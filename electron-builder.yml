@@ -1,0 +1,50 @@
+appId: tel13520521413
+asar: false
+productName: tel13520521413
+directories:
+  output: 'dist-release/${version}'
+icon: public/icon.ico
+files:
+  - '!**/.vscode/*'
+  - '!dist-release/*'
+  - '!src/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.preload.json,tsconfig.renderer.json}'
+  # - '!**/*'
+  # - package.json
+  # - out/**/*
+  # - public/**/*
+# 复制进去
+# extraFiles:
+#   - from: node_modules/global-mouse-events
+#     to: resources/app/node_modules/global-mouse-events
+
+#   - from: node_modules/node-window-manager
+#     to: resources/app/node_modules/node-window-manager
+
+#   - from: node_modules/@scanood/nut-js
+#     to: resources/app/node_modules/@scanood/nut-js
+# 不要打包进asar
+asarUnpack:
+  - public/**
+  # - node_modules/global-mouse-events
+  # - node_modules/node-window-manager
+  # - node_modules/@scanood/nut-js
+win:
+  artifactName: '${productName}-win-${version}.${ext}'
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+mac:
+  artifactName: '${productName}-Mac-${version}.${ext}'
+linux:
+  target:
+    - AppImage
+    - snap
+    - deb
+  artifactName: '${productName}-linux-${version}.${ext}'

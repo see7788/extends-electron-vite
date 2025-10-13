@@ -1,0 +1,1 @@
+import "lib-vanilla/src/anyWebrtc/peerjs/electronPreload"
