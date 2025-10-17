@@ -1,3 +1,2 @@
-import {appinit} from "lib-vanilla/electronBase/main"
-import Init from "lib-vanilla/src/anyWebrtc/peerjs/electronMain"
-appinit().then(() => new Init()).then(() => console.log("APP INIT success")).catch(error => console.error('APP INIT', error))
+import Base, { appinit } from "lib-vanilla/electronBase/main"
+appinit().then(() => new Base({ broId: "index" })).then(v => v.broObj.loadURL("https://www.tongyi.com/"))

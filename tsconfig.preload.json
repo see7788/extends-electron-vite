@@ -1,11 +1,9 @@
 {
   "include": [
-    "electron.vite.config.*",
-    "src/main/**/*",
+    "src/preload/**",
   ],
   "compilerOptions": {
     "composite": true,
-    "jsx": "react-jsx"
     // "target":"esnext",
     // "useDefineForClassFields": true,
     // "module":"node16",
