@@ -1,6 +1,7 @@
 appId: com.electron.app
 productName: electron-template
 directories:
+  output: '.dist-release/${version}'
   buildResources: build
 files:
   - '!**/.vscode/*'

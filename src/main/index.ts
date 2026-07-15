@@ -1,9 +1,6 @@
 import { app, BrowserWindow } from 'electron/main'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import icon from '../../resources/icon.png?asset'
 import honodemo from "./honodemo"
-const __dirname = dirname(fileURLToPath(import.meta.url))
 app.whenReady().then(honodemo).then((url) => {
   console.log(url)
   app.setAppUserModelId('com.electron')

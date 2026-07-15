@@ -1,34 +1,25 @@
-import { BrowserRouter, Link, Route, Routes } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import TestRouter from './testrouter'
 
-function App(): React.JSX.Element {
-  return (
-    <BrowserRouter basename="/renderer">
-      <Routes>
-        <Route
-          path="/a"
-          element={
-            <div>
-              a
-              <div style={{ marginTop: 16 }}>
-                <Link to="/">回到默认</Link>
-              </div>
-            </div>
-          }
-        />
-        <Route
-          path="*"
-          element={
-            <div>
-              默认
-              <div style={{ marginTop: 16 }}>
-                <Link to="/a">到 /a</Link>
-              </div>
-            </div>
-          }
-        />
-      </Routes>
-    </BrowserRouter>
-  )
-}
-
-export default App
+const appRouter = createBrowserRouter(
+  [
+    {
+      path: '/testrouter',
+      element: <TestRouter />,
+    },
+    {
+      path: '*',
+      element: <div>404</div>,
+    },
+  ],
+  {
+    basename: '/renderer',
+  }
+)
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <RouterProvider router={appRouter} />
+  </StrictMode>
+)
