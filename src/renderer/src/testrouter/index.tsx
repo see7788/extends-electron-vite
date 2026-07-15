@@ -20,6 +20,7 @@ export default function TestRouter() {
       <div style={{ marginBottom: 16 }}>
         <Link to="a">到 a</Link>
       </div>
+      testrouter
       <Outlet />
     </div>
   )

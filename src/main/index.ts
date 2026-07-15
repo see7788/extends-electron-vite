@@ -21,7 +21,7 @@ app.whenReady().then(honodemo).then((url) => {
     mainWindow.show()
   })
 
-  mainWindow.loadURL(`${url}/4444444`)
+  mainWindow.loadURL(`${url}/renderer/`)
 }).catch(console.log)
 
 app.on('window-all-closed', () => {

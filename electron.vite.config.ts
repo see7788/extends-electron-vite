@@ -7,7 +7,6 @@ export default defineConfig({
   main: {},
   preload: {},
   renderer: {
-    base: '/renderer/',
     server: {
       host
     },
