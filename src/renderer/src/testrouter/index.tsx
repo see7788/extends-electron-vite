@@ -21,7 +21,7 @@ export default function TestRouter() {
         <Link to="a">到 a</Link>
       </div>
       testrouter
-      <Outlet />
+      {/* <Outlet /> */}
     </div>
   )
 }

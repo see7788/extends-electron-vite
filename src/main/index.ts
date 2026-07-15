@@ -21,8 +21,8 @@ app.whenReady().then(honodemo).then((url) => {
     mainWindow.show()
   })
 
-  mainWindow.loadURL(`${url}/renderer/`)
-}).catch(console.log)
+  mainWindow.loadURL(url)
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
