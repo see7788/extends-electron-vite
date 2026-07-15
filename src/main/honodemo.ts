@@ -11,7 +11,7 @@ if (process.env.ELECTRON_RENDERER_URL) {
 } else {
     app.use("/renderer/*", serveStatic({ root: "./out/renderer" }))
 }
-app.get("/", ctx => ctx.html("index"))
+app.get("/test", ctx => ctx.html("test"))
 app.get("*", ctx => ctx.html("index"))
 export default (): Promise<string | void> => {
     const { host, port } = packageJson.config
