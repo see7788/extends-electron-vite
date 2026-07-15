@@ -6,7 +6,7 @@ import packageJson from '../../package.json' with { type: 'json' }
 import { AddressInfo } from 'node:net'
 
 export const app = new Hono()
-app.get("/test", ctx => ctx.html("test"))
+app.notFound(c => c.text("hono Not Found", 404))
 export default (): Promise<string> => {
     const { host, port } = packageJson.config
     if (process.env.ELECTRON_RENDERER_URL) {
@@ -22,7 +22,6 @@ export default (): Promise<string> => {
             })
         )
     }
-    app.notFound(c => c.text("hono Not Found", 404))
     return new Promise((resolve, reject) => {
         const server = serve(
             { fetch: app.fetch, port, hostname: host },
