@@ -1,11 +1,7 @@
 import { app } from 'electron/main'
-import localCodexWindowCreate from 'chatgpt-com-tocodex'
+import LocalCodexWindow from 'chatgpt-com-tocodex'
 
-void localCodexWindowCreate()
-  .catch((error: unknown) => {
-    console.error(error)
-    app.quit()
-  })
+new LocalCodexWindow()
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

@@ -88,17 +88,19 @@ export default class LocalCodexWindow {
   private readonly completedCalls = new Map<string, McpToolExecution>()
   private status = '正在启动…'
   private statusTone: McpStatusTone = 'warn'
+  private mcpGateway: McpGatewayPool | undefined
   private lifecycleClosePromise: Promise<void> | undefined
 
   constructor(
-    private readonly gateway: McpGatewayPool,
-    private readonly windowClose: (localCodexWindow: LocalCodexWindow) => Promise<void>
+    private readonly gatewayReady: Promise<McpGatewayPool>,
+    private readonly windowClose: () => Promise<void>
   ) {}
 
-  async start(): Promise<void> {
+  protected async start(): Promise<void> {
     try {
+      this.mcpGateway = await this.gatewayReady
       const window = this.createWindow()
-      this.statusUnsubscribe = this.gateway.statusSubscribe((message, tone) => {
+      this.statusUnsubscribe = this.mcpGatewayGet().statusSubscribe((message, tone) => {
         this.updateStatus(message, tone)
       })
       this.installMenu()
@@ -111,9 +113,16 @@ export default class LocalCodexWindow {
     }
   }
 
+  private mcpGatewayGet(): McpGatewayPool {
+    if (this.mcpGateway === undefined) {
+      throw new Error('MCP gateway is unavailable after Local Codex window startup')
+    }
+    return this.mcpGateway
+  }
+
   private lifecycleClose(): Promise<void> {
     if (this.lifecycleClosePromise === undefined) {
-      this.lifecycleClosePromise = this.windowClose(this)
+      this.lifecycleClosePromise = this.windowClose()
     }
     return this.lifecycleClosePromise
   }
@@ -185,7 +194,7 @@ export default class LocalCodexWindow {
           {
             label: '重新连接 MCP',
             accelerator: 'CmdOrCtrl+Shift+M',
-            click: () => void this.gateway.reconnect()
+            click: () => void this.mcpGatewayGet().reconnect()
           },
           { type: 'separator' },
           {
@@ -277,7 +286,7 @@ export default class LocalCodexWindow {
       const conversation = this.conversationKey(snapshot.href)
       if (conversation !== this.activeConversation) this.onNavigation(snapshot.href)
 
-      if (this.gateway.toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
+      if (this.mcpGatewayGet().toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
         await this.bootstrapCurrentConversation(false)
         return
       }
@@ -308,7 +317,7 @@ export default class LocalCodexWindow {
   }
 
   private async bootstrapCurrentConversation(force: boolean): Promise<void> {
-    if (!this.page || this.gateway.toolCount === 0) {
+    if (!this.page || this.mcpGatewayGet().toolCount === 0) {
       if (force) {
         await dialog.showMessageBox(this.window!, {
           type: 'warning',
@@ -330,16 +339,16 @@ export default class LocalCodexWindow {
     }
 
     const prompt = this.buildBootstrapPrompt()
-    this.updateStatus(`正在初始化：${this.gateway.toolCount} 个本地工具…`, 'warn')
+    this.updateStatus(`正在初始化：${this.mcpGatewayGet().toolCount} 个本地工具…`, 'warn')
     await this.page.send(prompt)
     this.bootstrapSentAt = Date.now()
     this.activeConversation = this.conversationKey(snapshot.href)
     this.bootstrappedConversation = this.activeConversation
-    this.updateStatus(`Local Codex 已启用 · ${this.gateway.toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
+    this.updateStatus(`Local Codex 已启用 · ${this.mcpGatewayGet().toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
   }
 
   private buildBootstrapPrompt(): string {
-    const allTools = this.gateway.promptTools()
+    const allTools = this.mcpGatewayGet().promptTools()
     const includedTools: typeof allTools = []
     for (const tool of allTools) {
       const candidate = [...includedTools, tool]
@@ -412,7 +421,7 @@ Reply exactly LOCAL_CODEX_READY.`
         results.push(cached)
         continue
       }
-      const result = await this.gateway.call(call)
+      const result = await this.mcpGatewayGet().call(call)
       this.completedCalls.set(call.id, result)
       results.push(result)
     }
