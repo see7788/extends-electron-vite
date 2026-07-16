@@ -14,6 +14,7 @@
 - [x] 将 MCP 生命周期改为窗口集合驱动：由 `ElectronLifecycle.ts` 维护窗口集合，在首窗口创建时启动公共 MCP、末窗口关闭时关闭并释放 MCP；窗口构造与关闭事件调用它，并通过 TypeScript 验证。
 - [x] 先按真实 owner 拆分 `index.ts`：将 MCP、ChatGPT 页面与窗口类分别迁入 `McpGatewayPool.ts`、`ChatGptPage.ts`、`LocalCodexWindow.ts`；根 `index.ts` 仅保留默认 public 入口，Electron 生命周期直接创建 MCP，并通过两个 TypeScript 编译范围验证。
 - [x] 收敛为四个实现文件：`index.ts` 作为唯一对外入口与生命周期协调 owner；`LocalCodexWindow.ts`、`McpGatewayPool.ts`、`ChatGptPage.ts` 各自只处理窗口、MCP、页面职责；已移除 `ElectronLifecycle.ts` 与 `LocalCodexBridge.ts`，并同步简化 README、通过子项目与主进程 TypeScript 验证。
+- [x] 将 Electron ready 等待收进 `index.ts` 的默认入口；移除 `mainapp` 与 README 对 `app.whenReady()` 的调用限制，明确 `index.ts` 是 `LocalCodexWindow` 的集合层，并通过子项目与主进程 TypeScript 验证。
 
 ## 进行中
 

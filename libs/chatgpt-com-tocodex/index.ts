@@ -15,6 +15,7 @@ let electronApplicationClosing = false
 let mcpGatewayPool: McpGatewayPool | undefined
 
 export default async function localCodexWindowCreate(): Promise<LocalCodexWindow> {
+  await app.whenReady()
   electronLifecycleStart()
   const localCodexWindow = await electronLifecycleQueue.add(async () => {
     if (electronApplicationClosing) {
