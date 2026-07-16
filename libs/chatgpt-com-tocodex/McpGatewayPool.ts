@@ -2,15 +2,12 @@ import log from 'electron-log/main'
 import PQueue from 'p-queue'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import {
-  bridgeErrorText,
-  bridgeTextTruncate,
-  type BridgeStatusTone
-} from './LocalCodexBridge'
 
 const APP_VERSION = '1.0.0'
 const RECONNECT_MS = 5_000
 const TOOL_TIMEOUT_MS = 10 * 60_000
+
+export type McpStatusTone = 'ok' | 'warn' | 'error'
 
 export type McpToolCall = {
   id: string
@@ -56,16 +53,26 @@ function endpointFor(baseUrl: string, server: string): URL {
   return new URL(`/api/v2/mcp/${encodeURIComponent(server)}`, `${baseUrl.replace(/\/$/, '')}/`)
 }
 
+function errorText(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`
+  return String(error)
+}
+
+function descriptionTruncate(description: string, max: number): string {
+  if (description.length <= max) return description
+  return `${description.slice(0, max)}\n...[truncated ${description.length - max} characters by MCP Gateway]`
+}
+
 export default class McpGatewayPool {
   private readonly queue = new PQueue({ concurrency: 1 })
   private readonly connections = new Map<string, McpConnection>()
   private readonly tools = new Map<string, McpTool>()
-  private readonly statusListeners = new Set<(message: string, tone: BridgeStatusTone) => void>()
+  private readonly statusListeners = new Set<(message: string, tone: McpStatusTone) => void>()
   private connecting: Promise<void> | undefined
   private reconnectTimer: NodeJS.Timeout | undefined
   private disposed = false
   private status = 'MCP 等待连接…'
-  private statusTone: BridgeStatusTone = 'warn'
+  private statusTone: McpStatusTone = 'warn'
 
   constructor(
     private readonly baseUrl: string,
@@ -76,7 +83,7 @@ export default class McpGatewayPool {
     return this.tools.size
   }
 
-  statusSubscribe(listener: (message: string, tone: BridgeStatusTone) => void): () => void {
+  statusSubscribe(listener: (message: string, tone: McpStatusTone) => void): () => void {
     this.statusListeners.add(listener)
     listener(this.status, this.statusTone)
     return () => this.statusListeners.delete(listener)
@@ -89,7 +96,7 @@ export default class McpGatewayPool {
   }> {
     return [...this.tools.values()].map((tool) => ({
       name: tool.publicName,
-      description: bridgeTextTruncate(tool.description || 'No description supplied by MCP server.', 2_000),
+      description: descriptionTruncate(tool.description || 'No description supplied by MCP server.', 2_000),
       input_schema: tool.inputSchema
     }))
   }
@@ -169,7 +176,7 @@ export default class McpGatewayPool {
     if (outcomes.some((item) => item.status === 'rejected')) this.scheduleReconnect()
   }
 
-  private statusSet(message: string, tone: BridgeStatusTone): void {
+  private statusSet(message: string, tone: McpStatusTone): void {
     this.status = message
     this.statusTone = tone
     for (const listener of this.statusListeners) listener(message, tone)
@@ -227,7 +234,7 @@ export default class McpGatewayPool {
         return { id: call.id, name: call.name, ok: true, result: normalized }
       } catch (error) {
         log.error(`[TOOL:${call.id}] failed`, error)
-        return { id: call.id, name: call.name, ok: false, error: bridgeErrorText(error) }
+        return { id: call.id, name: call.name, ok: false, error: errorText(error) }
       }
     }) as Promise<McpToolExecution>
   }

@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { BrowserWindow } from 'electron'
 import log from 'electron-log/main'
-import type { BridgeStatusTone } from './LocalCodexBridge'
+
+type PageStatusTone = 'ok' | 'warn' | 'error'
 
 export type PageSnapshot = {
   href: string
@@ -61,7 +62,7 @@ export default class ChatGptPage {
     this.installed = false
   }
 
-  async setStatus(message: string, tone: BridgeStatusTone = 'warn'): Promise<void> {
+  async setStatus(message: string, tone: PageStatusTone = 'warn'): Promise<void> {
     if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) return
     const color = tone === 'ok' ? '#166534' : tone === 'error' ? '#991b1b' : '#92400e'
     try {

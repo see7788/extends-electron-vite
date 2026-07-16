@@ -11,13 +11,8 @@ import log from 'electron-log/main'
 import Store from 'electron-store'
 import { z } from 'zod'
 import ChatGptPage, { type PageSnapshot } from './ChatGptPage'
-import ElectronLifecycle from './ElectronLifecycle'
-import {
-  bridgeErrorText,
-  bridgeTextTruncate,
-  type BridgeStatusTone
-} from './LocalCodexBridge'
 import McpGatewayPool, {
+  type McpStatusTone,
   type McpToolCall,
   type McpToolExecution
 } from './McpGatewayPool'
@@ -64,6 +59,16 @@ function shortHash(text: string): string {
   return createHash('sha256').update(text).digest('hex').slice(0, 20)
 }
 
+function errorText(error: unknown): string {
+  if (error instanceof Error) return `${error.name}: ${error.message}`
+  return String(error)
+}
+
+function textTruncate(text: string, max: number): string {
+  if (text.length <= max) return text
+  return `${text.slice(0, max)}\n...[truncated ${text.length - max} characters by Local Codex]`
+}
+
 export default class LocalCodexWindow {
   private window: BrowserWindow | undefined
   private page: ChatGptPage | undefined
@@ -82,23 +87,18 @@ export default class LocalCodexWindow {
   private readonly processedResponses = new Set<string>()
   private readonly completedCalls = new Map<string, McpToolExecution>()
   private status = '正在启动…'
-  private statusTone: BridgeStatusTone = 'warn'
-  private readonly windowId = Symbol('local-codex-window')
-  private readonly gatewayReady: Promise<void>
-  private gateway: McpGatewayPool | undefined
+  private statusTone: McpStatusTone = 'warn'
   private lifecycleClosePromise: Promise<void> | undefined
 
-  constructor(private readonly electronLifecycle: ElectronLifecycle) {
-    this.gatewayReady = electronLifecycle.windowOpen(this.windowId).then((gateway) => {
-      this.gateway = gateway
-    })
-  }
+  constructor(
+    private readonly gateway: McpGatewayPool,
+    private readonly windowClose: (localCodexWindow: LocalCodexWindow) => Promise<void>
+  ) {}
 
   async start(): Promise<void> {
     try {
-      await this.gatewayReady
       const window = this.createWindow()
-      this.statusUnsubscribe = this.gatewayGet().statusSubscribe((message, tone) => {
+      this.statusUnsubscribe = this.gateway.statusSubscribe((message, tone) => {
         this.updateStatus(message, tone)
       })
       this.installMenu()
@@ -111,16 +111,9 @@ export default class LocalCodexWindow {
     }
   }
 
-  private gatewayGet(): McpGatewayPool {
-    if (this.gateway === undefined) {
-      throw new Error('MCP gateway is unavailable after Local Codex window startup')
-    }
-    return this.gateway
-  }
-
   private lifecycleClose(): Promise<void> {
     if (this.lifecycleClosePromise === undefined) {
-      this.lifecycleClosePromise = this.electronLifecycle.windowClose(this.windowId)
+      this.lifecycleClosePromise = this.windowClose(this)
     }
     return this.lifecycleClosePromise
   }
@@ -192,7 +185,7 @@ export default class LocalCodexWindow {
           {
             label: '重新连接 MCP',
             accelerator: 'CmdOrCtrl+Shift+M',
-            click: () => void this.gatewayGet().reconnect()
+            click: () => void this.gateway.reconnect()
           },
           { type: 'separator' },
           {
@@ -260,7 +253,7 @@ export default class LocalCodexWindow {
     }
   }
 
-  private updateStatus(message: string, tone: BridgeStatusTone = 'warn'): void {
+  private updateStatus(message: string, tone: McpStatusTone = 'warn'): void {
     this.status = message
     this.statusTone = tone
     void this.page?.setStatus(message, tone)
@@ -284,7 +277,7 @@ export default class LocalCodexWindow {
       const conversation = this.conversationKey(snapshot.href)
       if (conversation !== this.activeConversation) this.onNavigation(snapshot.href)
 
-      if (this.gatewayGet().toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
+      if (this.gateway.toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
         await this.bootstrapCurrentConversation(false)
         return
       }
@@ -315,7 +308,7 @@ export default class LocalCodexWindow {
   }
 
   private async bootstrapCurrentConversation(force: boolean): Promise<void> {
-    if (!this.page || this.gatewayGet().toolCount === 0) {
+    if (!this.page || this.gateway.toolCount === 0) {
       if (force) {
         await dialog.showMessageBox(this.window!, {
           type: 'warning',
@@ -337,16 +330,16 @@ export default class LocalCodexWindow {
     }
 
     const prompt = this.buildBootstrapPrompt()
-    this.updateStatus(`正在初始化：${this.gatewayGet().toolCount} 个本地工具…`, 'warn')
+    this.updateStatus(`正在初始化：${this.gateway.toolCount} 个本地工具…`, 'warn')
     await this.page.send(prompt)
     this.bootstrapSentAt = Date.now()
     this.activeConversation = this.conversationKey(snapshot.href)
     this.bootstrappedConversation = this.activeConversation
-    this.updateStatus(`Local Codex 已启用 · ${this.gatewayGet().toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
+    this.updateStatus(`Local Codex 已启用 · ${this.gateway.toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
   }
 
   private buildBootstrapPrompt(): string {
-    const allTools = this.gatewayGet().promptTools()
+    const allTools = this.gateway.promptTools()
     const includedTools: typeof allTools = []
     for (const tool of allTools) {
       const candidate = [...includedTools, tool]
@@ -396,7 +389,7 @@ Reply exactly LOCAL_CODEX_READY.`
       if (!parsed.success) return { kind: 'invalid', error: z.prettifyError(parsed.error) }
       return { kind: 'valid', calls: parsed.data.calls }
     } catch (error) {
-      return { kind: 'invalid', error: bridgeErrorText(error) }
+      return { kind: 'invalid', error: errorText(error) }
     }
   }
 
@@ -407,7 +400,7 @@ Reply exactly LOCAL_CODEX_READY.`
 
     if (parsed.kind === 'invalid') {
       this.updateStatus('工具调用格式无效，正在要求模型修正…', 'error')
-      await this.page.send(`<<<LOCAL_CODEX_PROTOCOL_ERROR>>>\n${bridgeTextTruncate(parsed.error, 4_000)}\n<<<END_LOCAL_CODEX_PROTOCOL_ERROR>>>\nReturn a corrected LOCAL_CODEX_CALLS block only.`)
+      await this.page.send(`<<<LOCAL_CODEX_PROTOCOL_ERROR>>>\n${textTruncate(parsed.error, 4_000)}\n<<<END_LOCAL_CODEX_PROTOCOL_ERROR>>>\nReturn a corrected LOCAL_CODEX_CALLS block only.`)
       return
     }
 
@@ -419,7 +412,7 @@ Reply exactly LOCAL_CODEX_READY.`
         results.push(cached)
         continue
       }
-      const result = await this.gatewayGet().call(call)
+      const result = await this.gateway.call(call)
       this.completedCalls.set(call.id, result)
       results.push(result)
     }
@@ -447,7 +440,7 @@ Reply exactly LOCAL_CODEX_READY.`
         ...item,
         result: serialized.length <= perResult
           ? item.result
-          : { truncated: true, text: bridgeTextTruncate(serialized, perResult) }
+          : { truncated: true, text: textTruncate(serialized, perResult) }
       }
     })
     return safeJson({ results: bounded, bridge_truncated: true }, 2)
