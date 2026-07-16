@@ -1,19 +1,18 @@
 import { app } from 'electron'
 import log from 'electron-log/main'
 import PQueue from 'p-queue'
+import McpGatewayPool from './McpGatewayPool'
 
-type McpGateway = {
-  connect(): Promise<void>
-  close(): Promise<void>
-}
+const MCP_GATEWAY_URL = 'http://127.0.0.1:8765'
+const MCP_SERVERS = ['__builtin_skills__']
 
-export default class ElectronLifecycle<Gateway extends McpGateway> {
+export default class ElectronLifecycle {
   private readonly windowIds = new Set<symbol>()
   private readonly windowQueue = new PQueue({ concurrency: 1 })
-  private gateway: Gateway | undefined
+  private gateway: McpGatewayPool | undefined
   private applicationClosing = false
 
-  constructor(private readonly gatewayCreate: () => Gateway) {
+  constructor() {
     log.initialize()
     log.transports.file.level = 'info'
     log.transports.console.level = 'info'
@@ -26,7 +25,7 @@ export default class ElectronLifecycle<Gateway extends McpGateway> {
     })
   }
 
-  windowOpen(windowId: symbol): Promise<Gateway> {
+  windowOpen(windowId: symbol): Promise<McpGatewayPool> {
     return this.windowQueue.add(async () => {
       if (this.applicationClosing) {
         throw new Error('Electron application is closing; cannot open a Local Codex window')
@@ -41,11 +40,11 @@ export default class ElectronLifecycle<Gateway extends McpGateway> {
         throw new Error('MCP gateway exists without any Local Codex windows')
       }
 
-      const gateway = this.gatewayCreate()
+      const gateway = new McpGatewayPool(MCP_GATEWAY_URL, MCP_SERVERS)
       this.gateway = gateway
       await gateway.connect()
       return gateway
-    }) as Promise<Gateway>
+    }) as Promise<McpGatewayPool>
   }
 
   windowClose(windowId: symbol): Promise<void> {
@@ -71,7 +70,7 @@ export default class ElectronLifecycle<Gateway extends McpGateway> {
     }) as Promise<void>)
   }
 
-  private gatewayGet(): Gateway {
+  private gatewayGet(): McpGatewayPool {
     if (this.gateway === undefined) {
       throw new Error('MCP gateway is not available for an active Local Codex window')
     }
