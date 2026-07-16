@@ -4,23 +4,27 @@ import PQueue from 'p-queue'
 import LocalCodexWindowBase from './LocalCodexWindow'
 import McpGatewayPool from './McpGatewayPool'
 
-const MCP_GATEWAY_URL = 'http://127.0.0.1:8765'
-const MCP_SERVERS = ['__builtin_skills__']
-
 export default class LocalCodexWindow extends LocalCodexWindowBase {
   private static readonly windowIds = new Set<symbol>()
   private static readonly electronLifecycleQueue = new PQueue({ concurrency: 1 })
   private static electronLifecycleStarted = false
   private static electronApplicationClosing = false
   private static mcpGatewayPool: McpGatewayPool | undefined
+  private readonly windowId = Symbol('local-codex-window')
+  private readonly mcpGatewayReadyPromise: Promise<McpGatewayPool>
 
   constructor() {
-    const windowId = Symbol('local-codex-window')
-    super(
-      LocalCodexWindow.windowOpen(windowId),
-      () => LocalCodexWindow.windowClose(windowId)
-    )
+    super()
+    this.mcpGatewayReadyPromise = LocalCodexWindow.windowOpen(this.windowId)
     void this.start()
+  }
+
+  protected mcpGatewayReady(): Promise<McpGatewayPool> {
+    return this.mcpGatewayReadyPromise
+  }
+
+  protected windowClosed(): Promise<void> {
+    return LocalCodexWindow.windowClose(this.windowId)
   }
 
   private static async windowOpen(windowId: symbol): Promise<McpGatewayPool> {
@@ -40,7 +44,7 @@ export default class LocalCodexWindow extends LocalCodexWindowBase {
         throw new Error('MCP gateway exists without any Local Codex windows')
       }
 
-      const mcpGatewayPool = new McpGatewayPool(MCP_GATEWAY_URL, MCP_SERVERS)
+      const mcpGatewayPool = new McpGatewayPool()
       LocalCodexWindow.mcpGatewayPool = mcpGatewayPool
       await mcpGatewayPool.connect()
       return mcpGatewayPool

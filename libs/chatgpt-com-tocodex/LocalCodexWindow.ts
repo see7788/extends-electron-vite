@@ -10,7 +10,7 @@ import {
 import log from 'electron-log/main'
 import Store from 'electron-store'
 import { z } from 'zod'
-import ChatGptPage, { type PageSnapshot } from './ChatGptPage'
+import ChatGptPage from './ChatGptPage'
 import McpGatewayPool, {
   type McpStatusTone,
   type McpToolCall,
@@ -69,7 +69,7 @@ function textTruncate(text: string, max: number): string {
   return `${text.slice(0, max)}\n...[truncated ${text.length - max} characters by Local Codex]`
 }
 
-export default class LocalCodexWindow {
+export default abstract class LocalCodexWindow {
   private window: BrowserWindow | undefined
   private page: ChatGptPage | undefined
   private readonly store = new Store<PersistedSettings>({
@@ -91,14 +91,13 @@ export default class LocalCodexWindow {
   private mcpGateway: McpGatewayPool | undefined
   private lifecycleClosePromise: Promise<void> | undefined
 
-  constructor(
-    private readonly gatewayReady: Promise<McpGatewayPool>,
-    private readonly windowClose: () => Promise<void>
-  ) {}
+  protected abstract mcpGatewayReady(): Promise<McpGatewayPool>
+
+  protected abstract windowClosed(): Promise<void>
 
   protected async start(): Promise<void> {
     try {
-      this.mcpGateway = await this.gatewayReady
+      this.mcpGateway = await this.mcpGatewayReady()
       const window = this.createWindow()
       this.statusUnsubscribe = this.mcpGatewayGet().statusSubscribe((message, tone) => {
         this.updateStatus(message, tone)
@@ -122,7 +121,7 @@ export default class LocalCodexWindow {
 
   private lifecycleClose(): Promise<void> {
     if (this.lifecycleClosePromise === undefined) {
-      this.lifecycleClosePromise = this.windowClose()
+      this.lifecycleClosePromise = this.windowClosed()
     }
     return this.lifecycleClosePromise
   }
@@ -144,7 +143,7 @@ export default class LocalCodexWindow {
         webSecurity: true
       }
     })
-    this.page = new ChatGptPage(this.window)
+    this.page = new ChatGptPage(this.window.webContents)
 
     const ses = session.fromPartition('persist:local-codex-chatgpt')
     ses.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))

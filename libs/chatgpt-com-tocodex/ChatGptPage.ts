@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { BrowserWindow } from 'electron'
+import type { WebContents } from 'electron'
 import log from 'electron-log/main'
 
 type PageStatusTone = 'ok' | 'warn' | 'error'
 
-export type PageSnapshot = {
+type PageSnapshot = {
   href: string
   assistantCount: number
   userCount: number
@@ -19,16 +19,16 @@ export default class ChatGptPage {
   private readonly librarySource: string
   private installed = false
 
-  constructor(private readonly window: BrowserWindow) {
+  constructor(private readonly webContents: WebContents) {
     const require = createRequire(import.meta.url)
     this.librarySource = readFileSync(require.resolve('@kudoai/chatgpt.js'), 'utf8')
   }
 
   async install(): Promise<boolean> {
-    if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) return false
+    if (this.webContents.isDestroyed()) return false
     if (this.installed) return true
     try {
-      this.installed = await this.window.webContents.executeJavaScript(
+      this.installed = await this.webContents.executeJavaScript(
         `(() => {
           if (!location.hostname.endsWith('chatgpt.com')) return false;
           if (!window.chatgpt) {
@@ -63,10 +63,10 @@ export default class ChatGptPage {
   }
 
   async setStatus(message: string, tone: PageStatusTone = 'warn'): Promise<void> {
-    if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) return
+    if (this.webContents.isDestroyed()) return
     const color = tone === 'ok' ? '#166534' : tone === 'error' ? '#991b1b' : '#92400e'
     try {
-      await this.window.webContents.executeJavaScript(
+      await this.webContents.executeJavaScript(
         `(() => {
           const badge = document.getElementById('local-codex-status');
           if (!badge) return false;
@@ -82,12 +82,12 @@ export default class ChatGptPage {
   }
 
   async snapshot(): Promise<PageSnapshot> {
-    if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) {
+    if (this.webContents.isDestroyed()) {
       return {
         href: '', assistantCount: 0, userCount: 0, text: '', streaming: false, ready: false, draft: ''
       }
     }
-    return this.window.webContents.executeJavaScript(
+    return this.webContents.executeJavaScript(
       `(() => {
         const assistants = [...document.querySelectorAll('[data-message-author-role="assistant"]')];
         const users = document.querySelectorAll('[data-message-author-role="user"]');
@@ -108,7 +108,7 @@ export default class ChatGptPage {
   }
 
   async send(message: string): Promise<void> {
-    const result = (await this.window.webContents.executeJavaScript(
+    const result = (await this.webContents.executeJavaScript(
       `(() => {
         if (!window.chatgpt) return { ok: false, reason: 'chatgpt.js not installed' };
         const input = window.chatgpt.getChatBox?.();

@@ -16,6 +16,7 @@
 - [x] 收敛为四个实现文件：`index.ts` 作为唯一对外入口与生命周期协调 owner；`LocalCodexWindow.ts`、`McpGatewayPool.ts`、`ChatGptPage.ts` 各自只处理窗口、MCP、页面职责；已移除 `ElectronLifecycle.ts` 与 `LocalCodexBridge.ts`，并同步简化 README、通过子项目与主进程 TypeScript 验证。
 - [x] 将 Electron ready 等待收进 `index.ts` 的默认入口；移除 `mainapp` 与 README 对 `app.whenReady()` 的调用限制，明确 `index.ts` 是 `LocalCodexWindow` 的集合层，并通过子项目与主进程 TypeScript 验证。
 - [x] 将根 `index.ts` 改为零参数的默认派生类：继承内部 `LocalCodexWindow`，构造函数接入共享生命周期并启动自身；移除默认工厂函数，外部改为 `new LocalCodexWindow()`，并通过子项目与主进程 TypeScript 验证。
+- [x] 收敛基础类构造边界：`LocalCodexWindow.ts` 移除入口生命周期参数并改由派生入口实现 protected 钩子；`McpGatewayPool.ts` 移除固定配置参数；`ChatGptPage.ts` 改为仅消费 `WebContents`，同步 README，并通过子项目与主进程 TypeScript 验证。
 
 ## 进行中
 

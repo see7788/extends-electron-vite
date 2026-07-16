@@ -4,6 +4,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 const APP_VERSION = '1.0.0'
+const MCP_GATEWAY_URL = 'http://127.0.0.1:8765'
+const MCP_SERVERS = ['__builtin_skills__']
 const RECONNECT_MS = 5_000
 const TOOL_TIMEOUT_MS = 10 * 60_000
 
@@ -74,11 +76,6 @@ export default class McpGatewayPool {
   private status = 'MCP 等待连接…'
   private statusTone: McpStatusTone = 'warn'
 
-  constructor(
-    private readonly baseUrl: string,
-    private readonly servers: string[]
-  ) {}
-
   get toolCount(): number {
     return this.tools.size
   }
@@ -115,9 +112,9 @@ export default class McpGatewayPool {
     this.statusSet('正在连接本机 MCP-Gateway…', 'warn')
 
     const outcomes = await Promise.allSettled(
-      this.servers.map(async (server, index) => {
+      MCP_SERVERS.map(async (server, index) => {
         const serverId = serverAlias(server, index)
-        const endpoint = endpointFor(this.baseUrl, server)
+        const endpoint = endpointFor(MCP_GATEWAY_URL, server)
         const client = new Client(
           { name: 'electron-local-codex', version: APP_VERSION },
           { capabilities: {} }
@@ -162,7 +159,7 @@ export default class McpGatewayPool {
 
     outcomes.forEach((outcome, index) => {
       if (outcome.status === 'rejected') {
-        log.error(`[MCP:${serverAlias(this.servers[index], index)}] connect failed`, outcome.reason)
+        log.error(`[MCP:${serverAlias(MCP_SERVERS[index], index)}] connect failed`, outcome.reason)
       }
     })
 
