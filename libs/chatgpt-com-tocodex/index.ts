@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, resolve } from 'node:path'
 import {
-  app,
   BrowserWindow,
   dialog,
   Menu,
@@ -16,6 +15,7 @@ import PQueue from 'p-queue'
 import { z } from 'zod'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import ElectronLifecycle from './ElectronLifecycle'
 
 /**
  * Local Codex Bridge — single-file Electron main process.
@@ -486,20 +486,49 @@ class LocalCodexWindow {
   private readonly completedCalls = new Map<string, ToolExecution>()
   private status = '正在启动…'
   private statusTone: StatusTone = 'warn'
+  private readonly windowId = Symbol('local-codex-window')
+  private readonly gatewayReady: Promise<void>
+  private gateway: McpGatewayPool | undefined
+  private lifecycleClosePromise: Promise<void> | undefined
 
-  constructor(private readonly gateway: McpGatewayPool) {}
-
-  async start(): Promise<void> {
-    this.createWindow()
-    this.statusUnsubscribe = this.gateway.statusSubscribe((message, tone) => {
-      this.updateStatus(message, tone)
+  constructor(private readonly electronLifecycle: ElectronLifecycle<McpGatewayPool>) {
+    this.gatewayReady = electronLifecycle.windowOpen(this.windowId).then((gateway) => {
+      this.gateway = gateway
     })
-    this.installMenu()
-    await this.window?.loadURL(CHATGPT_URL)
-    this.startMonitor()
   }
 
-  private createWindow(): void {
+  async start(): Promise<void> {
+    try {
+      await this.gatewayReady
+      const window = this.createWindow()
+      this.statusUnsubscribe = this.gatewayGet().statusSubscribe((message, tone) => {
+        this.updateStatus(message, tone)
+      })
+      this.installMenu()
+      await window.loadURL(CHATGPT_URL)
+      this.startMonitor()
+    } catch (error) {
+      this.window?.destroy()
+      await this.lifecycleClose()
+      throw error
+    }
+  }
+
+  private gatewayGet(): McpGatewayPool {
+    if (this.gateway === undefined) {
+      throw new Error('MCP gateway is unavailable after Local Codex window startup')
+    }
+    return this.gateway
+  }
+
+  private lifecycleClose(): Promise<void> {
+    if (this.lifecycleClosePromise === undefined) {
+      this.lifecycleClosePromise = this.electronLifecycle.windowClose(this.windowId)
+    }
+    return this.lifecycleClosePromise
+  }
+
+  private createWindow(): BrowserWindow {
     this.window = new BrowserWindow({
       width: 1280,
       height: 860,
@@ -538,7 +567,9 @@ class LocalCodexWindow {
       this.monitorTimer = undefined
       this.statusUnsubscribe?.()
       this.statusUnsubscribe = undefined
+      void this.lifecycleClose()
     })
+    return this.window
   }
 
   private installMenu(): void {
@@ -564,7 +595,7 @@ class LocalCodexWindow {
           {
             label: '重新连接 MCP',
             accelerator: 'CmdOrCtrl+Shift+M',
-            click: () => void this.gateway.reconnect()
+            click: () => void this.gatewayGet().reconnect()
           },
           { type: 'separator' },
           {
@@ -656,7 +687,7 @@ class LocalCodexWindow {
       const conversation = this.conversationKey(snapshot.href)
       if (conversation !== this.activeConversation) this.onNavigation(snapshot.href)
 
-      if (this.gateway.toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
+      if (this.gatewayGet().toolCount > 0 && this.bootstrappedConversation !== this.activeConversation) {
         await this.bootstrapCurrentConversation(false)
         return
       }
@@ -687,7 +718,7 @@ class LocalCodexWindow {
   }
 
   private async bootstrapCurrentConversation(force: boolean): Promise<void> {
-    if (!this.page || this.gateway.toolCount === 0) {
+    if (!this.page || this.gatewayGet().toolCount === 0) {
       if (force) {
         await dialog.showMessageBox(this.window!, {
           type: 'warning',
@@ -709,16 +740,16 @@ class LocalCodexWindow {
     }
 
     const prompt = this.buildBootstrapPrompt()
-    this.updateStatus(`正在初始化：${this.gateway.toolCount} 个本地工具…`, 'warn')
+    this.updateStatus(`正在初始化：${this.gatewayGet().toolCount} 个本地工具…`, 'warn')
     await this.page.send(prompt)
     this.bootstrapSentAt = Date.now()
     this.activeConversation = this.conversationKey(snapshot.href)
     this.bootstrappedConversation = this.activeConversation
-    this.updateStatus(`Local Codex 已启用 · ${this.gateway.toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
+    this.updateStatus(`Local Codex 已启用 · ${this.gatewayGet().toolCount} 个工具 · ${basename(this.workspaceRoot)}`, 'ok')
   }
 
   private buildBootstrapPrompt(): string {
-    const allTools = this.gateway.promptTools()
+    const allTools = this.gatewayGet().promptTools()
     const includedTools: typeof allTools = []
     for (const tool of allTools) {
       const candidate = [...includedTools, tool]
@@ -791,7 +822,7 @@ Reply exactly LOCAL_CODEX_READY.`
         results.push(cached)
         continue
       }
-      const result = await this.gateway.call(call)
+      const result = await this.gatewayGet().call(call)
       this.completedCalls.set(call.id, result)
       results.push(result)
     }
@@ -840,40 +871,15 @@ Reply exactly LOCAL_CODEX_READY.`
 
 }
 
-class LocalCodexApplication {
-  private readonly gateway = new McpGatewayPool(MCP_GATEWAY_URL, MCP_SERVERS)
-
-  constructor() {
-    log.initialize()
-    log.transports.file.level = 'info'
-    log.transports.console.level = 'info'
-    void this.gateway.connect().catch((error) => log.error('Initial MCP connection failed', error))
-  }
-
-  async windowCreate(): Promise<LocalCodexWindow> {
-    const localCodexWindow = new LocalCodexWindow(this.gateway)
-    await localCodexWindow.start()
-    return localCodexWindow
-  }
-
-  async close(): Promise<void> {
-    await this.gateway.close()
-  }
-}
-
-let localCodexApplication: LocalCodexApplication | undefined
+let electronLifecycle: ElectronLifecycle<McpGatewayPool> | undefined
 
 export default async function localCodexWindowCreate(): Promise<LocalCodexWindow> {
-  if (!localCodexApplication) {
-    app.setAppUserModelId('com.local-codex.electron')
-    localCodexApplication = new LocalCodexApplication()
-    app.once('before-quit', (event) => {
-      if (!localCodexApplication) return
-      event.preventDefault()
-      const closingApplication = localCodexApplication
-      localCodexApplication = undefined
-      void closingApplication.close().finally(() => app.quit())
-    })
+  if (electronLifecycle === undefined) {
+    electronLifecycle = new ElectronLifecycle(
+      () => new McpGatewayPool(MCP_GATEWAY_URL, MCP_SERVERS)
+    )
   }
-  return localCodexApplication.windowCreate()
+  const localCodexWindow = new LocalCodexWindow(electronLifecycle)
+  await localCodexWindow.start()
+  return localCodexWindow
 }
