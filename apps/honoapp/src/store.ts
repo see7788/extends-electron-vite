@@ -28,8 +28,8 @@ export default createStore<Store>()(
       mcpActions: {
         responseContentRead: async (response) => {
           const text = await response.text();
-          if (!response.ok) throw new Error(text);
-          const body: unknown = JSON.parse(text);
+          if (!response.ok) throw new Error(text || String(response.status));
+          const body: unknown = text ? JSON.parse(text) : String(response.status);
           return {
             content: [{
               type: "text",
