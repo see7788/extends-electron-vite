@@ -3,12 +3,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import store from "../../store";
 
-const sourceSchema = z.object({ source: z.string().min(1) });
+export const globalTplSourceSchema = z.object({ source: z.string().min(1) });
 
 const globalTplRouter = new Hono()
   .basePath("/tpl/global")
   .get("/source", (ctx) => ctx.json(store.getState().globalTplActions.sourceRead()))
-  .put("/source", zValidator("json", sourceSchema), (ctx) => {
+  .put("/source", zValidator("json", globalTplSourceSchema), (ctx) => {
     try {
       store.getState().globalTplActions.sourceUpdate(ctx.req.valid("json"));
       return ctx.json(null, 200);
