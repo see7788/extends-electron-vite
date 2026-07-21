@@ -22,6 +22,10 @@ type FileTreeNode = {
   isLeaf: boolean;
 };
 
+export const fileQuerySchema = z.object({
+  path: z.string().optional(),
+});
+
 function projectRootNode(): FileTreeNode {
   return {
     title: path.basename(projectRoot) || projectRoot,
@@ -250,8 +254,6 @@ async function fileChildren(fullpath?: string): Promise<FileTreeNode[]> {
 export default new Hono().basePath("/file")
   .get(
     "/",
-    zValidator("query", z.object({
-      path: z.string().optional(),
-    })),
+    zValidator("query", fileQuerySchema),
     async c => c.json(await fileChildren(c.req.valid("query").path)),
   );
