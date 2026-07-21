@@ -4,7 +4,7 @@ import { immer } from "zustand/middleware/immer";
 import createFile from "./file/store";
 import createSse from "./sse/store";
 import createTpl from "./tpl/store";
-import createTodotree from "./todotree"
+import createTodotree from "./todotree/store";
 export default create<ReturnType<typeof createFile>
   & ReturnType<typeof createSse>
   & ReturnType<typeof createTpl>
