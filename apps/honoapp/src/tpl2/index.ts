@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { zValidator } from "@hono/zod-validator";
@@ -15,6 +16,12 @@ const outputInputSchema = z.object({
   source: z.string().min(1),
   workspacePath: z.string().refine(existsSync, "workspacePath must exist"),
 });
+
+const workspacePathSchema = z.object({
+  workspacePath: z.string().refine(existsSync, "workspacePath must exist"),
+});
+
+const globalWorkspacePath = homedir();
 
 const sourceInitializerGet = (source: string) => {
   const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl2.ts", source);
@@ -44,25 +51,40 @@ const sourceGet = (source: string) => sourceSchema.parse(
   new Function("nodes", `"use strict"; return (${sourceInitializerGet(source)});`)(nodesGet()),
 );
 
-const sourceTextGet = (input: { declaration: "source" | "tpl"; source: unknown; type: "GlobalSource" | "ProjectSource" }) => [
-  `const nodes = ${JSON.stringify(nodesGet(), undefined, 2)} as const;`,
-  "",
-  `type ${input.type} = ${input.type};`,
-  "",
-  `const ${input.declaration}: ${input.type} = ${JSON.stringify(input.source, undefined, 2)};`,
-].join("\n");
+const sourceDefaultGet = (workspacePath: string) => workspacePath === globalWorkspacePath
+  ? { declaration: "source" as const, source: globalSource }
+  : { declaration: "tpl" as const, source: projectSource };
 
-const outputGet = (input: z.infer<typeof outputInputSchema>) => new CodexOutput({
-  path: join(input.workspacePath, ".codex"),
-  source: sourceGet(input.source),
-});
+const sourceTextGet = (input: { declaration: "source" | "tpl"; source: ReturnType<typeof sourceGet> }) => {
+  const { nodes: sourceNodes, ...source } = input.source;
+  const lines = JSON.stringify(source, undefined, 2).split("\n");
+  lines[lines.length - 2] += ",";
+  return [
+    `const nodes = ${JSON.stringify(nodesGet(), undefined, 2)} as const;`,
+    "",
+    `const ${input.declaration} = {`,
+    ...lines.slice(1, -1).map(line => `  ${line}`),
+    "  nodes,",
+    "};",
+  ].join("\n");
+};
+
+const outputGet = (input: z.infer<typeof outputInputSchema>) => {
+  const source = sourceGet(input.source);
+  if ((input.workspacePath === globalWorkspacePath) !== (source.scope === "global")) {
+    throw new Error(`Template source scope does not match workspacePath: ${input.workspacePath}`);
+  }
+  return new CodexOutput({
+    path: join(input.workspacePath, ".codex"),
+    source,
+  });
+};
 
 const tpl2Router = new Hono()
   .basePath("/tpl2")
-  .get("/source", (ctx) => ctx.json({
-    global: sourceTextGet({ declaration: "source", source: globalSource, type: "GlobalSource" }),
-    project: sourceTextGet({ declaration: "tpl", source: projectSource, type: "ProjectSource" }),
-  }))
+  .get("/source", zValidator("query", workspacePathSchema), (ctx) => ctx.json(
+    sourceTextGet(sourceDefaultGet(ctx.req.valid("query").workspacePath)),
+  ))
   .post("/output/filesStatus", zValidator("json", outputInputSchema), (ctx) => ctx.json(
     outputGet(ctx.req.valid("json")).filesStatus(),
   ))
