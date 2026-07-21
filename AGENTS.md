@@ -2,6 +2,13 @@
 
 除本文件的补充外，继续遵守 [`.codex/AGENTS.md`](.codex/AGENTS.md)。
 
+## CodeGraph 强制门禁
+
+- 本仓库的代码库检索、符号定位、调用关系、影响范围分析和改代码前上下文获取，必须先使用 CodeGraph；CodeGraph 索引是上述工作的必需前置条件，不得以 `rg`、`find`、直接读取源码或历史记录替代。
+- 开始相关工作前必须确认仓库根目录存在可用的 `.codegraph/` 索引，并确认当前会话实际可调用 CodeGraph MCP 或 `codegraph explore`；仅存在 `.codegraph/` 目录或 `.gitignore` 不算索引可用。
+- `.codegraph/` 缺失、为空、索引失效或当前会话无法调用 CodeGraph 时，必须停止相关代码分析、定位和修改，报告 `CodeGraph Index Required`，并说明缺失的索引或调用能力；不得回退到 `rg` 或直接读取源码继续工作。
+- 只有 CodeGraph 已完成并返回可验证结果后，才允许读取其明确定位到的源码，并继续进行实现、修改和验证。
+
 ## Electron 窗口边界
 
 - Electron 功能先按具体 `BrowserWindow` 分组，不建立无业务语义的 `windows/` 外壳。包根只保留公开入口、包级配置和文档。

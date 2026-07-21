@@ -1,0 +1,24 @@
+{
+  "name": "web-base",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "extends-zustand": "workspace:*",
+    "@ant-design/icons": "5.3.7",
+    "htmlpreload": "workspace:*",
+    "antd": "5.25.4",
+    "extends-react": "workspace:*",
+    "hono": "4.10.7",
+    "immer": "10.2.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "7.18.1",
+    "zustand": "5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "typescript": "5.8.3"
+  }
+}

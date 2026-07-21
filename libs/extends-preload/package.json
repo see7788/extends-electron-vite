@@ -1,0 +1,13 @@
+{
+  "name": "extends-preload",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*/index.ts"
+  },
+  "scripts": {},
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

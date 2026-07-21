@@ -59,8 +59,5 @@
     "@vscode/vsce": "3.6.2",
     "tsup": "8.5.1",
     "typescript": "5.9.3"
-  },
-  "dependencies": {
-    "tdodoapp": "workspace:*"
   }
 }

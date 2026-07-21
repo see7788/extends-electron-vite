@@ -135,34 +135,55 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
-- [x] T-044 方先生确认建立当前 `tdodoapp`：Vite + React + Zustand 的 TodoApp 浏览器承载项目已创建；后续功能以当前目录与包名为准。
+- [>] T-070 方先生提出：按全项目体检结果逐项修复 TypeScript 基线、无套壳约束与类型错误；每项必须直接修改真实 owner，不新增 factory、wrapper、barrel、alias、兼容层或兜底，完成后在该子节点记录真实 typecheck 证据。
+	- [>] 01 P0：根 package `extends-electron-vite` 补充自身 `tsconfig.json`，明确根只编排 workspace、不得混编子 package；补齐根级逐 package TypeScript 检查入口。
+	- [>] 02 P0：`libs/extends_chatgtp_com/userapp/src` 是含 TS/TSX 的独立 package，补充自身 `tsconfig.json` 并覆盖全部真实源码；不得缩小 include 或隐藏错误。
+	- [>] 03：删除 `apps/honoapp/src/routers.ts` 的 `routersCreate` 薄壳，将顶层 Hono router 直接构造和挂载到真实服务入口。
+	- [>] 04：删除 `apps/honoapp/src/sse/index.ts` 的二次 Hono 转发壳，直接挂载真实 SSE 与 push router，保持现有路径和顺序。
+	- [>] 05：删除单消费者 `config` package；`host`、`port` 进入 Hono 主 store 的必填 `runtimeActions`，由入口一次校验写入、消费者直接读取。
+	- [>] 06：删除 `apps/mainapp/src/preload/index.ts` 未被消费的空 `api` bridge；不得保留未来预留对象。
+	- [>] 07：删除 `web-base/src/topic/chat.tsx`、`image.tsx`、`research.tsx` 三个固定 `userRoute` React 壳；在真实 `routers.tsx` 直接渲染 `User`。
+	- [>] 08：删除 `admin-electron-main` 的 `routers/hono/admin-web.ts`、`user-web.ts` 拼装壳；在真实 Hono 入口直接构造 Vite router 并挂载 IPC router。
+	- [>] 09：删除 `user-electron-main/src/index.ts` 的单调用入口；构建输入指向直接承载 Electron 生命周期的真实入口。
+	- [>] 10：删除 `libs/chatgpt-com-tocodex/index.ts` 的 `LocalCodexWindow` barrel；消费者改为包名加真实物理路径导入。
+	- [>] 11：删除 `admin-web/src/store.ts` 的纯 spread 切片工厂；三个 slice 的真实数据和 action 收拢到唯一 root Zustand initializer。
+	- [x] 12：保留 `apps/reactapp/src/routers.tsx`；它是方先生明确要求的 React 路由专用文件与唯一入口，不属于套壳。
+	- [>] 13：修复 `honoapp` 的 Zustand persist/immer `StateCreator` mutator 类型；使用已有 `extends-zustand` 主/切片仓库模式，不使用断言或双层包装。
+	- [>] 14：修复 `mcpserver` 解析根 `honoapp` 失败；删除伪造依赖或改为真实物理 owner 路径，不改变生产者接口。
+	- [>] 15：修复 `reactapp/store.ts`、`todotree/index.tsx`；使 TodoTree 数据和 actions 成为主仓库确定成员，消除 unknown 连锁错误。
+	- [>] 16：删除 `vscode-plugin` 对已删除 `tdodoapp` 的依赖、import、链接和 lockfile 项；接入 `reactapp` 的真实入口，不重建转发包。
+	- [>] 17：修复 `admin-electron-main`、`admin-web`、`user-web` 的 `extends-electron/main/loginState` 解析；定位 `LoginState` owner 并改为真实物理路径导入，不新增 export 映射。
+	- [>] 18：统一 `admin-web`、`user-web` 实际消费的 React、React DOM、types 与 Ant Design 依赖来源，修复 JSX 类型冲突，不使用 skipLibCheck 或 adapter。
+	- [>] 19：修复 `web-base` 缺失 `TopicWebIpcChannel` 与参数数量不符；由真实 IPC owner 定义唯一类型和签名，消费者直接遵守。
+	- [>] 20：修复 `userapp-remoteweb` IPC router 与 store 泛型不匹配；以服务端 router 真实响应为唯一 owner，前端直接消费，不加兼容 adapter 或默认字段。
+	- [~] 21：方先生提出：`runtimeActions` 只保留服务实例的明确固定值；移除所有业务消费者对其非明确值的判断、补值与 catch 后继续。`workspacePath` 不属于 runtimeActions，改为页面打开与对应接口的必填参数，由接口校验后直接传入真实业务 owner。
+		- [x] parent：已从总入口移除 `workspacePath` 注入、网卡扫描、端口递增、启动物化 catch/warn 与 router/service 包装；入口只读取主仓库明确 `hostname`、`port` 直接启动。
+		- [~] parent：`/tpl` 已改为 query/JSON 必填 `workspacePath`，React Tpl 页面从 `#/tpl?workspacePath=<绝对路径>` 读取并随每次请求传入；`/tpl/global` 未读取该参数。
+		- [!] parent：Chat 仍有 `/chat/state`、`/chat/agent/codexcli` GET/POST 三处遗留 `runtimeActions.workspacePath`，现因必填 runtimeActions 不含该字段而类型失败；必须由 Chat 页面/接口明确传入或移除未接线 Codex CLI 能力，不能猜测删除。
+- [~] T-064 方先生提出：整理子项目合并后的 pnpm 依赖。parent 已确认 `libs/*` 未覆盖多层包目录、`vscode-plugin` 未列入 workspace；workerLow 将把 workspace 包范围收敛为 `mainapp`、`vscode-plugin`、`libs/**` 与现有两个外部共享包，随后由 parent 执行根 `pnpm install` 验证所有 `workspace:*` 可解析。
+- [~] T-066 方先生提出：将唯一 preload 包 `libs/preloads/` 改名为 `libs/extends-preload/`，并在新目录内部按 `codex/`、`chatgptCom/` 隔离能力；各目录提供 `index.ts` 与 `userConfig.ts`，根入口只汇总导出。
+	- [<] worker：已迁移为 `extends-preload` 并通过类型与 workspace 验证；反馈称 `input`/历史读取被放入 `codex/userConfig.ts`。
+	- [<] tokener：验收未通过：行为代码误入 `codex/userConfig.ts`，`codex/index.ts` 与 `chatgptCom/index.ts` 存在无消费者的通配转发；已给出最小修复方向。
+	- [<] worker：已将 Codex 行为收敛到 `codex/index.ts` 的默认能力入口，`userConfig.ts` 与空的 `chatgptCom/index.ts` 不再承接行为；类型、exports 与文本完整性检查通过。真实 Webview 运行时未验证。
+- [>] T-067 方先生提出：将共享库 `libs/extends-electron/` 改名为 `libs/extends-main/`，同步包名、pnpm workspace 消费方、导入路径与构建配置。
+	- [>] worker：使用 `codegraph explore` 定位目录、package name 与 consumers；确认 T-066 无冲突后执行安全重命名、依赖更新与类型/构建验证。
+- [>] T-068 方先生提出：将现有共享库 `libs/extends-hono/` 改名为 `libs/honodoor/`，同步包名、pnpm workspace 消费方、导入路径与构建配置；不另建独立 `honodoor` 根目录项目。
+	- [>] worker：使用 `codegraph explore` 定位目录、package name 与 consumers；确认 T-066、T-067 无冲突后执行安全重命名、依赖更新与类型/构建验证。
+- [<] T-069 方先生提出：修复 Codex 当前会话未加载 CodeGraph MCP 的环境问题；不重建已正常的项目索引。
+	- [>] parent：待方先生重启 VS Code 并新开 Codex 会话后，确认会话工具清单实际出现 CodeGraph MCP；当前会话无法热加载。
 - [~] T-046 方先生提出：完成 `tdodoapp` 的真实任务树对象与页面。验收：`todotree` 保持 `{ todotree, todotreeActions }` 分层、节点使用扁平 `nodesById + id_parent`、状态与 agent 采用数值领域值，React 路由实际消费该对象；不创建测试性质文件。
-	- [x] worker：已完成任务树切片、数值状态/agent 映射、主仓库组合与 `#/todotree` 路由入口；`tdodoapp` 类型检查与构建通过。
 	- [~] parent：待可观察浏览器验收任务树页面；必须启动 Vite 页面，确认路由、节点编辑和层级渲染真实可用，不能用静态检查替代。
 	- [>] worker：待页面验收路径准备好后，以 `#/todotree?path=<编码后的工作区绝对路径>` 作为任务树根；顶级任务的 `id_parent` 等于该路径，不创建空根或随机根。
 - [~] T-048 方先生提出：完成 `tdodoapp` 与 `vscode-plugin` 的本机工作流接入。验收：不引入 Hono；浏览器 UI 持久化与工作流事实分离；插件以有类型显式输入接入页面与 Codex，不依赖隐式进程参数。
-	- [x] worker：主仓库已以有效 Hash 绝对路径作为 Zustand persist key，仅持久化 `todotree.nodesById`；action、文字映射和运行态不落盘。无效或缺失路径采用 no-op storage，避免跨项目串数据；typecheck、build、UTF-8 检查通过。
 	- [~] parent：待可观察浏览器验收持久化：两个不同路径分别新增节点并刷新，确认同路径保留、不同路径隔离，且 Local Storage 不含 action/映射。
 	- [>] worker：实现 Vite 本机工作流接口与工作流事实 owner；限定于 `tdodoapp`，再由 parent 按实际接口派发 `vscode-plugin` 的安装/启动入口接入任务。
 	- [~] parent：方先生确认先验证官方 Codex Webview 的最小本地注入，不接入 PeerJS 信令或重做会话：页面就绪后一秒，`perload.js` 向原 Composer 写入并提交“你好，我是谁”。该验证只证明外部模块可复用官方输入/提交链路；每次重新加载窗口都会再次发送，验证后必须由下一任务替换为真实受控 PeerJS 接收。
-		- [x] worker：仅修改官方已安装扩展 `openai.chatgpt-26.715.31925-win32-x64/webview/index.html` 与新增同目录 `perload.js`；已创建 `index.html.t048-original.bak`，再用 `</head>` 唯一锚点加载本地模块。模块以 MutationObserver 等待 Composer，检测到后仅安排一次一秒延时，再以原生 value setter、冒泡 InputEvent 与同作用域原发送按钮提交固定测试文本；未改 `out/extension.js`、未接入网络或 PeerJS server。`node --check`、UTF-8 无 BOM/LF、唯一 HTML 引用与备份 SHA-256 均通过。
 		- [~] parent：待方先生重新加载 VS Code 窗口后的真实 UI 验收：官方 Composer 是否可见地仅提交一次“你好，我是谁”；如选择器不匹配，下一 worker 只修正 `perload.js` 的 DOM 定位，不改官方 bundle。
 		- [~] parent：方先生指出首测脚本为固定插件版本做了无意义的多输入、多按钮兜底；重排为只保留一个已证实 Composer/发送按钮定位、等待页面就绪、一秒延迟、React 可识别输入与原按钮提交。
-			- [x] worker：仅修改官方扩展 `webview/perload.js`；已收敛为固定 `[data-codex-composer-root] .ProseMirror[contenteditable="true"]` 及同根启用 `button[type="submit"]`，删除通用 input/按钮扫描、重复查询和无关分支。前者由 `assets/codex-composer-adapter-DlOHmZFM.js` 的根与 ProseMirror 静态证据确认；后者基于同 Composer Input `onSubmit` 结构，当前包没有可证明的发送按钮 data-testid。保留一秒延迟、固定测试文本和无页面时安全退出；未改 `index.html`、备份、bundle、网络或项目文件。`node --check`、UTF-8 无 BOM/LF/替换字符通过；真实 UI 提交仍待验收。
 			- [~] parent：方先生纠正：保留 MutationObserver，它只等待固定 Composer 与发送按钮出现；出现后立即断开并执行一次真实“输入 → 提交”，不使用延迟轮询、调度状态、泛化选择器或额外分支。
-				- [x] worker：仅修改 `webview/perload.js`，已收敛为 14 行（13 个 LF）：单一 MutationObserver 只等待已确认 Composer 根、编辑器与启用提交按钮；首次同时出现即断开，写入固定测试文本、派发 React 可识别 input 并点击原按钮。无 timeout、状态变量、函数封装、重复查询或无关分支；未改其他文件。`node --check`、UTF-8 无 BOM/LF/替换字符通过，真实 UI 验收仍待方先生重载窗口后确认。
 				- [~] parent：方先生确认极简写法应以 MutationObserver 回调的第二参数断开监听，直接保存 root/editor/button 三个 DOM 引用，不保留额外状态或抽象。
-					- [x] worker：仅修改 `webview/perload.js`，已严格采用方先生确认的极简结构：内联 `new MutationObserver((_, observer) => …).observe(…)`，回调仅保存 root/editor/button 三个引用，出现后断开、输入并点击；未改变选择器、测试文本、输入事件语义或其他文件。12 行，`node --check`、UTF-8 无 BOM/LF/替换字符通过；真实 UI 验收仍待方先生重载窗口后确认。
 					- [<] parent：方先生重载后未成功。根因已定位：脚本把 `button[type="submit"]:not(:disabled)` 作为进入条件；空 Composer 的发送按钮通常在输入前禁用，脚本因而既不填入文本，也不会产生后续 DOM 变化。改为先等待实际 ProseMirror 与其 form，使用浏览器真实插入动作填入文本，再调用 form 的真实 submit 事件；不再依赖按钮预先启用。
-					- [x] worker：仅修改 `webview/perload.js`；现保留单一 MutationObserver 与固定 Composer 根，等待 `.ProseMirror[contenteditable="true"]` 和同根 form 后断开。用 `document.execCommand("insertText")` 触发浏览器真实编辑动作输入固定文本，再调用该 form 的 `requestSubmit()`；不再查询或点击预先启用的按钮，也没有重试或泛化兜底。静态证据为 Composer Input 的 `onSubmit` 与同根 form 语义；`node --check`、UTF-8 无 BOM/LF/替换字符通过。重载后的真实 UI 仍待方先生确认。
-					- [x] parent：已以原用户配置启动 `F:\pro\extends-electron-vite`，VS Code 的 `9222` CDP 端口与 Chrome DevTools MCP 均已实际连接；从 `extensionId=openai.chatgpt` 的 Webview 创建三个独立测试任务，通过真实焦点、键盘输入与 Enter 分别提交“你好 / 早上好 / 晚上好”的三条测试问候。每条均在对应任务 DOM 中出现并进入“正在思考”；当前只证明 MCP 可观察的真实 Composer 提交链路，未把 `perload.js` 的自动提交误标为已验收。
 					- [<] parent：方先生纠正：验证当前对话的输入提交时，默认只在当前线程提交并观察，一条短文本已足够；除非方先生明确要求并行或新话题，不得为测试新建任务、切换话题或制造额外运行任务。
-- [x] T-061 方先生提出：全局 Codex 模板明确 VS Code 的 CDP 可观察调试边界与可复制 PowerShell 启动脚本。验收：仅在需要 Chrome DevTools MCP/CDP 操作 VS Code Workbench、Webview 或官方 Codex 抽屉时要求该启动方式；普通扩展调试不适用；脚本以项目根目录占位、只绑定 `127.0.0.1`、明确必须先退出既有 VS Code 主进程；源模板与物化产物一致并通过针对性验证。
-	- [x] worker：已修改 `honoapp/src/tpl/global/source.ts` 并定向物化 `C:\Users\diyya\.codex\skills\codebase-mcp-styleskill\SKILL.md`；`pnpm typecheck`、源/产物一致、UTF-8 无 BOM/LF、语义锚点与 `git diff --check` 均通过。
-- [x] T-062 方先生提出：并行验证三个具体工作者的即时回复。验收：三个 `workerLow` 同时只回答“你是谁”，不读取项目、不调用工具、不改文件、不创建或切换 Codex 话题。
-	- [x] workerLow#1：返回“方先生”。
-	- [x] workerLow#2：返回“方先生”。
-	- [x] workerLow#3：返回“方先生”。
 
 
 
@@ -172,18 +193,7 @@ pnpm --dir honoapp-vscode-plugin run build
 
 
 - [~] T-063 方先生提出：`preloads` 作为当前工作区的扁平导出库，新增 `vsocde-codex-preload.ts`。验收：不创建 `src`；`preloads` 自身成为 pnpm workspace 包；导出风格与 `extends-zustand` 一致；文件仅实现官方 Codex Webview 的最小预加载输入桥接，不改官方扩展或其他项目。
-	- [x] worker：已创建库根 `package.json`、`tsconfig.json` 与 `vsocde-codex-preload.ts`，并将 pnpm workspace 成员由 `preloads/*` 调整为 `preloads`；`pnpm --dir preloads exec tsc --noEmit`、workspace 识别、UTF-8/LF 与 `git diff --check` 均通过。
-	- [x] workerLow：已将顶层 `preloadFormInsert` 收进默认导出；仅保留函数内回调，供“首次立即检查”和 MutationObserver 复用，避免重复 DOM 逻辑。类型检查、UTF-8/LF 与 `git diff --check` 均通过。
-	- [x] parent 纠正：新增输入框只属于临时验证 UI，不作为库的主要提交路径；保留其“写入官方输入框并 `requestSubmit()`”的兜底能力，同时正在定位官方 Codex Webview 的真实提交入口，新增直接调用能力。
-	- [x] parent：已定位官方提交链：`codex-composer-adapter-*.js` 中私有 `Yv(...)` 是真实提交处理器，由 React `handleSubmit` 闭包持有；它没有模块导出或 `window` 暴露。官方表单的 `requestSubmit()` 是唯一不依赖 React 私有实现、仍能进入同一提交链的稳定入口。
-	- [x] workerLow：已新增公开 `composerSubmit()`，只定位官方 Composer form 后调用 `requestSubmit()`；临时输入框保留，并已改为调用此 API 验证。`pnpm --dir preloads exec tsc --noEmit` 与 UTF-8/LF 检查通过。
-	- [x] parent 纠正：方先生要求移除临时输入框、MutationObserver、重复注入和额外 API；workerLow 已收敛为唯一默认导出 `vsocdeCodexPreload(preloadText: string)`，只负责写入官方 Composer 并提交。类型检查与 UTF-8/LF/diff 检查通过。
-	- [x] parent：TypeScript 报告 `document.execCommand` 已弃用；workerLow 已改用 `textContent` 与标准 `InputEvent`，随后调用 `requestSubmit()`。类型与文件完整性检查通过；尚未向实际会话发送消息，故运行时页面行为未标记为已验证。
 	- [~] parent：真实 Webview 验证 1/4 已完成：9222 已连接，真实会话位于外层 Webview 的 `#active-frame.contentDocument`；已确认 Composer 与编辑器存在，但不存在 `<form>`，旧 `requestSubmit()` 实现不可用。当前会话运行时仅显示“停止”按钮，不能伪造为已提交。
 	- [~] parent：真实 Webview 验证 2/4：已启动独立等待空闲的 CDP 验证器；待 Composer 空闲后读取真实发送控件的可观察属性与选择器；只以实际控件为证据，不猜测 `form` 或 React 私有调用。
-	- [x] workerLow：方先生要求先独立补齐已有记录读取；已删除错误的 `ask()` 导出，新增 `vsocdeCodexHistoryGet(): string[]`，只返回已有最终 AI 回复；未触碰 `input()`、未实现 `ask()`、未做提交验证。`pnpm --dir preloads exec tsc --noEmit`、UTF-8 完整性与 diff 检查通过。
 	- [ ] workerLow：真实 Webview 验证 3/4：收到发送控件证据后，修正 `input(preloadText): void`；以固定测试消息实际发送，并确认出现用户消息节点与最终 AI 回复节点。
 	- [ ] workerLow：真实 Webview 验证 4/4：在已验证的提交链上实现 `ask(preloadText): Promise<string>`；只返回本轮最终 AI 回复。`vsocdeCodexHistoryGet(): string[]` 保持为独立的历史 AI 回复读取方法，另行运行时验证。
-	- [x] parent：方先生追加需要历史会话读取；已从官方源码定位消息锚点，并新增 `vsocdeCodexHistoryGet()`。当前 CDP 只暴露 VS Code Webview 外层 `fake.html`，不把空页面当作实际验证结果。
-	- [x] parent 纠正：方先生要求历史返回值只包含 AI 回答，不包含用户提问；workerLow 已将 `vsocdeCodexHistoryGet()` 收敛为只读 `data-local-conversation-final-assistant` 的 `string[]`，类型与文本格式检查通过。
-- [x] T-060 方先生确认当前项目关系：`tdodoapp` 是 TodoApp 页面包，`vscode-plugin` 是调用其公开包入口的 VS Code 插件；旧目录名不再作为运行时路径或依赖。

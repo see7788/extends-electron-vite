@@ -1,5 +1,8 @@
 packages:
-  - 'mainapp'
-  - 'libs/*'
+  - 'vscode-plugin'
+  - 'apps/*'
+  - 'libs/**'
   - '../extends-react'
+  - '../extends-antd'
+  - '../extends-hono'
   - '../extends-zustand'

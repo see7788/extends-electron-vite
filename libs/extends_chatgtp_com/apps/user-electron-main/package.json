@@ -1,0 +1,19 @@
+{
+  "name": "user-electron-main",
+  "version": "0.1.0",
+  "private": true,
+  "description": "User main process.",
+  "main": "./out/main/index.js",
+  "config": {
+    "userWebUrl": "http://127.0.0.1:8788/user-web/"
+  },
+  "dependencies": {
+    "electron": "39.2.5"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "electron-vite": "4.0.1",
+    "typescript": "5.8.3",
+    "vite": "6.3.5"
+  }
+}

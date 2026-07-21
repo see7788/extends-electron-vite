@@ -1,0 +1,15 @@
+{
+  "name": "userapp-electron-preload",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Userapp preload for experiment transport.",
+  "main": "./out/index.js",
+  "dependencies": {
+    "electron": "39.2.5",
+    "userapp-src": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "typescript": "5.8.3"
+  }
+}

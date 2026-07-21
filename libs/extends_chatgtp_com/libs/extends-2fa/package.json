@@ -1,0 +1,12 @@
+{
+  "name": "extends-2fa",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./src/*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "typescript": "5.8.3"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "userapp-remoteweb",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Userapp remote web for comment demo.",
+  "type": "module",
+  "main": "dist/index.html",
+  "dependencies": {
+    "antd": "5.25.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "7.18.1",
+    "userapp-src": "workspace:*",
+    "zustand": "5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@vitejs/plugin-react": "4.3.4",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "typescript": "5.8.3",
+    "vite": "6.3.5"
+  },
+  "scripts": {
+    "dev": "vite --port 8810 --open",
+    "build": "vite build"
+  }
+}

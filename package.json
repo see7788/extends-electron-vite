@@ -5,7 +5,7 @@
   "author": "example.com",
   "homepage": "https://electron-vite.org",
   "scripts": {
-    "dev": "concurrently --kill-others-on-fail \"extends-codex restart\" \"pnpm --dir mainapp exec electron-vite dev --watch --remoteDebuggingPort %npm_package_config_electronRemoteDebuggingPort%\""
+    "dev": "concurrently --kill-others-on-fail \"extends-codex restart\" \"pnpm --dir apps/mainapp exec electron-vite dev --watch --remoteDebuggingPort %npm_package_config_electronRemoteDebuggingPort%\""
   },
   "config": {
     "electronRemoteDebuggingPort": "9222"
