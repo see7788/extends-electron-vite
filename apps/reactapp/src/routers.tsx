@@ -7,9 +7,30 @@ export default createHashRouter([
   },
   {
     path: "/todotree",
-    lazy: async () => {
-      const { default: TodoTree } = await import("./todotree");
-      return { Component: TodoTree };
-    },
+    lazy: async () => ({ Component: (await import("./todotree")).default }),
+  },
+  {
+    path: "/chat",
+    lazy: async () => ({ Component: (await import("./chat")).default }),
+  },
+  {
+    path: "/email",
+    lazy: async () => ({ Component: (await import("./email")).default }),
+  },
+  {
+    path: "/file",
+    lazy: async () => ({ Component: (await import("./file")).default }),
+  },
+  {
+    path: "/sse",
+    lazy: async () => ({ Component: (await import("./sse")).default }),
+  },
+  {
+    path: "/tpl",
+    lazy: async () => ({ Component: (await import("./tpl")).default }),
+  },
+  {
+    path: "/tpl/global",
+    lazy: async () => ({ Component: (await import("./tpl/global")).default }),
   },
 ]);
