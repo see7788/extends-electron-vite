@@ -40,13 +40,15 @@ const accounts: Array<{
   },
 ];
 
+export const emailCollectSchema = z.object({
+  email: z.string().min(1),
+});
+
 export default new Hono().basePath("/email")
   .get("/accounts", c => c.json(accounts))
   .post(
     "/collect",
-    zValidator("json", z.object({
-      email: z.string().min(1),
-    })),
+    zValidator("json", emailCollectSchema),
     async c => {
       const payload = c.req.valid("json");
       const account = accounts.find(item => item.username === payload.email)!;
