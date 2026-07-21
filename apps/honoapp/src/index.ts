@@ -9,10 +9,12 @@ import fileRouter from "./file";
 import { ssePushRouter, sseRouter } from "./sse";
 import store from "./store";
 import tplRouter from "./tpl";
+import tpl2Router from "./tpl2";
 import globalTplRouter from "./tpl/global";
 const app = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
   .route("/", tplRouter)
+  .route("/", tpl2Router)
   .route("/", globalTplRouter)
   .route("/", sseRouter)
   .route("/", ssePushRouter)
