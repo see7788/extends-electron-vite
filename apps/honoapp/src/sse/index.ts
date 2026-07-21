@@ -8,6 +8,11 @@ type SseMessage = {
   stop?: boolean;
 };
 
+export const ssePushSchema = z.object({
+  text: z.string(),
+  stop: z.boolean().optional(),
+});
+
 const connections = new Set<(message: SseMessage) => void>();
 
 export const sseSend = async (message: SseMessage) => {
@@ -17,10 +22,7 @@ export const sseSend = async (message: SseMessage) => {
 };
 
 export const ssePushRouter = new Hono()
-  .post("/ssepush", zValidator("json", z.object({
-    text: z.string(),
-    stop: z.boolean().optional(),
-  })), async (ctx) => {
+  .post("/ssepush", zValidator("json", ssePushSchema), async (ctx) => {
     await sseSend(ctx.req.valid("json"));
     return ctx.json({ ok: true });
   });
