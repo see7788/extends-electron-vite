@@ -4,9 +4,3 @@ exclude = ["ELECTRON_RUN_AS_NODE"]
 
 [features]
 hooks = true
-
-[[hooks.UserPromptSubmit]]
-hooks = [{ type = "command", command = "HOOK_USER_COMMAND", timeout = 10 }]
-
-[[hooks.Stop]]
-hooks = [{ type = "command", command = "HOOK_ASSISTANT_COMMAND", timeout = 10 }]
