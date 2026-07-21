@@ -1,7 +1,4 @@
-import { lazy } from "react";
 import { createHashRouter, Navigate } from "react-router-dom";
-
-const TodoTree = lazy(() => import("./todotree"));
 
 export default createHashRouter([
   {
@@ -10,6 +7,9 @@ export default createHashRouter([
   },
   {
     path: "/todotree",
-    element: <TodoTree />,
+    lazy: async () => {
+      const { default: TodoTree } = await import("./todotree");
+      return { Component: TodoTree };
+    },
   },
 ]);
