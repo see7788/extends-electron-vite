@@ -1,11 +1,15 @@
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Project } from "ts-morph";
 import type { StateCreator } from "zustand";
+import { z } from "zod";
 import type { Store } from "../store";
 import CodexOutput from "./output";
 import { sourceSchema, type ProjectSource } from "./output/schema";
 import projectSource from "./source";
+
+export const workspacePathSchema = z.object({ workspacePath: z.string().refine(existsSync, "workspacePath must exist") });
 
 export type TplStore = {
   tpl: {
