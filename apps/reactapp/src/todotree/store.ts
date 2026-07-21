@@ -42,8 +42,7 @@ const nodeFieldSet = <Field extends keyof Pick<TodoTreeNode, "title" | "status" 
     node[field] = fieldValue;
   }
 };
-
-const createTodoTreeStore = immerStateCreator<TodoTreeStore>((set) => ({
+export default immerStateCreator<TodoTreeStore>((set) => ({
   todotree: {
     nodesById: {},
   },
@@ -138,4 +137,3 @@ const createTodoTreeStore = immerStateCreator<TodoTreeStore>((set) => ({
   },
 }));
 
-export default createTodoTreeStore;
