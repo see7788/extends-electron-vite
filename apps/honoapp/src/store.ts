@@ -2,10 +2,11 @@ import cwdPersist from "extends-zustand/cwdPersist";
 import chatStore, { type ChatStore } from "./chat/store";
 import tplStore, { type TplStore } from "./tpl/store";
 import globalTplStore, { type GlobalTplStore } from "./tpl/global/store";
+import tpl2Store, { type Tpl2Store } from "./tpl2/store";
 import { createStore } from "zustand";
 import { immer } from "zustand/middleware/immer";
 
-export type Store = ChatStore & TplStore & GlobalTplStore & {
+export type Store = ChatStore & TplStore & GlobalTplStore & Tpl2Store & {
   runtimeActions: {
     hostname: string;
     port: number;
@@ -14,7 +15,7 @@ export type Store = ChatStore & TplStore & GlobalTplStore & {
 
 export default createStore<Store>()(
   cwdPersist({
-    initializer: immer<Store>((set, get) => ({
+    initializer: immer<Store>((set, get, api) => ({
       runtimeActions: {
         hostname: "127.0.0.1",
         port: 3005
@@ -22,6 +23,7 @@ export default createStore<Store>()(
       ...chatStore(set, get),
       ...tplStore(set, get),
       ...globalTplStore(set, get),
+      ...tpl2Store(set, get, api),
     })),
   }),
 );
