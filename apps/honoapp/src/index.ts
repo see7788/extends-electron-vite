@@ -20,6 +20,11 @@ const app = new Hono()
   .route("/", ssePushRouter)
   .route("/", emailRouter)
   .route("/", fileRouter)
+  .all("/tpl2-mcp", async (ctx) => {
+    const { server, transport } = store.getState().mcpActions.tpl2;
+    if (!server.isConnected()) await server.connect(transport);
+    return transport.handleRequest(ctx);
+  })
   .route("/", await createViteRouter({
     root: fileURLToPath(new URL("../../reactapp", import.meta.url)),
   }));
