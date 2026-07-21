@@ -10,10 +10,6 @@ export default createHashRouter([
     lazy: async () => ({ Component: (await import("./todotree")).default }),
   },
   {
-    path: "/chat",
-    lazy: async () => ({ Component: (await import("./chat")).default }),
-  },
-  {
     path: "/email",
     lazy: async () => ({ Component: (await import("./email")).default }),
   },
