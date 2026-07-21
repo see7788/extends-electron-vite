@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Project } from "ts-morph";
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import CodexOutput from "./output";
@@ -21,14 +22,33 @@ export type Tpl2Store = {
 
 const workspacePathGlobal = homedir();
 
-const createTpl2 = immerStateCreator<Tpl2Store>((set, get) => {
+const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
+  const nodesRead = () => {
+    const { hostname, port } = (api.getState() as Tpl2Store & {
+      runtimeActions: { hostname: string; port: number };
+    }).runtimeActions;
+    const hookCommandRead = (role: "assistant" | "user") => [
+      "node",
+      JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")),
+      JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))),
+      "hook",
+      JSON.stringify(hostname),
+      port,
+      role,
+    ].join(" ");
+    return {
+      ...sourceDefault.project.nodes,
+      HOOK_ASSISTANT_COMMAND: hookCommandRead("assistant"),
+      HOOK_USER_COMMAND: hookCommandRead("user"),
+    };
+  };
   const sourceScopeRead = (workspacePath: string) => workspacePath === workspacePathGlobal ? "global" : "project";
   const sourceTextRead = (sourceValue: Source) => {
     const { nodes: sourceNodes, ...sourceData } = sourceValue;
     const sourceLines = JSON.stringify(sourceData, undefined, 2).split("\n");
     sourceLines[sourceLines.length - 2] += ",";
     return [
-      `const nodes = ${JSON.stringify(sourceValue.nodes, undefined, 2)};`,
+      `const nodes = ${JSON.stringify(nodesRead(), undefined, 2)} as const;`,
       "",
       "const source = {",
       ...sourceLines.slice(1, -1).map(line => `  ${line}`),
@@ -38,9 +58,8 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get) => {
   };
   const sourceValidatedRead = (workspacePath: string, source: string) => {
     const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl2.ts", source);
-    const nodesText = sourceFile.getVariableDeclaration("nodes")?.getInitializerOrThrow().getText().replace(/\s+as const$/, "");
     const sourceText = (sourceFile.getVariableDeclaration("source")?.getInitializerOrThrow().getText() ?? source).replace(/\s+as const$/, "");
-    const sourceValue = sourceSchema.parse(new Function(`"use strict"; ${nodesText ? `const nodes = (${nodesText});` : ""} return (${sourceText});`)());
+    const sourceValue = sourceSchema.parse(new Function("nodes", `"use strict"; return (${sourceText});`)(nodesRead()));
     if (sourceValue.scope !== sourceScopeRead(workspacePath)) {
       throw new Error(`Template source scope does not match workspacePath: ${workspacePath}`);
     }
