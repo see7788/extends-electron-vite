@@ -1,6 +1,6 @@
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import { hc } from "hono/client";
-import type chatRouter from "honoapp/src/chat";
+// import type chatRouter from "honoapp/src/chat";
 import type { sseRouter } from "honoapp/src/sse";
 const emptyText = "Empty node";
 type NodesObjInfo_t = {
@@ -49,7 +49,7 @@ const createPush = immerStateCreator<{
         hookPushReceive: () => void
     }
 }>((set, get) => {
-    const chatClient = hc<typeof chatRouter>(location.origin);
+    // const chatClient = hc<typeof chatRouter>(location.origin);
     return {
         sse: {
             maxId: "1",
@@ -266,10 +266,10 @@ const createPush = immerStateCreator<{
                 const chatItem = push.chat.items[chatItemIndex] ?? push.chat.items[0];
                 if (!chatItem) return;
                 const chatTargets = [
-                    { request: chatClient.chat.llm.openai, response: "node" },
-                    { request: chatClient.chat.llm.openai, response: "graph" },
-                    { request: chatClient.chat.agent.codexcli, response: "node" },
-                ];
+                    // { request: chatClient.chat.llm.openai, response: "node" },
+                    // { request: chatClient.chat.llm.openai, response: "graph" },
+                    // { request: chatClient.chat.agent.codexcli, response: "node" },
+                ] as any;
                 const chatTarget = chatTargets[chatItemIndex] ?? chatTargets[0];
                 const targetName = chatItem.label;
                 const targetPrompt = chatItem.prompt.trim();
