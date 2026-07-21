@@ -16,4 +16,7 @@ export default create<ReturnType<typeof createFile>
     ...createTodotree(set, get, api),
   })), {
     name: "extends-codex",
+    partialize: (store) => Object.fromEntries(
+      Object.entries(store).filter(([storeKey]) => !storeKey.endsWith("Actions")),
+    ),
   }));
