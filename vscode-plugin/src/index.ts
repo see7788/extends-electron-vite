@@ -1,6 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync } from "node:fs";
-import { tdodoappViteCommand } from "tdodoapp";
 import * as vscode from "vscode";
 
 type ServiceState = "stopped" | "starting" | "running" | "stopping";
@@ -70,24 +69,24 @@ class ServiceController {
 
   private async start(input: { workspacePath: string }) {
     this.stateSet("starting");
-    try {
-      const serviceProcess = serviceProcessStart(input);
-      this.serviceProcess = serviceProcess;
-      this.processWatch(serviceProcess);
-      const origin = await serviceOriginWait({ output: this.output, serviceProcess });
-      this.origin = origin;
-      const browserProcess = browserProcessStart({ origin, profilePath: this.browserProfilePath });
-      this.browserProcess = browserProcess;
-      this.browserWatch(browserProcess);
-      this.stateSet("running");
-    } catch (error) {
-      const serviceProcess = this.serviceProcess;
-      this.serviceProcess = undefined;
-      this.origin = undefined;
-      await processStop(serviceProcess);
-      this.stateSet("stopped");
-      throw error;
-    }
+    // try {
+    //   const serviceProcess = serviceProcessStart(input);
+    //   this.serviceProcess = serviceProcess;
+    //   this.processWatch(serviceProcess);
+    //   const origin = await serviceOriginWait({ output: this.output, serviceProcess });
+    //   this.origin = origin;
+    //   const browserProcess = browserProcessStart({ origin, profilePath: this.browserProfilePath });
+    //   this.browserProcess = browserProcess;
+    //   this.browserWatch(browserProcess);
+    //   this.stateSet("running");
+    // } catch (error) {
+    //   const serviceProcess = this.serviceProcess;
+    //   this.serviceProcess = undefined;
+    //   this.origin = undefined;
+    //   await processStop(serviceProcess);
+    //   this.stateSet("stopped");
+    //   throw error;
+    // }
   }
 
   private processWatch(serviceProcess: ChildProcess) {
@@ -121,9 +120,9 @@ class ServiceController {
 }
 
 function serviceProcessStart(input: { workspacePath: string }) {
-  return process.platform === "win32"
-    ? spawn("pnpm.cmd", [...tdodoappViteCommand], { cwd: input.workspacePath, stdio: ["ignore", "pipe", "pipe"], windowsHide: true })
-    : spawn("pnpm", [...tdodoappViteCommand], { cwd: input.workspacePath, stdio: ["ignore", "pipe", "pipe"] });
+  // return process.platform === "win32"
+  //   ? spawn("pnpm.cmd", [...tdodoappViteCommand], { cwd: input.workspacePath, stdio: ["ignore", "pipe", "pipe"], windowsHide: true })
+  //   : spawn("pnpm", [...tdodoappViteCommand], { cwd: input.workspacePath, stdio: ["ignore", "pipe", "pipe"] });
 }
 
 function serviceOriginWait(input: { output: vscode.OutputChannel; serviceProcess: ChildProcess }) {
