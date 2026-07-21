@@ -1,8 +1,11 @@
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Hono } from "hono";
+import { hc } from "hono/client";
+import { homedir } from "node:os";
 import store from "honoapp/src/store";
-import { workspacePathSchema } from "honoapp/src/tpl/store";
+import type tpl2Router from "honoapp/src/tpl2";
+import { workspacePathSchema } from "honoapp/src/tpl2";
 
 const app = new Hono();
 const mcpServer = new McpServer({
@@ -11,6 +14,13 @@ const mcpServer = new McpServer({
 });
 const transport = new StreamableHTTPTransport();
 
+const outputMaterialize = async (workspacePath: string) => {
+  const { hostname, port } = store.getState().runtimeActions;
+  const client = hc<typeof tpl2Router>(`http://${hostname}:${String(port)}`);
+  const response = await client.tpl2.output.materialize.$post({ json: { workspacePath } });
+  if (!response.ok) throw new Error(await response.text());
+};
+
 mcpServer.registerTool(
   "tplGlobalMaterialize",
   {
@@ -18,7 +28,7 @@ mcpServer.registerTool(
     inputSchema: {},
   },
   async () => {
-    store.getState().globalTplActions.outputMaterialize();
+    await outputMaterialize(homedir());
     return { content: [{ type: "text", text: "全局模板物化成功。" }] };
   },
 );
@@ -30,8 +40,7 @@ mcpServer.registerTool(
     inputSchema: workspacePathSchema.shape,
   },
   async ({ workspacePath }) => {
-    const { runtimeActions, tplActions } = store.getState();
-    tplActions.outputMaterialize({ ...runtimeActions, workspacePath });
+    await outputMaterialize(workspacePath);
     return { content: [{ type: "text", text: "项目模板物化成功。" }] };
   },
 );
