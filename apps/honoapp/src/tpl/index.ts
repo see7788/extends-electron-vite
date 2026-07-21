@@ -1,11 +1,12 @@
 import { zValidator } from "@hono/zod-validator";
+import { existsSync } from "node:fs";
 import { Hono } from "hono";
 import { z } from "zod";
 import store from "../store";
 
 export type { ProjectSource as Tpl } from "./output/schema";
 
-const workspacePathSchema = z.object({ workspacePath: z.string().min(1) });
+const workspacePathSchema = z.object({ workspacePath: z.string().refine(existsSync, "workspacePath must exist") });
 const sourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
 
 const tplRouter = new Hono()
