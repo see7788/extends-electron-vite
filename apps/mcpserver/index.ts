@@ -18,7 +18,9 @@ const outputMaterialize = async (workspacePath: string) => {
   const { hostname, port } = store.getState().runtimeActions;
   const client = hc<typeof tpl2Router>(`http://${hostname}:${String(port)}`);
   const response = await client.tpl2.output.materialize.$post({ json: { workspacePath } });
-  if (!response.ok) throw new Error(await response.text());
+  const content = await response.text();
+  if (!response.ok) throw new Error(content);
+  return content;
 };
 
 mcpServer.registerTool(
@@ -28,8 +30,7 @@ mcpServer.registerTool(
     inputSchema: {},
   },
   async () => {
-    await outputMaterialize(homedir());
-    return { content: [{ type: "text", text: "全局模板物化成功。" }] };
+    return { content: [{ type: "text", text: await outputMaterialize(homedir()) }] };
   },
 );
 
@@ -40,8 +41,7 @@ mcpServer.registerTool(
     inputSchema: workspacePathSchema.shape,
   },
   async ({ workspacePath }) => {
-    await outputMaterialize(workspacePath);
-    return { content: [{ type: "text", text: "项目模板物化成功。" }] };
+    return { content: [{ type: "text", text: await outputMaterialize(workspacePath) }] };
   },
 );
 
