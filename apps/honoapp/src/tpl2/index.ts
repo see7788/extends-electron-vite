@@ -12,6 +12,8 @@ const sourceInputSchema = workspacePathSchema.extend({
   source: z.string().min(1),
 });
 
+export { sourceInputSchema, workspacePathSchema };
+
 const tpl2Router = new Hono()
   .basePath("/tpl2")
   .get("/source", zValidator("query", workspacePathSchema), (ctx) => ctx.json(
