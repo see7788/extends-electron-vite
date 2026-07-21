@@ -20,16 +20,16 @@ const app = new Hono()
   .route("/", ssePushRouter)
   .route("/", emailRouter)
   .route("/", fileRouter)
-  .all("/tpl2-mcp", async (ctx) => {
-    const { server, transport } = store.getState().mcpActions.tpl2;
-    if (!server.isConnected()) await server.connect(transport);
-    return transport.handleRequest(ctx);
-  })
   .route("/", await createViteRouter({
     root: fileURLToPath(new URL("../../reactapp", import.meta.url)),
   }));
 const { hostname, port } = store.getState().runtimeActions;
-const server = serve({ fetch: app.fetch, hostname, port }, (info) => {
+const server = serve({ fetch: (request, env) => app.fetch(request, {
+  ...env,
+  api: store,
+  mcp: store.getState().mcpActions.tpl2,
+  responseContentRead: store.getState().mcpActions.responseContentRead,
+}), hostname, port }, (info) => {
   console.log(`http://${hostname}:${String(info.port)}`);
 });
 process.once("SIGINT", () => server.close());
