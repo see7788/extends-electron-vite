@@ -4,9 +4,9 @@ import { z } from "zod";
 import store from "../store";
 import { workspacePathSchema } from "./store";
 
-export type { ProjectSource as Tpl } from "../tpl2/schema";
+export type { ProjectSource as Tpl } from "../tpl2/source";
 
-const sourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
+export const tplSourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
 
 const tplRouter = new Hono()
   .basePath("/tpl")
@@ -19,7 +19,7 @@ const tplRouter = new Hono()
       workspacePath: ctx.req.valid("query").workspacePath,
     }));
   })
-  .put("/source", zValidator("json", sourceSchema), (ctx) => {
+  .put("/source", zValidator("json", tplSourceSchema), (ctx) => {
     const { hostname, port } = store.getState().runtimeActions;
     store.getState().tplActions.sourceUpdate({ ...ctx.req.valid("json"), hostname, port });
     return ctx.json(null, 200);
