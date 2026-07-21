@@ -3,10 +3,10 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import localCodexUserConfig from 'chatgpt-com-tocodex/userConfig'
-
+import store from "honoapp/src/store"
 delete process.env.ELECTRON_RUN_AS_NODE
 
-const { host, port } = packageJson
+const { hostname: host, port } = store.getState().runtimeActions
 const mainappDirectory = dirname(fileURLToPath(import.meta.url))
 const hostUserConfig = {
   main: {
