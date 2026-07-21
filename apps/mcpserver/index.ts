@@ -1,51 +1,47 @@
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { store } from "honoapp";
 import { Hono } from "hono";
+import store from "honoapp/src/store";
+import { existsSync } from "node:fs";
 import { z } from "zod";
 
-const materializeInputSchema = z.object({});
+const app = new Hono();
+const mcpServer = new McpServer({
+  name: "extends-mcpserver",
+  version: "0.0.0",
+});
+const transport = new StreamableHTTPTransport();
 
-const mcpserverApp = () => {
-  const app = new Hono();
-  const mcpServer = new McpServer({
-    name: "extends-mcpserver",
-    version: "0.0.0",
-  });
-  const transport = new StreamableHTTPTransport();
+mcpServer.registerTool(
+  "tplGlobalMaterialize",
+  {
+    description: "物化全局 Codex 模板；只写入用户级 Codex 工作区。",
+    inputSchema: {},
+  },
+  async () => {
+    store.getState().globalTplActions.outputMaterialize();
+    return { content: [{ type: "text", text: "全局模板物化成功。" }] };
+  },
+);
 
-  mcpServer.registerTool(
-    "tplGlobalMaterialize",
-    {
-      description: "物化全局 Codex 模板；只写入用户级 Codex 工作区。",
-      inputSchema: materializeInputSchema.shape,
+mcpServer.registerTool(
+  "tplProjectMaterialize",
+  {
+    description: "物化项目 Codex 模板；只写入指定项目工作区。",
+    inputSchema: {
+      workspacePath: z.string().refine(existsSync, "workspacePath must exist"),
     },
-    async () => {
-      store.getState().globalTplActions.outputMaterialize();
-      return { content: [{ type: "text", text: "全局模板物化成功。" }] };
-    },
-  );
+  },
+  async ({ workspacePath }) => {
+    const { runtimeActions, tplActions } = store.getState();
+    tplActions.outputMaterialize({ ...runtimeActions, workspacePath });
+    return { content: [{ type: "text", text: "项目模板物化成功。" }] };
+  },
+);
 
-  mcpServer.registerTool(
-    "tplProjectMaterialize",
-    {
-      description: "物化项目 Codex 模板；只写入当前启动服务所绑定的项目工作区。",
-      inputSchema: materializeInputSchema.shape,
-    },
-    async () => {
-      const { runtimeActions, tplActions } = store.getState();
-      if (!runtimeActions) throw new Error("honoapp 服务尚未启动，无法物化项目模板");
-      tplActions.outputMaterialize(runtimeActions);
-      return { content: [{ type: "text", text: "项目模板物化成功。" }] };
-    },
-  );
+app.all("/mcp", async (context) => {
+  if (!mcpServer.isConnected()) await mcpServer.connect(transport);
+  return transport.handleRequest(context);
+});
 
-  app.all("/mcp", async (context) => {
-    if (!mcpServer.isConnected()) await mcpServer.connect(transport);
-    return transport.handleRequest(context);
-  });
-
-  return app;
-};
-
-export default mcpserverApp;
+export default app;
