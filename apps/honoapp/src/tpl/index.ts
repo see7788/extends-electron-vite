@@ -4,7 +4,7 @@ import { z } from "zod";
 import store from "../store";
 import { workspacePathSchema } from "./store";
 
-export type { ProjectSource as Tpl } from "./output/schema";
+export type { ProjectSource as Tpl } from "../tpl2/schema";
 
 const sourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
 
