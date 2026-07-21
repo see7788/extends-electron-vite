@@ -1,4 +1,5 @@
 packages:
-  - 'apps/*'
+  - 'mainapp'
   - 'libs/*'
+  - '../extends-react'
   - '../extends-zustand'

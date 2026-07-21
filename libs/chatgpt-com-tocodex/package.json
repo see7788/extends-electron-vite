@@ -1,0 +1,31 @@
+{
+  "name": "chatgpt-com-tocodex",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/node": "^22.19.1",
+    "electron": "^39.2.6",
+    "electron-vite": "^5.0.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.2",
+    "@kudoai/chatgpt.js": "4.15.1",
+    "antd": "^6.5.1",
+    "electron-log": "5.4.4",
+    "extends-electron": "workspace:*",
+    "extends-react": "workspace:*",
+    "extends-zustand": "workspace:*",
+    "p-queue": "9.3.1",
+    "zod": "4.4.3",
+    "zustand": "5.0.13"
+  }
+}
