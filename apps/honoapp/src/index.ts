@@ -4,7 +4,6 @@ import { serve } from "@hono/node-server";
 import createViteRouter from "extends-hono/create-reactapp-router";
 import { Hono } from "hono";
 import { fileURLToPath} from "node:url";
-import chatRouter from "./chat";
 import emailRouter from "./email";
 import fileRouter from "./file";
 import { ssePushRouter, sseRouter } from "./sse";
@@ -13,7 +12,6 @@ import tplRouter from "./tpl";
 import globalTplRouter from "./tpl/global";
 const app = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
-  .route("/", chatRouter)
   .route("/", tplRouter)
   .route("/", globalTplRouter)
   .route("/", sseRouter)
