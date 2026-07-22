@@ -3,8 +3,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { Project } from "ts-morph";
 import immerStateCreator from "extends-zustand/immerStateCreator";
+import { Project } from "ts-morph";
 import CodexOutput from "./output";
 import sourceDefault, { sourceSchema, type Source } from "../../source";
 
@@ -13,20 +13,21 @@ export type Tpl2Store = {
     source: string;
   }>;
   tpl2Actions: {
+    mcp: {
+      responseContentRead: (response: Response) => Promise<{ content: Array<{ type: "text"; text: string }> }>;
+      server: McpServer;
+      transport: StreamableHTTPTransport;
+    };
     outputFilesStatus: (workspacePath: string) => ReturnType<CodexOutput["filesStatus"]>;
     outputMaterialize: (workspacePath: string) => void;
     outputRebase: (workspacePath: string) => void;
-    responseContentRead: (response: Response) => Promise<{ content: Array<{ type: "text"; text: string }> }>;
-    server: McpServer;
     sourceRead: (workspacePath: string) => string;
     sourceUpdate: (workspacePath: string, source: string) => void;
-    transport: StreamableHTTPTransport;
   };
 };
 
-const workspacePathGlobal = homedir();
-
 const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
+  const workspacePathGlobal = homedir();
   const nodesRead = () => {
     const { hostname, port } = (api.getState() as Tpl2Store & {
       runtimeActions: { hostname: string; port: number };
@@ -73,31 +74,38 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
     ?? sourceTextRead(sourceDefault[sourceScopeRead(workspacePath)]);
   const outputRead = (workspacePath: string) => new CodexOutput({
     path: join(workspacePath, ".codex"),
-    source: sourceValidatedRead(workspacePath, get().tpl2[workspacePath]?.source ?? JSON.stringify(sourceDefault[sourceScopeRead(workspacePath)])),
+    source: sourceValidatedRead(workspacePath, sourceRead(workspacePath)),
   });
   return {
     tpl2: {},
     tpl2Actions: {
-      outputFilesStatus: (workspacePath) => outputRead(workspacePath).filesStatus(),
-      outputMaterialize: (workspacePath) => outputRead(workspacePath).materialize(),
-      outputRebase: (workspacePath) => outputRead(workspacePath).rebase(),
-      responseContentRead: async (response) => {
-        const text = await response.text();
-        if (!response.ok) throw new Error(text || String(response.status));
-        const body: unknown = text ? JSON.parse(text) : String(response.status);
-        return {
-          content: [{
-            type: "text",
-            text: typeof body === "string" ? body : JSON.stringify(body),
-          }],
-        };
+      mcp: {
+        responseContentRead: async (response) => {
+          const text = await response.text();
+          if (!response.ok) throw new Error(text || String(response.status));
+          const body: unknown = text ? JSON.parse(text) : String(response.status);
+          return {
+            content: [{
+              type: "text",
+              text: typeof body === "string" ? body : JSON.stringify(body),
+            }],
+          };
+        },
+        server: new McpServer({
+          name: "honoapp-tpl2",
+          version: "0.0.0",
+        }, {
+          instructions: "管理指定工作区的 Codex 模板源码及其物化文件。读取操作不会写入文件；更新、物化和 rebase 会改变持久化数据或工作区文件。",
+        }),
+        transport: new StreamableHTTPTransport(),
       },
-      server: new McpServer({
-        name: "honoapp-tpl2",
-        version: "0.0.0",
-      }, {
-        instructions: "管理指定工作区的 Codex 模板源码及其物化文件。读取操作不会写入文件；更新、物化和 rebase 会改变持久化数据或工作区文件。",
-      }),
+      outputFilesStatus: (workspacePath) => outputRead(workspacePath).filesStatus(),
+      outputMaterialize: (workspacePath) => {
+        outputRead(workspacePath).materialize();
+      },
+      outputRebase: (workspacePath) => {
+        outputRead(workspacePath).rebase();
+      },
       sourceRead,
       sourceUpdate: (workspacePath, source) => {
         const sourceValue = sourceValidatedRead(workspacePath, source);
@@ -105,7 +113,6 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
           state.tpl2[workspacePath] = { source: sourceTextRead(sourceValue) };
         });
       },
-      transport: new StreamableHTTPTransport(),
     },
   };
 });
