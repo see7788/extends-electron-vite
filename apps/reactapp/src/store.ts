@@ -20,6 +20,6 @@ export default create<ReturnType<typeof createFile>
   })), {
     name: "extends-codex",
     partialize: (store) => Object.fromEntries(
-      Object.entries(store).filter(([storeKey]) => !storeKey.endsWith("Actions")),
+      Object.entries(store).filter(([storeKey]) => storeKey !== "tpl2" && !storeKey.endsWith("Actions")),
     ),
   }));
