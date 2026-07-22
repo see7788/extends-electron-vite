@@ -48,18 +48,6 @@ const sourceBaseSchema = z.object({
   ),
 });
 
-const mcpServersSchema = z.record(z.string().min(1), z.object({
-  args: z.array(z.string()).optional(),
-  command: z.string().min(1),
-}));
-
-const agentsSchema = z.record(z.string().min(1).regex(/^[^/\\]+$/), z.object({
-  description: z.string().min(1),
-  model: z.string().min(1),
-  modelReasoningEffort: z.string().min(1),
-  developerInstructions: z.string().min(1),
-}));
-
 const projectSourceSchema = sourceBaseSchema.extend({
   scope: z.literal("project"),
   configToml: z.object({
@@ -80,9 +68,17 @@ const projectSourceSchema = sourceBaseSchema.extend({
 const globalSourceSchema = sourceBaseSchema.extend({
   scope: z.literal("global"),
   configToml: z.object({
-    mcpServers: mcpServersSchema,
+    mcpServers: z.record(z.string().min(1), z.object({
+      args: z.array(z.string()).optional(),
+      command: z.string().min(1),
+    })),
   }),
-  agents: agentsSchema,
+  agents: z.record(z.string().min(1).regex(/^[^/\\]+$/), z.object({
+    description: z.string().min(1),
+    model: z.string().min(1),
+    modelReasoningEffort: z.string().min(1),
+    developerInstructions: z.string().min(1),
+  })),
 });
 
 const sourceSchema = z.discriminatedUnion("scope", [projectSourceSchema, globalSourceSchema]);
