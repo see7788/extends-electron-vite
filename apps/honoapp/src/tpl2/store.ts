@@ -6,8 +6,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Project } from "ts-morph";
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import CodexOutput from "./output";
-import { sourceSchema, type Source } from "./schema";
-import sourceDefault from "./source";
+import sourceDefault, { sourceSchema, type Source } from "../../source";
 
 export type Tpl2Store = {
   tpl2: Record<string, {
