@@ -136,6 +136,13 @@ pnpm --dir honoapp-vscode-plugin run build
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
 
+- [~] [23:55] T-086 方先生确认：parent 自己发现的流程问题也必须立即写入台账，明确记录发现者、证据和处置，不能只在对话中说明；watcher 应在任务 ownership、读写基线或并发安排冲突时发出阻断级报警，parent 必须立即中断相关工作者，并在继续分析和重新派工前记录 watcher 反馈与任务“已中断”状态。
+	- [x] [23:55] parent 发现：T-083 的 workerMax 正在基于 `source.ts` 建立审计基线时，T-084 的 workerMedium 同时修改该文件；workerMax 返回 `Text Integrity Check Failed` 后，parent 才识别出真实并发冲突。本次不是 watcher 发现，说明 watcher 未获得持续任务事件和 ownership 快照，监督没有生效。
+	- [x] [23:55] parent 处置：已停止 workerMax 写入并要求废弃旧基线；T-084 建立 Git checkpoint 后再恢复审计。后续 watcher 发现同类冲突时，必须先触发阻断级报警，由 parent 中断工作者、写入台账，再调整 ownership 和重新派工。
+- [|] [23:41] T-085 方先生确认：由方先生明确要求创建或亲自创建的文件与目录属于受保护结构；未经逐项同意，AI 不得删除、移动、改名、合并、拆分或内联后删除，空文件、零消费者、少于 200 行和最小实现原则均不构成授权。恢复 `extends-hono/createMcpServer/mcp/browser.ts`、`codegraph.ts`、`io.ts`，`mcp/public/index.ts` 仅通过包名加真实文件路径加载，不再内联实现。
+	- [|] [23:55] workerMedium：为避免与 T-084 物化和 workerMax 审计再次发生 ownership 冲突，保持暂停；取得稳定 Git 基线后重新派工。
+- [~] [23:35] T-084 方先生确认：永久禁止 pnpm TypeScript 包内部使用 `./`、`../` 或补 `.js` 后缀引用同包源码；包内跨文件也必须使用“当前 package.name + 真实目录”的 self-reference import。立即修正 `extends-hono/createMcpServer` 的内部导入，并把实现细节加入全局 Codex 权威 source，建立 Git 检查点后物化。
+	- [~] [23:35] workerMedium：只修改 `extends-hono/createMcpServer` 的两处内部导入和 `apps/honoapp/source.ts` 对应 pnpm 包规则；不得扩大到全项目机械替换，不得物化或提交，返回类型、真实运行时导入、UTF-8 与限定 diff 证据。
 - [~] [23:31] T-083 方先生确认：全局 Codex 模板审计采用离线问题清单，不让高能力模型常驻问答。workerMax 先一次性把全部待问问题写入 `.log/codex-template-audit.md` 后休息；parent 按顺序逐题询问并记录答案；全部回答后再次启动 workerMax 汇总决策、修改权威 source、验证并物化，最终清理临时审计文件。
 	- [~] [23:31] workerMax：只读审计 `apps/honoapp/source.ts`，排除已确认事项；每题保存不少于 20 个汉字的原文、冲突或后果及单一问题，不修改任何正式源码或文档。
 - [>] [23:27] T-082 方先生确认：从全局 Codex 模板中直接删除“每项技术工作开始前先检查当前会话实际暴露的 MCP 工具，并按任务选择需要的 MCP”；不增加每任务 MCP 清单检查或能力快照替代条款。待本轮只读文档审计形成一组已确认修改后，由 workerMedium 一次性更新权威 source 并物化。
