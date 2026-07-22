@@ -139,6 +139,7 @@ pnpm --dir honoapp-vscode-plugin run build
 	- [x] parent：已明确角色边界。parent 是唯一语义决策者，负责澄清需求、拆分层级、声明依赖/ownership/验收、并行派工、吸收反馈、重排与最终闭环；直接回答的问题不制造实施节点，parent 不亲自修改业务文件。
 	- [x] parent：已明确具体工作者边界。worker/workerLow 只能领取并实施自己的节点、上报真实进度和结果；tokener 只能写自己审查节点的反馈；任何工作者不得改写根任务、兄弟节点、验收结论或其他角色状态。
 	- [x] parent：已明确 watcher 边界。watcher 常驻观察任务信封完整性、parent 私自实施、可并行节点被无理由串行、状态未及时更新、非终态任务中断、阶段性 Git 检查点及任务声明的具体文件限制；只通过专用异常接口向 parent 报告，不直接修改任务树。
+	- [x] [15:25] parent：台账 MCP 未接线期间，纯文本台账从本节点开始在每次新增记录或状态变更时使用 `[HH:mm]` 标注本地时分，不写年月日；既有历史节点保持不动。
 	- [ ] parent：实现台账 MCP 的角色受限接口。parent 接口负责 create/assign/replan/accept；worker 接口只负责自身节点 progress/report；tokener 接口只负责 review/report；watcher 接口只负责 bug/report；所有写入必须带 nodeId、agentId、时间、事实证据并由服务端校验权限和状态迁移。
 	- [ ] parent：为并行监督补齐任务节点的 dependencies、ownership 和验收字段；watcher 只根据结构化字段判断“可并行却串行”或“任务信封不完整”，不得靠理解业务标题猜测。
 	- [ ] parent：台账 MCP 未真实接线前，README 的本区仍是任务事实源且仅由 parent 写入；MCP 接线并验证后迁移现有非终态节点，所有角色改用各自接口，文档不再承担运行态并发写入。
