@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { sourceSchema, type GlobalSource, type Source } from "./schema";
+import { sourceSchema, type GlobalSource, type Source } from "../../source";
 
 type OutputState = {
   files: Record<string, string>;
