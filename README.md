@@ -135,6 +135,13 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
+- [ ] T-073 方先生提出：把“方先生表达需求 → parent 分析并直接回答或建立分层任务树 → 具体工作者实施/审查 → watcher 只发现流程异常 → parent 验收闭环”固化为多工作者协作模型；台账 MCP 完成前继续记录在本文档，完成后改由角色受限的 MCP 接口写入真实任务树。
+	- [x] parent：已明确角色边界。parent 是唯一语义决策者，负责澄清需求、拆分层级、声明依赖/ownership/验收、并行派工、吸收反馈、重排与最终闭环；直接回答的问题不制造实施节点，parent 不亲自修改业务文件。
+	- [x] parent：已明确具体工作者边界。worker/workerLow 只能领取并实施自己的节点、上报真实进度和结果；tokener 只能写自己审查节点的反馈；任何工作者不得改写根任务、兄弟节点、验收结论或其他角色状态。
+	- [x] parent：已明确 watcher 边界。watcher 常驻观察任务信封完整性、parent 私自实施、可并行节点被无理由串行、状态未及时更新、非终态任务中断、阶段性 Git 检查点及任务声明的具体文件限制；只通过专用异常接口向 parent 报告，不直接修改任务树。
+	- [ ] parent：实现台账 MCP 的角色受限接口。parent 接口负责 create/assign/replan/accept；worker 接口只负责自身节点 progress/report；tokener 接口只负责 review/report；watcher 接口只负责 bug/report；所有写入必须带 nodeId、agentId、时间、事实证据并由服务端校验权限和状态迁移。
+	- [ ] parent：为并行监督补齐任务节点的 dependencies、ownership 和验收字段；watcher 只根据结构化字段判断“可并行却串行”或“任务信封不完整”，不得靠理解业务标题猜测。
+	- [ ] parent：台账 MCP 未真实接线前，README 的本区仍是任务事实源且仅由 parent 写入；MCP 接线并验证后迁移现有非终态节点，所有角色改用各自接口，文档不再承担运行态并发写入。
 - [x] T-072 方先生提出：由 parent 接管本轮全部工作，恢复唯一 watcher、保持其他工作者休息；核实废弃 MCP 边界，强化 watcher 对改后文件乱码与 Git 发布遗漏的报警职责，收敛 `apps/honoapp/source.ts` 的 helper、外部泛型、导出类型和默认导出结构，使用中文 Git tag 保存并发布。
 	- [x] parent：已恢复唯一只读 watcher，其他工作者没有启动新任务；watcher 使用改后文件审计事件真实报告了提交前 `commit/tag/push` 缺失，parent 随后建立源码提交 `7c4dedf`，报警已处理。
 	- [x] parent：CodeGraph 证实 `apps/honoapp/src/mcp.ts` 的唯一消费者是 `apps/mcpserver/index.ts`；`apps/mcpserver` 没有启动脚本、Codex MCP 配置或其他消费者，当前运行态闲置。该链仍保存 email/file/旧 tpl 的 MCP 注册能力，未获删除授权前保持不动。
