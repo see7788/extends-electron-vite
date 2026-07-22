@@ -6,7 +6,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import { Project } from "ts-morph";
 import CodexOutput from "./output";
-import sourceDefault, { sourceSchema, type Source } from "../../source";
+import source from "../../source";
+
+type Source = typeof source.global | typeof source.project;
 
 export type Tpl2Store = {
   tpl2: Record<string, {
@@ -42,7 +44,7 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
       role,
     ].join(" ");
     return {
-      ...sourceDefault.project.nodes,
+      ...source.project.nodes,
       HOOK_ASSISTANT_COMMAND: hookCommandRead("assistant"),
       HOOK_USER_COMMAND: hookCommandRead("user"),
     };
@@ -61,17 +63,17 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
       "};",
     ].join("\n");
   };
-  const sourceValidatedRead = (workspacePath: string, source: string) => {
-    const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl2.ts", source);
-    const sourceText = (sourceFile.getVariableDeclaration("source")?.getInitializerOrThrow().getText() ?? source).replace(/\s+as const$/, "");
-    const sourceValue = sourceSchema.parse(new Function("nodes", `"use strict"; return (${sourceText});`)(nodesRead()));
+  const sourceValidatedRead = (workspacePath: string, sourceContent: string) => {
+    const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl2.ts", sourceContent);
+    const sourceText = (sourceFile.getVariableDeclaration("source")?.getInitializerOrThrow().getText() ?? sourceContent).replace(/\s+as const$/, "");
+    const sourceValue = source.schema.parse(new Function("nodes", `"use strict"; return (${sourceText});`)(nodesRead()));
     if (sourceValue.scope !== sourceScopeRead(workspacePath)) {
       throw new Error(`Template source scope does not match workspacePath: ${workspacePath}`);
     }
     return sourceValue;
   };
   const sourceRead = (workspacePath: string) => get().tpl2[workspacePath]?.source
-    ?? sourceTextRead(sourceDefault[sourceScopeRead(workspacePath)]);
+    ?? sourceTextRead(source[sourceScopeRead(workspacePath)]);
   const outputRead = (workspacePath: string) => new CodexOutput({
     path: join(workspacePath, ".codex"),
     source: sourceValidatedRead(workspacePath, sourceRead(workspacePath)),

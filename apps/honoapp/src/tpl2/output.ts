@@ -1,6 +1,9 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { sourceSchema, type GlobalSource, type Source } from "../../source";
+import sourceDefinition from "../../source";
+
+type Source = typeof sourceDefinition.global | typeof sourceDefinition.project;
+type GlobalSource = typeof sourceDefinition.global;
 
 type OutputState = {
   files: Record<string, string>;
@@ -14,7 +17,7 @@ export default class CodexOutput {
 
   constructor(input: { path: string; source: Source }) {
     this.path = input.path;
-    this.source = sourceSchema.parse(input.source);
+    this.source = sourceDefinition.schema.parse(input.source);
   }
 
   filesStatus() {

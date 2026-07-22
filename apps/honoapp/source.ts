@@ -85,13 +85,12 @@ const globalSourceSchema = sourceBaseSchema.extend({
   agents: agentsSchema,
 });
 
-export const sourceSchema = z.discriminatedUnion("scope", [projectSourceSchema, globalSourceSchema]);
+const sourceSchema = z.discriminatedUnion("scope", [projectSourceSchema, globalSourceSchema]);
 
-export type Source = z.infer<typeof sourceSchema>;
-export type ProjectSource = z.infer<typeof projectSourceSchema>;
-export type GlobalSource = z.infer<typeof globalSourceSchema>;
+type ProjectSource = z.infer<typeof projectSourceSchema>;
+type GlobalSource = z.infer<typeof globalSourceSchema>;
 
-export const nodes = {
+const nodes = {
   parentWorkflow: "parent-workflow-styleskill", // parent 私有工作流：需求澄清、派工、状态治理和中断恢复
   watcherWorkflow: "watcher-workflow-styleskill", // watcher 私有工作流：会话级流程错误发现与报警
   codebaseMcpStyle: "codebase-mcp-styleskill", // 代码库调查：源码检索、调用关系和影响范围
@@ -123,7 +122,7 @@ const global: GlobalSource = {
       model: "gpt-5.6-luna",
       modelReasoningEffort: "low",
       developerInstructions: `"""
-只加载 watcher-workflow 和会话运行时提供的 TodoTreeNode 树、agent 生命周期事件、parent 派工/实施/收尾事件及环境扫描结果；不得读取项目源码、接口、配置、skill、文档、任务信封、完整对话或业务资料。
+只加载 watcher-workflow 和会话运行时提供的 TodoTreeNode 树、agent 生命周期事件、parent 派工/实施/收尾事件、环境扫描结果及改后文件审计事件；除审计事件明确列出的已修改路径外，不得读取项目源码、接口、配置、skill、文档、任务信封、完整对话或业务资料。
 默认沉默；只在发现 WatcherBug 时向 parent 报告事实、关联 nodeIds/agentIds 和违反的流程。不得输出正常状态、周期性事实汇报或推测性提醒。
 不写任务台账、不标记状态、不创建节点、不派工、不重排、不改任何文件、不参与业务实现或技术 review。
 """`,
@@ -1008,7 +1007,7 @@ const global: GlobalSource = {
           items: [
             "watcher 是会话级监督实例，不属于任何业务任务节点；当前会话只启动一个实例。它不能跨 Codex 会话永久运行，下一会话由 parent 在首条方先生消息时重新启动。",
             "watcher 与项目相关的唯一数据模型是运行时显式提供的 TodoTreeNode[] 快照或事件载荷中的节点；`id`、`id_parent` 仅用于树关系，`status`、`agent` 仅用于结构和生命周期核验，`title` 仅用于定位，禁止解释标题的业务含义。类型声明本身不构成节点数据：没有显式 TodoTreeNode[] 输入时，只报告 `TodoTreeUnavailable`，不得凭类型、标题、文件或任何猜测推断树内容，也不得宣称当前已接入 todoapp。",
-            "watcher 还可读取通用运行事件：环境扫描结果、parent 派工/实施/收尾事件和 agent 启动/返回/失败事件。MCP 期望清单由运行时归一输入；watcher 只判断声明项能否调用，不读取或解析项目配置。",
+            "watcher 还可读取通用运行事件：环境扫描结果、parent 派工/实施/收尾事件、agent 启动/返回/失败事件，以及只包含本轮已修改路径与 Git/编码事实的 ChangedFileAudit。MCP 期望清单由运行时归一输入；watcher 只判断声明项能否调用，不读取或解析项目配置。",
             "不得读取项目业务、源码、接口、配置、skill、文档、任务信封、完整对话、业务数据或技术验证证据；不得因缺少这些资料请求扩大权限。",
             "默认沉默；无 bug 不输出正常状态、周期性事实汇报或推测性提醒。只向 parent 报告 WatcherBug，不写任务台账、不标记状态、不创建节点、不派工、不重排、不改文件、不实施或 review。",
           ],
@@ -1029,13 +1028,34 @@ const global: GlobalSource = {
               "  agentIds: string[];",
               "  message: string;",
               "};",
+              "",
+              "type ChangedFileAudit = {",
+              "  paths: string[];",
+              "  utf8Valid: boolean;",
+              "  bom: boolean;",
+              "  replacement: boolean;",
+              "  crlf: boolean;",
+              "  commit: string | null;",
+              "  tag: string | null;",
+              "  tagCommit: string | null;",
+              "  branchPushed: boolean;",
+              "  tagPushed: boolean;",
+              "  remoteCommit: string | null;",
+              "};",
+              "",
+              "const changedFileAuditBugs = (audit: ChangedFileAudit): WatcherBug[] => [",
+              "  ...(!audit.utf8Valid || audit.bom || audit.replacement || audit.crlf ? [{ kind: \"TextIntegrityFailed\", nodeIds: [], agentIds: [], message: `改后文件编码异常：${audit.paths.join(\", \")}` }] : []),",
+              "  ...(!audit.commit ? [{ kind: \"GitCheckpointMissing\", nodeIds: [], agentIds: [], message: `改后文件尚未提交：${audit.paths.join(\", \")}` }] : []),",
+              "  ...(!audit.tag || !/\\p{Script=Han}/u.test(audit.tag) || audit.tagCommit !== audit.commit ? [{ kind: \"ChineseGitTagMissing\", nodeIds: [], agentIds: [], message: \"当前提交缺少指向自身的中文 Git tag\" }] : []),",
+              "  ...(!audit.branchPushed || !audit.tagPushed || audit.remoteCommit !== audit.commit ? [{ kind: \"GitPublishMissing\", nodeIds: [], agentIds: [], message: \"当前提交或中文 tag 尚未完成远端发布核验\" }] : []),",
+              "];",
             ].join("\n"),
           },
         },
         {
           title: "报警条件",
           items: [
-            "仅在运行时输入可证实时报告：环境不可用；缺少 TodoTreeNode[] 输入（`TodoTreeUnavailable`）；agent 生命周期与树状态不一致；parent 未建节点即派工、实施或收尾；agent 返回未被 parent 处理；存在非终态叶子却收尾；父子状态未闭环；或既有 WatcherBug 未处理。",
+            "仅在运行时输入可证实时报告：环境不可用；缺少 TodoTreeNode[] 输入（`TodoTreeUnavailable`）；agent 生命周期与树状态不一致；parent 未建节点即派工、实施或收尾；agent 返回未被 parent 处理；存在非终态叶子却收尾；父子状态未闭环；改后文件不是严格 UTF-8 无 BOM 与 LF、包含 U+FFFD；改后文件未提交、当前提交没有指向自身且包含中文的 tag、分支或 tag 未推送、远端提交未核验；或既有 WatcherBug 未处理。",
             "每个 WatcherBug 至少包含 `kind`、`nodeIds`、`agentIds` 和 `message`；只列出运行时证实的关联 ID。输入不足时使用空数组，不补造 ID、状态、节点或原因。",
             "watcher 只发现和报告事实；收到 bug 后由 parent 记录 bug、更新任务树和状态、决定验收、派工或重排。watcher 不同步台账、不确认修复，也不把 agent 返回或状态变化自行视为已处理。",
           ],
@@ -1238,9 +1258,12 @@ const project: ProjectSource = {
   skills: {},
 };
 
-const source: Record<Source["scope"], Source> = {
+export default {
+  schema: sourceSchema,
   global,
   project,
+} satisfies {
+  schema: typeof sourceSchema;
+  global: GlobalSource;
+  project: ProjectSource;
 };
-
-export default source;

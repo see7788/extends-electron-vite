@@ -1,10 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
+import source from "../../source";
 import store from "../store";
 import { workspacePathSchema } from "./store";
 
-export type { ProjectSource as Tpl } from "../../source";
+export type Tpl = typeof source.project;
 
 export const tplSourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
 

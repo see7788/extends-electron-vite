@@ -5,8 +5,9 @@ import { Project } from "ts-morph";
 import type { StateCreator } from "zustand";
 import type { Store } from "../../store";
 import CodexOutput from "../../tpl2/output";
-import { sourceSchema, type GlobalSource } from "../../../source";
 import source from "../../../source";
+
+type GlobalSource = typeof source.global;
 
 export type GlobalTplStore = {
   globalTpl: {
@@ -56,7 +57,7 @@ if (!existsSync(sourcePath)) sourceWrite(sourceDefaultGet().source);
 export default ((set, get) => {
   const nodesGet = () => source.global.nodes;
   const sourceParse = (input: { source: string }) => {
-    const parsed = sourceSchema.parse(new Function("nodes", `"use strict"; return (${input.source});`)(nodesGet()));
+    const parsed = source.schema.parse(new Function("nodes", `"use strict"; return (${input.source});`)(nodesGet()));
     if (parsed.scope !== "global") throw new Error("Global template source must use scope: global");
     return parsed as GlobalSource;
   };

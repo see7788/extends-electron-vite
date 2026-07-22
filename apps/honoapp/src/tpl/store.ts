@@ -6,8 +6,9 @@ import type { StateCreator } from "zustand";
 import { z } from "zod";
 import type { Store } from "../store";
 import CodexOutput from "../tpl2/output";
-import { sourceSchema, type ProjectSource } from "../../source";
 import source from "../../source";
+
+type ProjectSource = typeof source.project;
 
 export const workspacePathSchema = z.object({ workspacePath: z.string().refine(existsSync, "workspacePath must exist") });
 
@@ -47,7 +48,7 @@ export default ((set, get) => {
     HOOK_USER_COMMAND: ["node", JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")), JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))), "hook", JSON.stringify(hostname), port, "user"].join(" "),
   });
   const sourceParse = (input: { nodes: Record<string, string | number>; source: string }) => {
-    const parsed = sourceSchema.parse(new Function("nodes", `"use strict"; return (${input.source});`)(input.nodes));
+    const parsed = source.schema.parse(new Function("nodes", `"use strict"; return (${input.source});`)(input.nodes));
     if (parsed.scope !== "project") throw new Error("Project template source must use scope: project");
     return parsed as ProjectSource;
   };
