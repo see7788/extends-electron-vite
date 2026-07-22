@@ -44,6 +44,34 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  ../extends-hono:
+    dependencies:
+      '@hono/mcp':
+        specifier: ^0.3.1
+        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.30))(hono@4.12.30)(zod@4.4.3)
+      '@hono/node-server':
+        specifier: ^1.13.8
+        version: 1.19.14(hono@4.12.30)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
+      hono:
+        specifier: ^4.9.8
+        version: 4.12.30
+      vite:
+        specifier: ^8.0.11
+        version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@types/node':
+        specifier: ^26.0.1
+        version: 26.1.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   ../extends-react:
     dependencies:
       ogl:
@@ -115,7 +143,7 @@ importers:
         version: 0.136.0
       extends-hono:
         specifier: workspace:*
-        version: link:../../libs/extends-hono
+        version: link:../../../extends-hono
       extends-zustand:
         specifier: workspace:*
         version: link:../../../extends-zustand
@@ -173,7 +201,7 @@ importers:
         version: 6.8.9
       extends-hono:
         specifier: workspace:*
-        version: link:../../libs/extends-hono
+        version: link:../../../extends-hono
       honoapp:
         specifier: workspace:*
         version: link:../honoapp
@@ -358,34 +386,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  libs/extends-hono:
-    dependencies:
-      '@hono/mcp':
-        specifier: ^0.3.1
-        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.30))(hono@4.12.30)(zod@4.4.3)
-      '@hono/node-server':
-        specifier: ^1.13.8
-        version: 1.19.14(hono@4.12.30)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(zod@4.4.3)
-      hono:
-        specifier: ^4.9.8
-        version: 4.12.30
-      vite:
-        specifier: ^8.0.11
-        version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)
-      zod:
-        specifier: ^4.4.3
-        version: 4.4.3
-    devDependencies:
-      '@types/node':
-        specifier: ^26.0.1
-        version: 26.1.1
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
   libs/extends-preload:
     devDependencies:
       typescript:
@@ -405,7 +405,7 @@ importers:
         version: link:../../../extends-electron
       extends-hono:
         specifier: workspace:*
-        version: link:../../../extends-hono
+        version: link:../../../../../extends-hono
       extends-zustand:
         specifier: workspace:*
         version: link:../../../../../extends-zustand
@@ -673,7 +673,7 @@ importers:
         version: 39.8.10
       extends-hono:
         specifier: workspace:*
-        version: link:../../../extends-hono
+        version: link:../../../../../extends-hono
       hono:
         specifier: ^4.9.8
         version: 4.12.30
