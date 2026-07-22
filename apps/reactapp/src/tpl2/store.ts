@@ -19,16 +19,11 @@ type Tpl2Actions = {
     outputMaterialize: (workspacePath: string) => Promise<void>;
     outputRebase: (workspacePath: string) => Promise<void>;
     sourceDefaultLoad: (workspacePath: string) => Promise<void>;
-    sourceUpdate: (workspacePath: string, source: string) => void;
+    sourceUpdate: (workspacePath: string, source: string) => Promise<void>;
   };
 };
 
 const createTpl2 = immerStateCreator<Tpl2State & Tpl2Actions>((set, get) => {
-  const sourceGet = (workspacePath: string) => {
-    const source = get().tpl2[workspacePath]?.source;
-    if (source === undefined) throw new Error(`Template source is not loaded: ${workspacePath}`);
-    return source;
-  };
   return {
     tpl2: {},
     tpl2Actions: {
@@ -37,7 +32,7 @@ const createTpl2 = immerStateCreator<Tpl2State & Tpl2Actions>((set, get) => {
       loading: {},
       outputFilesStatus: async (workspacePath) => {
         const response = await client.tpl2.output.filesStatus.$post({
-          json: { source: sourceGet(workspacePath), workspacePath },
+          json: { workspacePath },
         });
         if (!response.ok) throw new Error(await response.text());
         const status = await response.json();
@@ -52,7 +47,7 @@ const createTpl2 = immerStateCreator<Tpl2State & Tpl2Actions>((set, get) => {
         });
         try {
           const response = await client.tpl2.output.materialize.$post({
-            json: { source: sourceGet(workspacePath), workspacePath },
+            json: { workspacePath },
           });
           if (!response.ok) throw new Error(await response.text());
         } finally {
@@ -67,7 +62,7 @@ const createTpl2 = immerStateCreator<Tpl2State & Tpl2Actions>((set, get) => {
         });
         try {
           const response = await client.tpl2.output.rebase.$post({
-            json: { source: sourceGet(workspacePath), workspacePath },
+            json: { workspacePath },
           });
           if (!response.ok) throw new Error(await response.text());
         } finally {
@@ -85,9 +80,13 @@ const createTpl2 = immerStateCreator<Tpl2State & Tpl2Actions>((set, get) => {
           state.tpl2[workspacePath] = { source };
         });
       },
-      sourceUpdate: (workspacePath, source) => set((state) => {
-        state.tpl2[workspacePath] = { source };
-      }),
+      sourceUpdate: async (workspacePath, source) => {
+        const response = await client.tpl2.source.$put({ json: { source, workspacePath } });
+        if (!response.ok) throw new Error(await response.text());
+        set((state) => {
+          state.tpl2[workspacePath] = { source };
+        });
+      },
     },
   };
 });
