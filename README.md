@@ -137,6 +137,7 @@ pnpm --dir honoapp-vscode-plugin run build
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
 - [~] [19:24] T-074 方先生确认：删除闲置的 `apps/mcpserver` 与旧 `apps/honoapp/src/mcp.ts`，创建无 `src` 壳的独立库 `F:/pro/extends-mcp`；该库只保留根级 `honomcp.ts` 作为唯一源码并默认导出固定的 `server`、`transport`、`responseContentRead` 对象，服务身份统一为 `extends-mcp`。`honoapp` 使用 `workspace:*` 消费该库，移除 `tpl2Actions.mcp`，由 `tpl2/index.ts` 注册业务工具、总入口挂载唯一 `/mcp`，不得破坏现有 tpl2 Hono 接口和真实物化链路。
 	- [>] [19:24] worker：核对并保留当前重叠脏改动；实现 `extends-mcp` 根级 TypeScript 库、workspace 依赖和 Hono MCP 唯一入口，删除旧链，完成 pnpm 安装、库与 honoapp 类型检查、构建及真实 MCP 调用验证；不得修改 TodoTree、旧 tpl 业务或其他项目。
+		- [~] [19:36] parent：方先生验收纠正，禁止从默认 `mcp` 对象解构 `server`、`transport` 或 `responseContentRead`，所有消费必须保持 `mcp.server`、`mcp.transport`、`mcp.responseContentRead` 的对象层级；已退回原 worker 修正并重新验证。
 - [ ] [15:54] T-073 方先生确认：实现以现有 TodoTreeNode 层级为可见载体的台账 MCP 协作闭环。方先生需求下展示 parent 的整体任务信封，parent 一次性为具体工作者建立带 nodeId 的任务信封；角色的真实进展、完成、阻塞、审查或异常均追加为对应节点的语义化反馈子节点，parent 再在反馈节点下继续派发修复、审查或后续延伸任务，使全过程无需依赖对话转述即可观察。
 	- [x] [15:54] parent：设计已确认。任务信封最少公开目标、ownership、依赖、完成条件、验收方式和无法完成时的反馈要求；parent 独占任务节点创建、派工、状态迁移、验收与重排，worker/workerLow/tokener 只能向自己的任务 nodeId 提交反馈，不能修改任务状态。
 	- [ ] [19:26] parent：补充执行单元分流。已批准且输入、输出、副作用、错误边界明确的 MCP 是 parent 可直接指挥的确定性执行单元；parent 调用 MCP、核对真实结果并维护任务状态不算亲自实施源码。已有合适 MCP 时优先直接调用；接口缺失、能力不足或任务需要开放式实现判断时才派 worker，禁止借 MCP 绕过接口直接编辑业务源码。
