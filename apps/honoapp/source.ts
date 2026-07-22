@@ -95,7 +95,6 @@ export const nodes = {
   parentWorkflow: "parent-workflow-styleskill", // parent 私有工作流：需求澄清、派工、状态治理和中断恢复
   watcherWorkflow: "watcher-workflow-styleskill", // watcher 私有工作流：会话级流程错误发现与报警
   codebaseMcpStyle: "codebase-mcp-styleskill", // 代码库调查：源码检索、调用关系和影响范围
-  docStyle: "doc-styleskill", // parent 私有文档：台账树、README 和公开结构
   fileIo: "file-io-styleskill", // 文件操作：安全读写、编码检查和事故恢复
   netStyle: "net-styleskill", // 网络边界：Hono API、HTTP、SSE 和 WebSocket
   scopeStyle: "scope-styleskill", // 作用域：对象边界、复用、导出、依赖和运行时配置
@@ -157,7 +156,7 @@ const global: GlobalSource = {
       {
         title: "总纲",
         items: [
-          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}、${nodes.docStyle} 与 ${nodes.templateService}；watcher 只加载 ${nodes.watcherWorkflow} 和会话运行时事件。`,
+          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow} 与 ${nodes.templateService}；watcher 只加载 ${nodes.watcherWorkflow} 和会话运行时事件。`,
           "agentsMd 只负责角色与技术 skill 分流；具体约束只在对应 skill 或 agent 自身定义中维护。",
           "watcher 是会话级只读报警器，不属于任务节点；它只理解 TodoTreeNode 的结构字段与通用运行事件，不加载技术 nodes 或业务实现。",
           "workerLow、worker、tokener 只按自身 agent 定义与 parent 任务信封工作；仅加载任务明确指定的技术 nodes、ownership 和验收资料，不读取 parent/watcher/doc/template 私有工作流或无关上下文。",
@@ -844,7 +843,7 @@ const global: GlobalSource = {
       ],
     },
     [nodes.parentWorkflow]: {
-          description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、派工、处理 watcher bug、等待、处理中断与收尾；watcher、workerLow、worker、tokener 不得加载。",
+      description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、派工、处理 watcher bug、文档与 tree 写作、等待、处理中断与收尾；watcher、workerLow、worker、tokener 不得加载。",
       title: "Parent 工作流",
       sections: [
         {
@@ -886,7 +885,7 @@ const global: GlobalSource = {
           title: "任务树准备",
           items: [
             "任务树只记录真实闭环：worker 上下文不足或阻塞反馈、worker 正常返回后的 tokener 具体验收反馈；watcher 是会话级只读报警器，不占任务节点，只向 parent 报告非终态叶子、worker 中断、返回未吸收或任务未完成等 WatcherBug；parent 记录事实并重派/阻塞，不能把中断当完成。",
-            "涉及任务台账、待办事项、todolist、todoclick、任务清单、跨阶段交付或跨会话进度时，parent 必须加载 doc-style；不得只在对话中保留计划。",
+            "涉及任务台账、待办事项、todolist、todoclick、任务清单、跨阶段交付或跨会话进度时，parent 直接使用本 skill 的文档与 tree 规则；不得只在对话中保留计划。",
             "README.md 现有待办/工作流区只作为历史，不再维护；todoapp 的 TodoTreeNode 任务树是当前任务事实源。",
             "在实际诊断、实现、派工或运行态操作前，parent 先建立一个顶级任务节点；对每个准备派给 workerLow、worker 或 tokener 的动作，先建立对应子节点并写清任务信封。watcher 不占任务树节点。",
             "parent 是任务树唯一写入者：写入目标、范围、完成条件、责任角色、ownership、依赖、反馈、状态和验收证据。worker 或 tokener 返回后，parent 先比较结果与验收条件；不确定时派 tokener，只在结论成立后更新完成、继续、阻塞、取消或待确认状态。",
@@ -943,10 +942,59 @@ const global: GlobalSource = {
             "被批评后禁止只解释原因或只道歉；必须输出“应补约束位置 + 具体约束文本 + 当前代码修正动作”。",
             "收尾回复必须标注实现状态：已真实接线并验证、已接线未验证、未接线等待信息、被阻塞；禁止把未验证或未接线内容表述为完成。",
             "项目明确采用根目录 TODO.md 时才在其中记录未完成事项；否则沿用或创建项目文档中的可审计的工作流，不额外制造平行待办文件。",
-            "是否需要更新 README、公开结构或项目说明由 parent 根据交付物判断；只有确定需要写作时才给执行者分派 doc-styleskill，doc-styleskill 不负责台账和派工决策。",
+            "是否需要更新 README、公开结构或项目说明由 parent 根据交付物判断；文档与 tree 写作由 parent 使用本 skill 对应章节处理，不向具体工作者分派 parent 私有规则。",
             "代码存在、台账已写、构建通过、产物生成或日志出现都不等于用户可见交付；涉及安装、窗口、图标、浏览器、进程或页面状态时，完成证据必须包含真实环境中的最新观察。",
             "Agent 为测试创建的进程、GUI 窗口、浏览器、临时 profile、端口或目录必须记录 owner、可识别标记和退出条件，并与用户实例隔离；收尾或切换任务时只清理已确认由 Agent 创建的资源，禁止为方便而结束用户进程、使用宽泛匹配或清理不明资源。",
             "只有所有目标项均已处理且完成必要验收后才使用“完成了”或“已处理完”；仍有任务时继续安排，阻塞时明确卡点与下一步所需条件。",
+          ],
+        },
+        {
+          title: "文档使用边界",
+          items: [
+            "parent 只读取并修改明确交付的文档文件和树节点；具体工作者和 watcher 不读取任务文档，所需公开文档约束由 parent 摘入任务信封。",
+            "任务树使用 Markdown 无序列表：根节点无缩进，每个子节点前保留一个 literal Tab；节点 ID、当前行内容和缩进共同构成可审计定位，不能因为格式化而把历史树压平成普通列表。",
+          ],
+        },
+        {
+          title: "README",
+          orderedItems: [
+            "第一段写项目功能和快速使用方法。先用简短自然语言说明项目解决什么问题、主要提供什么能力、适合什么场景；再给出最短可运行的使用命令、入口或调用方式。第一段不写长篇背景，不把实现细节放在使用方法前面。",
+            "第二段写项目结构，并保持当前 README 的带连线 tree 风格。tree 先展示源码结构，再在关键文件节点下展开公开的主要方法、命令、接口或配置子节点；文件注释只概括该文件边界，具体能力写在子节点。内部临时文件、构建产物和没有公开能力的实现细节不进入 tree。",
+          ],
+        },
+        {
+          title: "tree 格式",
+          items: [
+            "项目结构必须写成 Markdown fenced code block 内的带连线 tree；必须使用 `├──`、`└──`、`│` 表达层级和同级关系。",
+            "tree 必须按 `目录/文件 -> 对外方法/命令/接口/配置 -> 具体职责` 组织；清晰表达对象可以被怎样操作，不写散文式职责说明。",
+            "禁止用普通缩进、无连线列表、Markdown `-` 列表或纯路径清单替代 tree；如果没有连线字符，视为没有遵守 parent-workflow 的 tree 规则。",
+            "目录节点以 `/` 结尾；文件节点写文件名和边界职责；文件下的公开方法、命令、接口或配置项继续作为子节点展开。",
+            "同级节点必须保持纵向连线对齐；最后一个同级节点使用 `└──`，非最后一个同级节点使用 `├──`。",
+          ],
+          code: {
+            language: "text",
+            content: [
+              "src/",
+              "├── index.ts                 # 入口，只负责启动和组合",
+              "├── routers.ts               # 路由汇总",
+              "└── object/",
+              "    ├── index.ts             # 对象入口",
+              "    │   ├── read()           # 读取对象",
+              "    │   └── update()         # 更新对象",
+              "    └── store.ts             # 对象仓库",
+              "        ├── object           # 持久化数据",
+              "        └── objectActions    # 动作与非持久化运行态",
+            ].join("\n"),
+          },
+        },
+        {
+          title: "结构说明",
+          items: [
+            "tree 以源码目录和文件为骨架，只展开关键公开入口；不要把普通实现细节、私有 helper 或调用过程写进 tree。",
+            "对象目录名称本身就是边界；文档和代码都应围绕对象目录说明可调用方法和职责，避免重复解释已经由目录名表达的概念。",
+            "文件节点只写边界职责；文件下的子节点写公开的主要方法、命令、接口或配置项，并说明它直接提供的能力。",
+            "能力提供方只写提供什么，不写哪里消费了它；消费方如果依赖其他公开能力，才在自身子节点说明消费链路。",
+            "子节点保持少量、主要、可维护；同类方法过多时合并为能力组，不把 README 写成完整 API 清单。",
           ],
         },
       ],
@@ -1026,61 +1074,6 @@ const global: GlobalSource = {
             "恢复候选必须放在与正式源并列的独立预览文件中，逐项列出可信快照主体、较新物化差异、尚未物化增量和明确排除的项目专属内容；方先生确认预览前不得合入正式源。",
             "正式源合入后必须先通过严格 UTF-8、语义锚点、schema、类型检查和限定 diff，再由 parent 创建 Git 检查点；只有方先生确认且检查点成功后才调用全局物化接口。",
             "物化后逐字比较实际产物与预期渲染，确认旧 agent/skill 已按源定义处理且用户自有 config 合并项未丢失；验证失败时停止发布并使用物化前 Git 检查点恢复。",
-          ],
-        },
-      ],
-    },
-    [nodes.docStyle]: {
-      description: "仅供 parent 使用。约束任务文档、README、项目说明和公开结构的写作、tree 缩进和定位；具体工作者和 watcher 不得加载。",
-      title: "文档写作风格",
-      sections: [
-        {
-          title: "使用边界",
-          items: [
-            "parent 只读取并修改明确交付的文档文件和树节点；具体工作者和 watcher 不读取任务文档，所需公开文档约束由 parent 摘入任务信封。",
-            "任务树使用 Markdown 无序列表：根节点无缩进，每个子节点前保留一个 literal Tab；节点 ID、当前行内容和缩进共同构成可审计定位，不能因为格式化而把历史树压平成普通列表。",
-          ],
-        },
-        {
-          title: "README",
-          orderedItems: [
-            "第一段写项目功能和快速使用方法。先用简短自然语言说明项目解决什么问题、主要提供什么能力、适合什么场景；再给出最短可运行的使用命令、入口或调用方式。第一段不写长篇背景，不把实现细节放在使用方法前面。",
-            "第二段写项目结构，并保持当前 README 的带连线 tree 风格。tree 先展示源码结构，再在关键文件节点下展开公开的主要方法、命令、接口或配置子节点；文件注释只概括该文件边界，具体能力写在子节点。内部临时文件、构建产物和没有公开能力的实现细节不进入 tree。",
-          ],
-        },
-        {
-          title: "tree 格式",
-          items: [
-            "项目结构必须写成 Markdown fenced code block 内的带连线 tree；必须使用 `├──`、`└──`、`│` 表达层级和同级关系。",
-            "tree 必须按 `目录/文件 -> 对外方法/命令/接口/配置 -> 具体职责` 组织；清晰表达对象可以被怎样操作，不写散文式职责说明。",
-            "禁止用普通缩进、无连线列表、Markdown `-` 列表或纯路径清单替代 tree；如果没有连线字符，视为没有遵守 doc-styleskill。",
-            "目录节点以 `/` 结尾；文件节点写文件名和边界职责；文件下的公开方法、命令、接口或配置项继续作为子节点展开。",
-            "同级节点必须保持纵向连线对齐；最后一个同级节点使用 `└──`，非最后一个同级节点使用 `├──`。",
-          ],
-          code: {
-            language: "text",
-            content: [
-              "src/",
-              "├── index.ts                 # 入口，只负责启动和组合",
-              "├── routers.ts               # 路由汇总",
-              "└── tpl/",
-              "    ├── source.ts            # 模板源",
-              "    │   ├── nodes            # 生成产物共享常量",
-              "    │   └── tpl              # .codex 生成模板",
-              "    └── output.ts            # CodexOutput 输出边界",
-              "        ├── filesStatus()    # 检查目标文件存在与脏状态",
-              "        └── materialize()    # 将模板源物化为 .codex 输出",
-            ].join("\n"),
-          },
-        },
-        {
-          title: "结构说明",
-          items: [
-            "tree 以源码目录和文件为骨架，只展开关键公开入口；不要把普通实现细节、私有 helper 或调用过程写进 tree。",
-            "对象目录名称本身就是边界；文档和代码都应围绕对象目录说明可调用方法和职责，避免重复解释已经由目录名表达的概念。",
-            "文件节点只写边界职责；文件下的子节点写公开的主要方法、命令、接口或配置项，并说明它直接提供的能力。",
-            "能力提供方只写提供什么，不写哪里消费了它；消费方如果依赖其他公开能力，才在自身子节点说明消费链路。",
-            "子节点保持少量、主要、可维护；同类方法过多时合并为能力组，不把 README 写成完整 API 清单。",
           ],
         },
       ],
