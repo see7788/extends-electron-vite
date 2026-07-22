@@ -135,12 +135,12 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
-- [~] T-071 方先生提出：收口 Codex 模板源集成并发布 GitHub。保持本轮由 parent 直接接管、不派其他工作者，但必须持续记录和标记进度；删除 `src/tpl/source.ts`、`src/tpl2/source.ts`，合并仅由 parent 消费且总是同时加载的 `parentWorkflow` 与 `docStyle`，完成类型/构建验证、逐文件 Git 保存、版本 tag 和远端发布。
+- [x] T-071 方先生提出：收口 Codex 模板源集成并发布 GitHub。保持本轮由 parent 直接接管、不派其他工作者，但必须持续记录和标记进度；删除 `src/tpl/source.ts`、`src/tpl2/source.ts`，合并仅由 parent 消费且总是同时加载的 `parentWorkflow` 与 `docStyle`，完成类型/构建验证、逐文件 Git 保存、版本 tag 和远端发布。
 	- [x] parent：已建立并保护 `apps/honoapp/source.ts` 作为同时包含 global/project 的唯一权威工作稿；`tpl`、`tpl2` 已改为只读消费该文件，旧 source import 已清零。
 	- [x] parent：已将 `docStyle` 的文档与 tree 规则整体收纳为 `parentWorkflow` 子章节，删除独立 node/skill 定义和强制双加载规则，保持 watcher 与具体工作者不可见。
 	- [x] parent：已删除无消费者的 `apps/honoapp/src/tpl/source.ts`、`apps/honoapp/src/tpl2/source.ts`，旧 source import 为零；honoapp、reactapp 的 TypeScript 与正式构建均通过。
 	- [x] parent：最终 Hono 服务已在 `127.0.0.1:3005` 启动；全新 Codex 进程真实调用 `honoapp-tpl2` 的 `tpl2.source.GET`，读取当前工作区并返回 `scope = project`。
-	- [~] parent：本地工作区干净且相对已记录的 `origin/master` 领先 89 个提交；首次发布连接被 GitHub 重置，正在重试远端核对、创建 `v1.0.4` tag 并推送分支与 tag，成功前不标完成。
+	- [x] parent：已确认远端历史可安全快进；通过本机既有代理将 `master` 从 `da42650` 推进到 `9a1587f`，并创建、推送语义化 tag `v1.0.4`。未修改全局 Git 代理配置，未 force push。
 - [>] T-070 方先生提出：按全项目体检结果逐项修复 TypeScript 基线、无套壳约束与类型错误；每项必须直接修改真实 owner，不新增 factory、wrapper、barrel、alias、兼容层或兜底，完成后在该子节点记录真实 typecheck 证据。
 	- [>] 01 P0：根 package `extends-electron-vite` 补充自身 `tsconfig.json`，明确根只编排 workspace、不得混编子 package；补齐根级逐 package TypeScript 检查入口。
 	- [>] 02 P0：`libs/extends_chatgtp_com/userapp/src` 是含 TS/TSX 的独立 package，补充自身 `tsconfig.json` 并覆盖全部真实源码；不得缩小 include 或隐藏错误。
