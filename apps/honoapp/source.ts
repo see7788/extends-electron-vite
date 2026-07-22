@@ -175,7 +175,7 @@ const global: GlobalSource = {
   configToml: {
     mcpServers: {
       "chrome-devtools": {
-        args: ["-y", "--cache", "C:/Users/diyya/.codex/npm-cache", "chrome-devtools-mcp@1.6.0", "--browserUrl", "http://127.0.0.1:9222", "--experimentalIncludeAllPages"],
+        args: ["-y", "--cache", "C:/Users/diyya/.codex/npm-cache", "chrome-devtools-mcp@1.6.0", "--autoConnect", "--experimentalIncludeAllPages"],
         command: "npx",
       },
       codegraph: {
