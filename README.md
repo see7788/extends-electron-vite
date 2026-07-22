@@ -135,12 +135,12 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
-- [~] T-072 方先生提出：由 parent 接管本轮全部工作，恢复唯一 watcher、保持其他工作者休息；核实废弃 MCP 边界，强化 watcher 对改后文件乱码与 Git 发布遗漏的报警职责，收敛 `apps/honoapp/source.ts` 的 helper、外部泛型、导出类型和默认导出结构，使用中文 Git tag 保存并发布。
+- [x] T-072 方先生提出：由 parent 接管本轮全部工作，恢复唯一 watcher、保持其他工作者休息；核实废弃 MCP 边界，强化 watcher 对改后文件乱码与 Git 发布遗漏的报警职责，收敛 `apps/honoapp/source.ts` 的 helper、外部泛型、导出类型和默认导出结构，使用中文 Git tag 保存并发布。
 	- [x] parent：已恢复唯一只读 watcher，其他工作者没有启动新任务；watcher 使用改后文件审计事件真实报告了提交前 `commit/tag/push` 缺失，parent 随后建立源码提交 `7c4dedf`，报警已处理。
 	- [x] parent：CodeGraph 证实 `apps/honoapp/src/mcp.ts` 的唯一消费者是 `apps/mcpserver/index.ts`；`apps/mcpserver` 没有启动脚本、Codex MCP 配置或其他消费者，当前运行态闲置。该链仍保存 email/file/旧 tpl 的 MCP 注册能力，未获删除授权前保持不动。
 	- [x] parent：`apps/honoapp/source.ts` 现仅有一个 default export，公开成员为 `schema/global/project`；原命名 schema、nodes 和外部类型导出已移除，消费者直接从默认对象调用或推导类型；两个单消费者 schema 已内联，其余内部 schema/refine 均有至少两个真实消费点。
 	- [x] parent：watcher 新增受限 `ChangedFileAudit` 输入和可执行的 `changedFileAuditBugs` 代码，明确报告编码、Git 检查点、中文 tag、分支/tag 推送与远端提交核验缺口；honoapp/reactapp TypeScript、schema 实例解析与正式构建通过。
-	- [~] parent：源码修改已分别保存为 `7c4dedf`、`c6736fe`，正在创建中文 tag、推送 `master` 与 tag 到 GitHub并核对远端对象。
+	- [x] parent：源码修改已分别保存为 `7c4dedf`、`c6736fe`；`master` 与中文 tag `模板源观察者审计-2026-07-22` 已推送 GitHub，远端分支和 tag 均指向 `843219b`。watcher 收到最终审计事件后没有报告 bug；本节点的纯台账收尾另由中文完成 tag 保存。
 - [x] T-071 方先生提出：收口 Codex 模板源集成并发布 GitHub。保持本轮由 parent 直接接管、不派其他工作者，但必须持续记录和标记进度；删除 `src/tpl/source.ts`、`src/tpl2/source.ts`，合并仅由 parent 消费且总是同时加载的 `parentWorkflow` 与 `docStyle`，完成类型/构建验证、逐文件 Git 保存、版本 tag 和远端发布。
 	- [x] parent：已建立并保护 `apps/honoapp/source.ts` 作为同时包含 global/project 的唯一权威工作稿；`tpl`、`tpl2` 已改为只读消费该文件，旧 source import 已清零。
 	- [x] parent：已将 `docStyle` 的文档与 tree 规则整体收纳为 `parentWorkflow` 子章节，删除独立 node/skill 定义和强制双加载规则，保持 watcher 与具体工作者不可见。
