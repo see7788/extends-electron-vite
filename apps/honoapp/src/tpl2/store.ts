@@ -1,8 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { StreamableHTTPTransport } from "@hono/mcp";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import { Project } from "ts-morph";
 import CodexOutput from "./output";
@@ -15,11 +13,6 @@ export type Tpl2Store = {
     source: string;
   }>;
   tpl2Actions: {
-    mcp: {
-      responseContentRead: (response: Response) => Promise<{ content: Array<{ type: "text"; text: string }> }>;
-      server: McpServer;
-      transport: StreamableHTTPTransport;
-    };
     outputFilesStatus: (workspacePath: string) => ReturnType<CodexOutput["filesStatus"]>;
     outputMaterialize: (workspacePath: string) => void;
     outputRebase: (workspacePath: string) => void;
@@ -81,26 +74,6 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
   return {
     tpl2: {},
     tpl2Actions: {
-      mcp: {
-        responseContentRead: async (response) => {
-          const text = await response.text();
-          if (!response.ok) throw new Error(text || String(response.status));
-          const body: unknown = text ? JSON.parse(text) : String(response.status);
-          return {
-            content: [{
-              type: "text",
-              text: typeof body === "string" ? body : JSON.stringify(body),
-            }],
-          };
-        },
-        server: new McpServer({
-          name: "honoapp-tpl2",
-          version: "0.0.0",
-        }, {
-          instructions: "管理指定工作区的 Codex 模板源码及其物化文件。读取操作不会写入文件；更新、物化和 rebase 会改变持久化数据或工作区文件。",
-        }),
-        transport: new StreamableHTTPTransport(),
-      },
       outputFilesStatus: (workspacePath) => outputRead(workspacePath).filesStatus(),
       outputMaterialize: (workspacePath) => {
         outputRead(workspacePath).materialize();
