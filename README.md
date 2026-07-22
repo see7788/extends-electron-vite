@@ -135,6 +135,10 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
+
+- [~] [20:49] T-077 方先生提出：AI 调试过程中产生的历史文件、一次性脚本、诊断输出、截图、日志、缓存和恢复候选不得散落；统一收纳到仓库根 `.log/`，任务结束后由创建者清理，只有明确长期维护且存在真实消费者的交付物才进入正式目录。
+	- [x] parent：已核实现有规则只覆盖截图和调试日志，缺少完整临时产物范围、owner、清理时点及长期文件准入条件；补充为通用文件读写约束，并保留创建文件前必须取得授权的边界。
+	- [~] parent：待完成源码检查、Git 保存及全局模板物化验证。
 - [~] [20:16] T-076 方先生确认：将全局模板源中的 Chrome DevTools MCP 从固定 `--browserUrl http://127.0.0.1:9222` 改为 Chrome 144+ 的 `--autoConnect`，复用正常 Chrome 用户资料与既有登录状态；同时把当前 MCP 以 `todo-mcp` 和固定源码路径的 npx/tsx stdio 入口纳入全局 source，使服务未启动时新会话也能正式加载。源码保存后通过真实 stdio MCP 更新用户级 source 并物化，核对最终 `config.toml`。
 	- [x] [20:16] parent：只修改权威模板源的 chrome-devtools 参数并建立 Git 检查点 `fe6e52a`；honoapp TypeScript、UTF-8 无 BOM 与差异检查通过。
 		- [~] [20:24] parent：真实 MCP `tpl2.source.PUT` 已返回 204；首次物化因模板管理的 chrome/codegraph 之后存在外部 `honoapp` URL MCP 而被安全检查阻断。方先生已授权修正物化器：只替换 source 明确拥有的 MCP section，任意位置的非模板 section 原样保留，重复或缺失模板所有段仍明确失败。
