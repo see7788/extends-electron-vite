@@ -5,9 +5,9 @@ import { Project } from "ts-morph";
 import type { StateCreator } from "zustand";
 import { z } from "zod";
 import type { Store } from "../store";
-import CodexOutput from "./output";
-import { sourceSchema, type ProjectSource } from "./output/schema";
-import projectSource from "./source";
+import CodexOutput from "../tpl2/output";
+import { sourceSchema, type ProjectSource } from "../../source";
+import source from "../../source";
 
 export const workspacePathSchema = z.object({ workspacePath: z.string().refine(existsSync, "workspacePath must exist") });
 
@@ -37,12 +37,12 @@ const sourceInitializerGet = (input: { declaration: string; source: string }) =>
 export default ((set, get) => {
   const defaultSourceGet = () => {
     return {
-      source: JSON.stringify(projectSource, undefined, 2),
+      source: JSON.stringify(source.project, undefined, 2),
       type: "ProjectSource",
     };
   };
   const nodesGet = ({ hostname, port }: { hostname: string; port: number }) => ({
-    ...projectSource.nodes,
+    ...source.project.nodes,
     HOOK_ASSISTANT_COMMAND: ["node", JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")), JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))), "hook", JSON.stringify(hostname), port, "assistant"].join(" "),
     HOOK_USER_COMMAND: ["node", JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")), JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))), "hook", JSON.stringify(hostname), port, "user"].join(" "),
   });
