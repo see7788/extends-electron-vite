@@ -169,6 +169,8 @@ pnpm --dir honoapp-vscode-plugin run build
 			- [<] [23:26] workerMedium：最终三文件结构、外部/内部公开边界、消费者同步、两边 TypeScript、基础动态导入与文本检查均已完成；`mcp/public` 的真实初始化已通过 Chrome 阶段，但在 CodeGraph `connect` 或 `listTools` 阶段 94 秒超时，未完成 stdio `tools/list`，验证进程已清理。
 				- [~] [23:26] parent：定位 CodeGraph 子进程阻塞，恢复公共工具入口的真实初始化与 stdio `tools/list`；在此之前不删除 `extends-mcp`，不把 T-080 标记完成。
 					- [x] [04:45] `libs/extends-hono/createMcpServer`：直接 Node + tsx 启动 `apps/honoapp/src/mcp.ts` 后，真实 stdio `connect()` 与 `listTools()` 成功，返回 36 个工具；Browser、CodeGraph、tpl2 与 `environment.check` 均存在，验证进程已关闭且无残留。迁移和消费者改动已提交为 `492ae59`。
+					- [x] [04:56] parent：接管 MCP 收尾后确认当前仓库和 `F:/pro` 其他 package/workspace/TOML 均无 `extends-mcp` 消费者；迁移后残留的两个 client 名已改为 `extends-hono-browser`、`extends-hono-codegraph`，TypeScript 通过并提交为 `d58de7c`。
+					- [!] [04:56] parent：旧 `F:/pro/extends-mcp` 不是 Git 仓库且已满足删除条件，但当前执行环境拦截 PowerShell 递归删除命令；方先生执行 `Remove-Item -LiteralPath 'F:\pro\extends-mcp' -Recurse -Force` 后即可关闭 T-080。
 	- [ ] [23:06] parent：验收迁移后的默认导出、`/tpl2-mcp` 挂载、依赖解析和 MCP 工具清单；确认 `extends-mcp` 无消费者且迁移文件完整后执行删除，并建立限定范围 Git 检查点。
 	- [~] [23:06] watcher：只读监督越界写入、脏基线覆盖、遗漏消费者、验证前删除、乱码、状态滞后和未完成收尾；仅发现真实流程 bug 时反馈。
 - [~] [21:36] T-079 方先生确认 AI 环境生产/消费边界：当前仓库只是 AI 环境与模板的开发生产者；普通项目 parent 只知道已物化规则、当前项目资料及 `todo-mcp` 公共工具，不知道 `honoapp`、`extends-codex`、`tpl2` 或生产仓库路径。parent 向工作者提供任务目标、必要外部上下文、精确文件 ownership、指定 skills/MCP 和验收条件；工作者不读取完整对话、其他任务或无关资料。
