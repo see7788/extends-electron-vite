@@ -1,3 +1,7 @@
+/**
+ * @codex-protected Codex 全局与项目要求的受保护权威工作稿。
+ * 项目业务只能只读引用；只有方先生明确提出 Codex 全局或项目要求变更时才允许修改。
+ */
 import { z } from "zod";
 
 const commandHookSchema = z.object({
@@ -157,6 +161,7 @@ const global: GlobalSource = {
           "agentsMd 只负责角色与技术 skill 分流；具体约束只在对应 skill 或 agent 自身定义中维护。",
           "watcher 是会话级只读报警器，不属于任务节点；它只理解 TodoTreeNode 的结构字段与通用运行事件，不加载技术 nodes 或业务实现。",
           "workerLow、worker、tokener 只按自身 agent 定义与 parent 任务信封工作；仅加载任务明确指定的技术 nodes、ownership 和验收资料，不读取 parent/watcher/doc/template 私有工作流或无关上下文。",
+          "标记 `@codex-protected` 的 package 根 `source.ts` 是 Codex 全局与项目要求的受保护权威工作稿；项目业务只能只读引用，只有方先生明确提出 Codex 全局或项目要求变更时才允许修改，业务开发、接口调整、仓库重构、MCP 实现和物化均不构成修改授权。",
         ],
       },
       {
@@ -997,6 +1002,7 @@ const global: GlobalSource = {
           title: "边界与入口",
           items: [
             "模板服务是用户级配置数据边界；普通项目不得读取或修改模板服务实现、默认源、store 或生成的 `.codex` 产物。只有方先生明确把任务范围锁定为 extends-codex 模板服务源码仓库时，才允许按该源码仓库的开发流程修改唯一模板源。",
+            "模板服务源码仓库重构期间，标记 `@codex-protected` 的 package 根 `source.ts` 是同时包含 global 与 project 的唯一权威工作稿；业务源码可以只读 import，但不得修改、复制、派生或覆盖。新 Codex 要求先维护该文件，结构稳定后才整体迁回正式生产位置。",
           ],
         },
         {
