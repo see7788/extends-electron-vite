@@ -135,16 +135,12 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
-- [ ] T-073 方先生提出：把“方先生表达需求 → parent 分析并直接回答或建立分层任务树 → 具体工作者实施/审查 → watcher 只发现流程异常 → parent 验收闭环”固化为多工作者协作模型；台账 MCP 完成前继续记录在本文档，完成后改由角色受限的 MCP 接口写入真实任务树。
-	- [x] parent：已明确角色边界。parent 是唯一语义决策者，负责澄清需求、拆分层级、声明依赖/ownership/验收、并行派工、吸收反馈、重排与最终闭环；直接回答的问题不制造实施节点，parent 不亲自修改业务文件。
-	- [x] parent：已明确具体工作者边界。worker/workerLow 只能领取并实施自己的节点、上报真实进度和结果；tokener 只能写自己审查节点的反馈；任何工作者不得改写根任务、兄弟节点、验收结论或其他角色状态。
-	- [x] parent：已明确 watcher 边界。watcher 常驻观察任务信封完整性、parent 私自实施、可并行节点被无理由串行、状态未及时更新、非终态任务中断、阶段性 Git 检查点及任务声明的具体文件限制；只通过专用异常接口向 parent 报告，不直接修改任务树。
-	- [x] [15:25] parent：台账 MCP 未接线期间，纯文本台账从本节点开始在每次新增记录或状态变更时使用 `[HH:mm]` 标注本地时分，不写年月日；既有历史节点保持不动。
-	- [x] [15:36] parent：按方先生纠正收敛权限模型。parent 创建带 nodeId 的任务、一次性写清具体工作者任务与验收，并独占所有任务节点状态迁移；worker、workerLow、tokener、watcher 只能对既有 nodeId 提交语义化反馈，不能创建任务或修改任何任务状态。
-	- [x] [15:36] parent：反馈不在派工时预建空失败节点；真实进展、完成、阻塞或异常发生时，由 MCP 将角色提交的反馈自动追加为关联任务下可见的只读子节点。parent 吸收反馈后，不需要方先生决策就立即新增后续实施/审查子节点并派工，需要方先生决策才新增待确认叶子。
-	- [ ] [15:36] parent：实现简化的台账 MCP。parent 接口只负责任务 create/assign/replan/status/accept；其他角色只有 report(nodeId, message, evidence)；服务端为 report 自动生成带时间、agent 和固定“已反馈”状态的只读子节点，并拒绝其他角色直接更新任务节点。
-	- [ ] parent：为并行监督补齐任务节点的 dependencies、ownership 和验收字段；watcher 只根据结构化字段判断“可并行却串行”或“任务信封不完整”，不得靠理解业务标题猜测。
-	- [ ] parent：台账 MCP 未真实接线前，README 的本区仍是任务事实源且仅由 parent 写入；MCP 接线并验证后迁移现有非终态节点，所有角色改用各自接口，文档不再承担运行态并发写入。
+- [ ] [15:54] T-073 方先生确认：实现以现有 TodoTreeNode 层级为可见载体的台账 MCP 协作闭环。方先生需求下展示 parent 的整体任务信封，parent 一次性为具体工作者建立带 nodeId 的任务信封；角色的真实进展、完成、阻塞、审查或异常均追加为对应节点的语义化反馈子节点，parent 再在反馈节点下继续派发修复、审查或后续延伸任务，使全过程无需依赖对话转述即可观察。
+	- [x] [15:54] parent：设计已确认。任务信封最少公开目标、ownership、依赖、完成条件、验收方式和无法完成时的反馈要求；parent 独占任务节点创建、派工、状态迁移、验收与重排，worker/workerLow/tokener 只能向自己的任务 nodeId 提交反馈，不能修改任务状态。
+	- [ ] [15:54] parent：实现台账 MCP 的任务与反馈接口。parent 使用 create/assign/replan/status/accept；worker、workerLow、tokener 使用 report(nodeId, message, evidence)；服务端把 report 自动物化为带时间、agent 和固定“已反馈”状态的只读子节点，成功、失败和阶段进展都只在真实发生后生成，不预建空节点。
+	- [ ] [15:54] parent：实现 watcher 特权接口。watcher 可以向任意既有 nodeId 追加不可变的异常反馈子节点，但不能创建任务、修改原节点状态或删除内容；它只读取相关任务子树、任务信封、agent 生命周期和实际变更文件事实，监督信封缺项、parent 私自实施、可并行任务无理由串行、状态滞后、中断、Git 检查点及具体文件限制，并对同一异常去重。
+	- [ ] [15:54] parent：实现期间逐项比较已确认闭环与现有 MCP 能力；任何行为没有准确接口时，必须先在本任务下记录缺口、影响和建议新增的最小接口，取得确认后补齐，禁止借用无关接口、解析自由文本、扩大角色权限或以绕行调用掩盖接口不足。
+	- [ ] [15:54] parent：MCP 未真实接线前继续由 parent 在 README 以 `[HH:mm]` 维护纯文本台账；接线后迁移全部非终态节点，并以多角色真实调用验证任务信封可见、反馈自动成子节点、watcher 任意节点报警、parent 后续派工与状态闭环，验证通过后本文档退出运行态并发写入职责。
 - [x] T-072 方先生提出：由 parent 接管本轮全部工作，恢复唯一 watcher、保持其他工作者休息；核实废弃 MCP 边界，强化 watcher 对改后文件乱码与 Git 发布遗漏的报警职责，收敛 `apps/honoapp/source.ts` 的 helper、外部泛型、导出类型和默认导出结构，使用中文 Git tag 保存并发布。
 	- [x] parent：已恢复唯一只读 watcher，其他工作者没有启动新任务；watcher 使用改后文件审计事件真实报告了提交前 `commit/tag/push` 缺失，parent 随后建立源码提交 `7c4dedf`，报警已处理。
 	- [x] parent：CodeGraph 证实 `apps/honoapp/src/mcp.ts` 的唯一消费者是 `apps/mcpserver/index.ts`；`apps/mcpserver` 没有启动脚本、Codex MCP 配置或其他消费者，当前运行态闲置。该链仍保存 email/file/旧 tpl 的 MCP 注册能力，未获删除授权前保持不动。
