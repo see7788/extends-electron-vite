@@ -136,15 +136,16 @@ pnpm --dir honoapp-vscode-plugin run build
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
 
-- [~] [20:49] T-077 方先生提出：AI 调试过程中产生的历史文件、一次性脚本、诊断输出、截图、日志、缓存和恢复候选不得散落；统一收纳到仓库根 `.log/`，任务结束后由创建者清理，只有明确长期维护且存在真实消费者的交付物才进入正式目录。
+- [x] [20:49] T-077 方先生提出：AI 调试过程中产生的历史文件、一次性脚本、诊断输出、截图、日志、缓存和恢复候选不得散落；统一收纳到仓库根 `.log/`，任务结束后由创建者清理，只有明确长期维护且存在真实消费者的交付物才进入正式目录。
 	- [x] parent：已核实现有规则只覆盖截图和调试日志，缺少完整临时产物范围、owner、清理时点及长期文件准入条件；补充为通用文件读写约束，并保留创建文件前必须取得授权的边界。
-	- [~] parent：待完成源码检查、Git 保存及全局模板物化验证。
-- [~] [20:16] T-076 方先生确认：将全局模板源中的 Chrome DevTools MCP 从固定 `--browserUrl http://127.0.0.1:9222` 改为 Chrome 144+ 的 `--autoConnect`，复用正常 Chrome 用户资料与既有登录状态；同时把当前 MCP 以 `todo-mcp` 和固定源码路径的 npx/tsx stdio 入口纳入全局 source，使服务未启动时新会话也能正式加载。源码保存后通过真实 stdio MCP 更新用户级 source 并物化，核对最终 `config.toml`。
+	- [x] parent：源码经 TypeScript、diff 与 UTF-8 检查后保存为提交 `e72aa40`；真实 `todo-mcp` 依次完成 source PUT 和物化并均返回 204，生成的 file-io skill 已逐字包含临时产物落点及清理规则。
+- [x] [20:16] T-076 方先生确认：将全局模板源中的 Chrome DevTools MCP 从固定 `--browserUrl http://127.0.0.1:9222` 改为 Chrome 144+ 的 `--autoConnect`，复用正常 Chrome 用户资料与既有登录状态；同时把当前 MCP 以 `todo-mcp` 和固定源码路径的 npx/tsx stdio 入口纳入全局 source，使服务未启动时新会话也能正式加载。源码保存后通过真实 stdio MCP 更新用户级 source 并物化，核对最终 `config.toml`。
 	- [x] [20:16] parent：只修改权威模板源的 chrome-devtools 参数并建立 Git 检查点 `fe6e52a`；honoapp TypeScript、UTF-8 无 BOM 与差异检查通过。
-		- [~] [20:24] parent：真实 MCP `tpl2.source.PUT` 已返回 204；首次物化因模板管理的 chrome/codegraph 之后存在外部 `honoapp` URL MCP 而被安全检查阻断。方先生已授权修正物化器：只替换 source 明确拥有的 MCP section，任意位置的非模板 section 原样保留，重复或缺失模板所有段仍明确失败。
-- [~] [20:00] T-075 方先生确认：调整全局 Codex 模板的成员与方法权限边界。对象、class、Zustand 仓库中的数据、状态、配置、运行时字段及根成员只能由方先生定义；AI 未获明确授权不得新增、删除、改名、移动或改变其类型、默认值与持久化属性。局部变量与形参不在此限；已定义对象中的 Actions、class 方法及实现方法解除“必须共享、必须多个消费者”等放置限制，但仍须遵守类型、命名、Immer 写法、真实返回值和错误边界。只修改 `apps/honoapp/source.ts`，随后通过真实 MCP 更新用户级模板 source 并物化。
-	- [~] [20:00] worker：修改权威模板源中的 variable、scope、Zustand 与 MCP 相关约束，清除与新边界冲突的旧规则；不得编辑物化文件或其他业务源码。
-		- [>] [20:00] parent：源码检查点提交后，调用真实 `/mcp` 执行用户级 source 更新与物化，并核验生成的 skills、编码及 Git 状态。
+		- [x] [20:24] parent：物化器已改为按 source 所有权结构化替换 MCP section；恢复路径格式误判造成的用户级受管产物偏离后，真实 stdio MCP 重新物化成功。最终 config 保留 shell/features，并唯一包含 chrome-devtools、codegraph、todo-mcp 三段；全部生成文本为 UTF-8 无 BOM、LF。
+- [>] [20:55] T-078 parent 发现：全局模板真实物化成功后，`tpl2.output.filesStatus.POST` 仍把含非受管配置的完整 `config.toml` 与仅含受管 MCP 段的渲染片段直接全量比较，因而错误报告 `config.toml` dirty。后续应让状态检查复用全局结构化 merge 后的期望结果，不得把非受管配置视为偏离。
+- [x] [20:00] T-075 方先生确认：调整全局 Codex 模板的成员与方法权限边界。对象、class、Zustand 仓库中的数据、状态、配置、运行时字段及根成员只能由方先生定义；AI 未获明确授权不得新增、删除、改名、移动或改变其类型、默认值与持久化属性。局部变量与形参不在此限；已定义对象中的 Actions、class 方法及实现方法解除“必须共享、必须多个消费者”等放置限制，但仍须遵守类型、命名、Immer 写法、真实返回值和错误边界。只修改 `apps/honoapp/source.ts`，随后通过真实 MCP 更新用户级模板 source 并物化。
+	- [x] [20:00] worker：权威模板源中的 variable、scope、Zustand 与 MCP 相关约束已按新边界完成修改并保存为提交 `1661391`；未编辑物化文件或其他业务源码。
+		- [x] [20:55] parent：通过真实 `todo-mcp` 更新用户级 source 并物化；生成的 variable、scope、Zustand 与 MCP skills 已恢复并通过严格 UTF-8、无 BOM、LF 检查。
 - [x] [19:24] T-074 方先生确认：删除闲置的 `apps/mcpserver` 与旧 `apps/honoapp/src/mcp.ts`，创建无 `src` 壳的独立库 `F:/pro/extends-mcp`；该库只保留根级 `honomcp.ts` 作为唯一源码并默认导出固定的 `server`、`transport`、`responseContentRead` 对象，服务身份统一为 `extends-mcp`。`honoapp` 使用 `workspace:*` 消费该库，移除 `tpl2Actions.mcp`，由 `tpl2/index.ts` 注册业务工具、总入口挂载唯一 `/mcp`，不得破坏现有 tpl2 Hono 接口和真实物化链路。
 	- [x] [19:24] worker：已保留重叠脏基线并完成 `extends-mcp` 根级 TypeScript 库、workspace 依赖、Hono MCP 唯一入口和旧链删除；`pnpm install`、库/honoapp TypeScript、honoapp build、真实 initialize、tools/list 与 `tpl2.source.GET` 均通过。
 		- [x] [19:36] parent：方先生验收纠正已落实；新库直接默认导出三个成员，消费端只使用 `mcp.server`、`mcp.transport`、`mcp.responseContentRead`，无解构别名或模块级中转常量，并已重新通过真实 MCP 验证。
