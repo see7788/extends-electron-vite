@@ -98,7 +98,6 @@ const nodes = {
   fileIo: "file-io-styleskill", // 文件操作：安全读写、编码检查和事故恢复
   netStyle: "net-styleskill", // 网络边界：Hono API、HTTP、SSE 和 WebSocket
   scopeStyle: "scope-styleskill", // 作用域：对象边界、复用、导出、依赖和运行时配置
-  templateService: "template-service-styleskill", // 模板服务：插件启动、接口读写和物化边界
   variableStyle: "variable-styleskill", // 命名：变量、形参、方法、action 和路由层级
   zustandStoreStyle: "zustand-store-styleskill", // Zustand：主/切片仓库、action、状态流和持久化
 } as const;
@@ -156,7 +155,7 @@ const global: GlobalSource = {
       {
         title: "总纲",
         items: [
-          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow} 与 ${nodes.templateService}；watcher 只加载 ${nodes.watcherWorkflow} 和会话运行时事件。`,
+          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；watcher 只加载 ${nodes.watcherWorkflow} 和会话运行时事件。`,
           "agentsMd 只负责角色与技术 skill 分流；具体约束只在对应 skill 或 agent 自身定义中维护。",
           "watcher 是会话级只读报警器，不属于任务节点；它只理解 TodoTreeNode 的结构字段与通用运行事件，不加载技术 nodes 或业务实现。",
           "workerLow、worker、tokener 只按自身 agent 定义与 parent 任务信封工作；仅加载任务明确指定的技术 nodes、ownership 和验收资料，不读取 parent/watcher/doc/template 私有工作流或无关上下文。",
@@ -1063,44 +1062,6 @@ const global: GlobalSource = {
             "仅在运行时输入可证实时报告：环境不可用；缺少 TodoTreeNode[] 输入（`TodoTreeUnavailable`）；agent 生命周期与树状态不一致；parent 未建节点即派工、实施或收尾；agent 返回未被 parent 处理；存在非终态叶子却收尾；父子状态未闭环；改后文件不是严格 UTF-8 无 BOM 与 LF、包含 U+FFFD；改后文件未提交、当前提交没有指向自身且包含中文的 tag、分支或 tag 未推送、远端提交未核验；或既有 WatcherBug 未处理。",
             "每个 WatcherBug 至少包含 `kind`、`nodeIds`、`agentIds` 和 `message`；只列出运行时证实的关联 ID。输入不足时使用空数组，不补造 ID、状态、节点或原因。",
             "watcher 只发现和报告事实；收到 bug 后由 parent 记录 bug、更新任务树和状态、决定验收、派工或重排。watcher 不同步台账、不确认修复，也不把 agent 返回或状态变化自行视为已处理。",
-          ],
-        },
-      ],
-    },
-    [nodes.templateService]: {
-      description: "仅供 parent 使用。涉及 extends-codex 模板服务、VS Code 插件启动、全局/项目模板数据、模板接口或物化时使用；具体工作者不得加载。",
-      title: "模板服务",
-      sections: [
-        {
-          title: "边界与入口",
-          items: [
-            "模板服务是用户级配置数据边界；普通项目不得读取或修改模板服务实现、默认源、store 或生成的 `.codex` 产物。只有方先生明确把任务范围锁定为 extends-codex 模板服务源码仓库时，才允许按该源码仓库的开发流程修改唯一模板源。",
-            "模板服务源码仓库重构期间，标记 `@codex-protected` 的 package 根 `source.ts` 是同时包含 global 与 project 的唯一权威工作稿；业务源码可以只读 import，但不得修改、复制、派生或覆盖。新 Codex 要求先维护该文件，结构稳定后才整体迁回正式生产位置。",
-          ],
-        },
-        {
-          title: "接口与物化",
-          items: [
-            "页面和 MCP 通过 `GET/PUT /tpl2/source`、`POST /tpl2/output/filesStatus`、`POST /tpl2/output/materialize`、`POST /tpl2/output/rebase` 操作模板；每个请求都必须带已存在目录的 workspacePath，全局模板只使用用户主目录作为 workspacePath。",
-            "直接物化只执行下方代码，禁止经 Hono/HTTP 包装。",
-            "AI 只根据插件是否存在和方先生是否已启动服务决定下一步，不绕过公开接口直接操作模板服务内部状态、缓存或生成文件。",
-            "用户级与项目级物化必须幂等；重复创建输出对象并物化同一目标不是异常，不得用实例状态横向污染下一实例。",
-            "共享配置文件按结构化部分所有权物化：生成器只替换 source 明确拥有的键、section 或文件；不属于 source 的内容无论位于受管内容之前、之间或之后都必须保持原位置与原文。禁止假设受管内容连续、位于文件末尾或始终保持相同空格格式；格式变化时按结构识别所有权，只有拥有段缺失、重复或结构歧义时才安全阻断。",
-            "物化状态文件只记录生成器拥有内容的基线，不代表取得整份共享文件的覆盖权；重新物化必须逐个受管 section 合并，禁止用旧状态中的连续字符串覆盖后来加入的外部配置。",
-            "方先生指出模板或规则不符合习惯时，普通项目通过模板接口读取、更新、物化并验证，说明对应接口、skill 名、section 标题和具体规则；不得转而修改模板服务源码或生成产物。",
-          ],
-          code: {
-            language: "ts",
-            content: "new CodexOutput({ path: workspacePath, source }).materialize();",
-          },
-        },
-        {
-          title: "预览、恢复与发布",
-          items: [
-            "模板源修改后先生成独立预览并逐对象渲染，与当前已物化 AGENTS、agents、skills 和 config 比较；物化产物比源码更新时，先把产物作为恢复证据重建预览源，禁止用较旧源码覆盖较新产物。",
-            "恢复候选必须放在与正式源并列的独立预览文件中，逐项列出可信快照主体、较新物化差异、尚未物化增量和明确排除的项目专属内容；方先生确认预览前不得合入正式源。",
-            "正式源合入后必须先通过严格 UTF-8、语义锚点、schema、类型检查和限定 diff，再由 parent 创建 Git 检查点；只有方先生确认且检查点成功后才调用全局物化接口。",
-            "物化后逐字比较实际产物与预期渲染，确认旧 agent/skill 已按源定义处理且用户自有 config 合并项未丢失；验证失败时停止发布并使用物化前 Git 检查点恢复。",
           ],
         },
       ],
