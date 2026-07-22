@@ -21,7 +21,6 @@
       "react-router-dom": "^7.6.3",
       "hono": "^4.9.8",
       "@hono/node-server": "^1.13.8",
-      "vite": "^7.2.6",
       "electron": "^39.2.6",
       "electron-vite": "^5.0.0",
       "tsx": "^4.20.0",
