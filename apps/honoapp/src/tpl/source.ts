@@ -1,8 +1,8 @@
-import type { ProjectSource } from "./output/schema";
-import { nodes as globalNodes } from "./global/source";
+import type { ProjectSource } from "../../source";
+import source from "../../source";
 
 const nodes = {
-  ...globalNodes,
+  ...source.global.nodes,
 } as const;
 
 const tpl: ProjectSource = {
