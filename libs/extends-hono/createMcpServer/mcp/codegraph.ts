@@ -5,7 +5,7 @@ import mcp from "extends-hono/createMcpServer/index.ts";
 import { z } from "zod";
 
 const codegraphClient = new Client({
-  name: "extends-mcp-codegraph",
+  name: "extends-hono-codegraph",
   version: "0.0.0",
 });
 

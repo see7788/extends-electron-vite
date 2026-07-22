@@ -5,7 +5,7 @@ import mcp from "extends-hono/createMcpServer/index.ts";
 import { z } from "zod";
 
 const browserClient = new Client({
-  name: "extends-mcp-browser",
+  name: "extends-hono-browser",
   version: "0.0.0",
 });
 
