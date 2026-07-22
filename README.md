@@ -139,6 +139,7 @@ pnpm --dir honoapp-vscode-plugin run build
 	- [>] [19:24] worker：核对并保留当前重叠脏改动；实现 `extends-mcp` 根级 TypeScript 库、workspace 依赖和 Hono MCP 唯一入口，删除旧链，完成 pnpm 安装、库与 honoapp 类型检查、构建及真实 MCP 调用验证；不得修改 TodoTree、旧 tpl 业务或其他项目。
 - [ ] [15:54] T-073 方先生确认：实现以现有 TodoTreeNode 层级为可见载体的台账 MCP 协作闭环。方先生需求下展示 parent 的整体任务信封，parent 一次性为具体工作者建立带 nodeId 的任务信封；角色的真实进展、完成、阻塞、审查或异常均追加为对应节点的语义化反馈子节点，parent 再在反馈节点下继续派发修复、审查或后续延伸任务，使全过程无需依赖对话转述即可观察。
 	- [x] [15:54] parent：设计已确认。任务信封最少公开目标、ownership、依赖、完成条件、验收方式和无法完成时的反馈要求；parent 独占任务节点创建、派工、状态迁移、验收与重排，worker/workerLow/tokener 只能向自己的任务 nodeId 提交反馈，不能修改任务状态。
+	- [ ] [19:26] parent：补充执行单元分流。已批准且输入、输出、副作用、错误边界明确的 MCP 是 parent 可直接指挥的确定性执行单元；parent 调用 MCP、核对真实结果并维护任务状态不算亲自实施源码。已有合适 MCP 时优先直接调用；接口缺失、能力不足或任务需要开放式实现判断时才派 worker，禁止借 MCP 绕过接口直接编辑业务源码。
 	- [ ] [15:54] parent：实现台账 MCP 的任务与反馈接口。parent 使用 create/assign/replan/status/accept；worker、workerLow、tokener 使用 report(nodeId, message, evidence)；服务端把 report 自动物化为带时间、agent 和固定“已反馈”状态的只读子节点，成功、失败和阶段进展都只在真实发生后生成，不预建空节点。
 	- [ ] [15:54] parent：实现 watcher 特权接口。watcher 可以向任意既有 nodeId 追加不可变的异常反馈子节点，但不能创建任务、修改原节点状态或删除内容；它只读取相关任务子树、任务信封、agent 生命周期和实际变更文件事实，监督信封缺项、parent 私自实施、可并行任务无理由串行、状态滞后、中断、Git 检查点及具体文件限制，并对同一异常去重。
 	- [ ] [15:54] parent：实现期间逐项比较已确认闭环与现有 MCP 能力；任何行为没有准确接口时，必须先在本任务下记录缺口、影响和建议新增的最小接口，取得确认后补齐，禁止借用无关接口、解析自由文本、扩大角色权限或以绕行调用掩盖接口不足。
