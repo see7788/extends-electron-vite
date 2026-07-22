@@ -158,7 +158,9 @@ pnpm --dir honoapp-vscode-plugin run build
 	- [~] [23:31] workerMax：只读审计 `apps/honoapp/source.ts`，排除已确认事项；每题保存不少于 20 个汉字的原文、冲突或后果及单一问题，不修改任何正式源码或文档。
 		- [~] [23:58] parent 重新派工：确认 `source.ts` 已有稳定 Git 基线且当前没有其他写入者；workerMax 取得该文件独占只读 ownership，开始生成 `.log/codex-template-audit.md`，若哈希变化必须立即停止并报告。
 		- [x] [02:09] workerMax 完成 30 项问题清单；parent 已逐项取得方先生决定并写入 30 个回答，审计文件校验为 30/30 完整。
-		- [~] [02:09] workerMax 获得 `apps/honoapp/source.ts` 独占写入 ownership：按 30 项决定和 T-087 最小派工规范统一整理全局模板，删除废话、冲突、项目特例与重复正文，验证 schema、TypeScript、UTF-8/LF 和限定 diff；其他任务继续暂停，不得并发修改该文件。
+		- [|] [02:09] workerMax 曾获得 `apps/honoapp/source.ts` 独占写入 ownership，但没有返回写入、验证或任务反馈里程碑；该次实施未发生，不能作为完成依据。
+			- [<] [04:52] `apps/honoapp`：以 30 项完整回答对照当前权威 source，结果为已落实 1、部分落实 2、未落实 0、冲突 27；逐项行号证据已经返回，确认问答原稿完整但绝大多数决定尚未组合。
+				- [~] [04:52] `apps/honoapp`：独占修改 `apps/honoapp/source.ts`，按 30 项回答删除冲突与残留、补齐明确规则和 T-087 短信封规范；完成 schema、TypeScript、UTF-8/LF、逐项语义复核和限定 diff 后反馈，其他任务不得并发修改该文件。
 - [>] [23:27] T-082 方先生确认：从全局 Codex 模板中直接删除“每项技术工作开始前先检查当前会话实际暴露的 MCP 工具，并按任务选择需要的 MCP”；不增加每任务 MCP 清单检查或能力快照替代条款。待本轮只读文档审计形成一组已确认修改后，由 workerMedium 一次性更新权威 source 并物化。
 - [!] [23:09] T-081 方先生提出：为 parent 建立可复用的任务信封模板，减少重复派工文本；至少覆盖实施、只读审查、迁移/重命名和运行态验证，并自动包含 ownership、排除范围、依赖、完成条件、验收证据及反馈格式。当前阻塞于 `todo-mcp` 任务接口尚未定型；待 T-073 的任务/反馈接口确定后，以正式任务对象实现，不绑定临时 Markdown 台账。
 - [~] [23:06] T-080 方先生确认：将 Hono 专用 MCP 基础能力从独立 `extends-mcp` 迁入长期库 `extends-hono/createMcpServer/`；该目录默认提供可直接挂载的 Hono MCP router，各业务切片自行注册工具并挂载自己的 MCP 路径。补齐生产者依赖，统一现有消费者为 pnpm 包路径，验证无遗留消费者后删除 `F:/pro/extends-mcp`。
