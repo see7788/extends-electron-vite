@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { serve } from "@hono/node-server";
-import createViteRouter from "extends-hono/create-reactapp-router";
+import createViteRouter from "extends-hono/create-reactapp-router/index.ts";
 import { Hono } from "hono";
 import { fileURLToPath} from "node:url";
 import emailRouter from "./email";

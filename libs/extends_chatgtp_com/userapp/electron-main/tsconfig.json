@@ -8,9 +8,9 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "rootDir": ".",
     "types": ["node"]
   },
   "include": ["src"]
 }
-

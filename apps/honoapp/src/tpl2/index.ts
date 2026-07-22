@@ -1,6 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { zValidator } from "@hono/zod-validator";
-import mcp from "extends-hono/createMcpServer";
+import mcp from "extends-hono/createMcpServer/index.ts";
 import { Hono } from "hono";
 import { z } from "zod";
 import store from "../store";

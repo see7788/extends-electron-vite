@@ -4,5 +4,4 @@ packages:
   - 'libs/**'
   - '../extends-react'
   - '../extends-antd'
-  - '../extends-hono'
   - '../extends-zustand'

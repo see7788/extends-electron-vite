@@ -1,4 +1,4 @@
-import createViteRouter from "extends-hono/create-reactapp-router";
+import createViteRouter from "extends-hono/create-reactapp-router/index.ts";
 import { Hono } from "hono";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";

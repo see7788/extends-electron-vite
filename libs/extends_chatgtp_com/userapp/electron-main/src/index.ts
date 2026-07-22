@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import { Hono } from "hono";
 import { serve } from "@hono/node-server";
-import createViteRouter from "extends-hono/create-reactapp-router";
+import createViteRouter from "extends-hono/create-reactapp-router/index.ts";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
