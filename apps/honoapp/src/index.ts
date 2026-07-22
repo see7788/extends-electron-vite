@@ -24,12 +24,7 @@ const app = new Hono()
     root: fileURLToPath(new URL("../../reactapp", import.meta.url)),
   }));
 const { hostname, port } = store.getState().runtimeActions;
-const server = serve({ fetch: (request, env) => app.fetch(request, {
-  ...env,
-  api: store,
-  mcp: store.getState().mcpActions.tpl2,
-  responseContentRead: store.getState().mcpActions.responseContentRead,
-}), hostname, port }, (info) => {
+const server = serve({ fetch: app.fetch, hostname, port }, (info) => {
   console.log(`http://${hostname}:${String(info.port)}`);
 });
 process.once("SIGINT", () => server.close());
