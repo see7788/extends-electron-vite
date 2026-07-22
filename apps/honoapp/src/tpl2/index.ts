@@ -35,12 +35,12 @@ const tpl2Router = new Hono()
     return ctx.body(null, 204);
   })
   .all("/tpl2-mcp", async (ctx) => {
-    const { server, transport } = store.getState().tpl2Actions;
+    const { server, transport } = store.getState().tpl2Actions.mcp;
     if (!server.isConnected()) await server.connect(transport);
     return transport.handleRequest(ctx);
   });
 
-const { responseContentRead, server } = store.getState().tpl2Actions;
+const { responseContentRead, server } = store.getState().tpl2Actions.mcp;
 
 server.registerTool("tpl2.source.GET", {
   title: "读取 Codex 模板源码",
