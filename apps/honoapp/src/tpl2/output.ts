@@ -101,8 +101,12 @@ export default class CodexOutput {
   private mcpServerRender(name: string, server: GlobalSource["configToml"]["mcpServers"][string]) {
     return [
       `[mcp_servers.${name}]`,
-      `command = ${JSON.stringify(server.command)}`,
-      ...(server.args ? [`args = ${JSON.stringify(server.args)}`] : []),
+      ...("url" in server
+        ? [`url = ${JSON.stringify(server.url)}`]
+        : [
+          `command = ${JSON.stringify(server.command)}`,
+          ...(server.args ? [`args = ${JSON.stringify(server.args)}`] : []),
+        ]),
     ].join("\n");
   }
 
@@ -207,13 +211,6 @@ export default class CodexOutput {
 
   private configTomlMerge(current: string, next: string, source: GlobalSource, previous?: string) {
     if (previous !== undefined) {
-      const index = current.indexOf(previous);
-      if (index !== -1) {
-        if (current.indexOf(previous, index + previous.length) !== -1) {
-          throw new Error(`Cannot locate unique extends-codex content in ${this.targetPath("config.toml")}`);
-        }
-        return `${current.slice(0, index)}${next}${current.slice(index + previous.length)}`;
-      }
       return this.configTomlRebase(current, next, source);
     }
     const newline = current.includes("\r\n") ? "\r\n" : "\n";
@@ -243,39 +240,30 @@ export default class CodexOutput {
     const newline = current.includes("\r\n") ? "\r\n" : "\n";
     const lines = current.split(/\r?\n/);
     const names = Object.keys(source.configToml.mcpServers);
-    const headers = new Map(names.map(name => [name, 0]));
     const sectionHeader = /^\s*\[([^\]]+)\]\s*(?:#.*)?$/;
     const headerName = (line: string) => {
       const match = sectionHeader.exec(line);
       if (!match) return undefined;
       return names.find(name => [`mcp_servers.${name}`, `mcp_servers.${JSON.stringify(name)}`].includes(match[1].trim()));
     };
-    const indexes: number[] = [];
-
-    lines.forEach((line, index) => {
-      const name = headerName(line);
-      if (name !== undefined) {
-        headers.set(name, headers.get(name)! + 1);
-        indexes.push(index);
-      }
-    });
-    if (Array.from(headers.values()).some(count => count !== 1)) {
+    const sectionStarts = lines.flatMap((line, index) => sectionHeader.test(line) ? [index] : []);
+    const sections = sectionStarts.map((start, index) => ({
+      end: sectionStarts[index + 1] ?? lines.length,
+      name: headerName(lines[start]),
+      start,
+    }));
+    const ownedSections = sections.filter(section => section.name !== undefined);
+    if (names.some(name => ownedSections.filter(section => section.name === name).length !== 1)) {
       throw new Error(`Cannot safely rebase extends-codex MCP content in ${this.targetPath("config.toml")}`);
     }
-
-    const start = Math.min(...indexes);
-    for (let index = start; index < lines.length; index += 1) {
-      const match = sectionHeader.exec(lines[index]);
-      const name = headerName(lines[index]);
-      if (match && (name === undefined || !headers.has(name))) {
-        throw new Error(`Cannot safely rebase extends-codex MCP content in ${this.targetPath("config.toml")}`);
-      }
-    }
-
-    const prefix = lines.slice(0, start);
-    while (prefix.at(-1)?.trim() === "") prefix.pop();
-    if (prefix.length) prefix.push("");
-    return [...prefix, ...next.trimEnd().split("\n"), ""].join(newline);
+    const start = Math.min(...ownedSections.map(section => section.start));
+    const ownedIndexes = new Set(ownedSections.flatMap(section =>
+      Array.from({ length: section.end - section.start }, (_, index) => section.start + index),
+    ));
+    const remaining = lines.filter((_, index) => !ownedIndexes.has(index));
+    const insertAt = lines.slice(0, start).filter((_, index) => !ownedIndexes.has(index)).length;
+    remaining.splice(insertAt, 0, ...next.trimEnd().split("\n"), "");
+    return remaining.join(newline);
   }
 
   private configTomlStateRebase(current: string, source: GlobalSource) {

@@ -68,10 +68,15 @@ const projectSourceSchema = sourceBaseSchema.extend({
 const globalSourceSchema = sourceBaseSchema.extend({
   scope: z.literal("global"),
   configToml: z.object({
-    mcpServers: z.record(z.string().min(1), z.object({
-      args: z.array(z.string()).optional(),
-      command: z.string().min(1),
-    })),
+    mcpServers: z.record(z.string().min(1), z.union([
+      z.object({
+        args: z.array(z.string()).optional(),
+        command: z.string().min(1),
+      }),
+      z.object({
+        url: z.string().url(),
+      }),
+    ])),
   }),
   agents: z.record(z.string().min(1).regex(/^[^/\\]+$/), z.object({
     description: z.string().min(1),
@@ -182,6 +187,10 @@ const global: GlobalSource = {
         args: ["-y", "@colbymchenry/codegraph@1.4.1", "serve", "--mcp"],
         command: "npx",
       },
+      "todo-mcp": {
+        args: ["-y", "tsx", "F:/pro/extends-electron-vite/apps/honoapp/src/mcp.ts"],
+        command: "npx",
+      },
     },
   },
   skills: {
@@ -201,6 +210,7 @@ const global: GlobalSource = {
         {
           title: "通用命名",
           items: [
+            "对象、class 和 Zustand 仓库中的数据、状态、配置、运行时字段及根成员只能由方先生定义；未经本轮明确授权，AI 不得新增、删除、改名、移动或改变其类型、默认值与持久化属性。局部变量、形参、对象方法、class 方法和 store action 不属于此成员授权范围。",
             "命名必须表达业务语义或状态语义，不用 `data`、`item`、`temp`、`value` 这类无法区分含义的泛名，除非作用域极小且含义唯一。",
             "形参最小化：单点逻辑直接读当前作用域；真实复用后，才把差异提升为形参。",
             "禁止为了包一层、传一遍、套壳或制造统一形式创建无复用形参。",
@@ -255,12 +265,12 @@ const global: GlobalSource = {
             "先从生产者角度确认对象：谁创建、更新、销毁它，谁维护持久状态与稳定 ID；前后端项目默认以服务端对象目录作为 owner 边界。",
             "一个领域对象只有一个 owner；对象类型、schema、持久状态和本对象 action 在 owner 目录内收敛，不得在多个切片仓库或传输层重复建模。",
             "切片是对象生产者的实现单元，不以固定大小判断；强一体化的数据、运行态和动作属于同一对象，可以形成大切片，也可以由多个各自拥有明确生产者边界的小切片直接组合。",
-            "对象成员先按真实消费范围确定边界：只在单文件消费时保留文件私有；属于既有对象的派生能力时作为该对象的功能子对象；具有独立职责、状态或生命周期时拆成独立小切片，再由主仓库直接组合。",
-            "同一功能、协议、第三方能力或共同生命周期包含两个及以上成员时，必须以功能名建立子对象；调用路径按功能对象在前、具体成员或动作在后组织，禁止把同一功能压扁成长前缀成员。",
+            "对象、class 和仓库的数据成员、状态字段、配置字段、运行时字段及根成员以方先生已经定义的结构为固定边界；AI 不得依据消费数量、目录整齐或实现便利自行增删、移动、改名或改变其类型、默认值与持久化属性。",
+            "已定义对象内的方法、class 方法和 store action 可以按实现职责组织为功能子对象或明确路径，不要求共享、多个消费者或独立生命周期作为放置前提；方法和 action 的调整不得暗中创建或改变数据成员。",
             "功能对象的边界变化时整体迁移：成为独立生产者就整体拆成切片，只剩单文件消费就整体收回文件私有作用域；不得把其成员散落后逐个迁移。",
             "对象名是边界与实现的强约束键：对象目录名、服务端对象名、切片仓库根属性名、前端消费目录名、路由名（前端目录/route/endpoint）及相关持久化 key 必须一一可映射为同名体系，不允许同一对象在任一层出现临时别名。",
             "严禁引用未落地的 owner 名称：若对象目录不存在对应 owner，先回到任务需求确认再创建目录或切片。",
-            "先实现 owner 的对象目录和切片仓库；action 只按当前已确认的页面或接口调用点创建，无真实调用点的未来方法、备用类型和预留 DTO 不得加入。",
+            "先实现方先生已经确认的 owner、对象目录和成员结构；方法与 action 可以按当前实现需要补充，但备用数据成员、类型字段和预留 DTO 未获授权不得加入。",
             "对象暴露的服务端路由放在该对象目录内；页面路由或功能目录与服务端对象目录保持同名或明确映射，路由汇总层只组合，不拥有领域状态。",
             "消费者只允许通过稳定 ID、owner action 或只读视图 DTO 使用对象；禁止从页面字段、请求 contract 或组件状态反推并新建领域对象。",
             "消费者携带的 ID、URL 查询或恢复参数只允许在 owner 状态不存在时用于初始化；owner 已有对象或关系后，重连、恢复和页面状态不得覆盖它，关系变更必须调用 owner action。",
@@ -315,15 +325,14 @@ const global: GlobalSource = {
         {
           title: "通用作用域",
           items: [
-            "任何常量、类型、函数、方法、class、组件、配置、DTO、wrapper、adapter 或文件，只有在存在多个真实消费点，或自身维护独立状态、生命周期、不变量时才允许定义；否则必须内联到真实消费点。改变 private/public、class/file 或目录位置不构成复用。",
+            "模块级常量、命名类型、函数、组件、配置、DTO、wrapper、adapter 或文件，只有在存在多个真实消费点，或自身维护独立状态、生命周期、不变量时才允许定义；否则必须内联到真实消费点。本条不约束方先生已定义对象、class 或仓库内部的方法和 action。",
             "无套壳阻断规则：所有领域对象、Hono router、Zustand 主/切片仓库、项目入口、React 页面、配置对象、schema、协议对象必须由真实 owner 直接定义、消费和导出；只转发、构造、拼装、重命名或包裹其他实现，以及 factory、wrapper、adapter、barrel、转发入口、创建后再调用、兼容层、恢复层、兜底层或预留层一律禁止，所有项目均无例外。class 禁止 `new` 后立即调用 start/run/init；React 禁止只转发 props 的 App、Layout 或路由壳；配置禁止用 configCreate、mergeConfig 或同义包装单一配置；类型和 schema 禁止平行 DTO 或转发类型文件；包入口和 export 禁止 barrel、重导出或别名；API、IPC、WebSocket 禁止只转发的 bridge、adapter 或 facade；命令、事件和订阅禁止转调 handler 或 wrapper；单消费者 helper 和 utils 必须内联。仅在缺少真实外部事实时可报告阻塞。",
             "方先生明确要求将 `name.ext` 目录化时，只能变为 `name/index.ext`，目录名保持原文件名；原内容、导出和行为必须先原样等价迁入。目录化本身禁止新增、删减、抽取或迁移其他文件或公开面；只有方先生另行明确要求才能增加文件。",
-            "单消费者 helper 文件是违规抽取，必须在同一轮并入唯一宿主 class 或模块并删除该文件；class 内仅供自身使用的方法必须标记为 `private`，模块级仅供单一 class 使用的函数不得以 helper 形式保留；零消费者 export、方法和文件必须删除，不得保留为未来复用。收纳、保留或删除前必须给出调用图证据，列出符号及全部当前消费者；无法证明两个独立真实消费者时不得创建或保留抽取。",
+            "单消费者 helper 文件是违规抽取，必须在同一轮并入唯一宿主 class 或模块并删除该文件；模块级仅供单一 class 使用的函数不得以 helper 形式保留；零消费者 export 和文件必须删除，不得保留为未来复用。本条不以消费数量限制既有对象、class 或仓库内部的方法和 action。收纳、保留或删除前必须给出调用图证据，列出符号及全部当前消费者。",
             "多个 Codex source 共同消费的静态模板常量必须由真实 owner 使用普通命名 `export const` 定义，其他 source 直接 import；禁止为了让同一 source 对象访问 `nodes` 等常量而使用 IIFE、闭包参数、factory 或回调包裹对象。只有立即计算本身具有真实输入、状态或生命周期时才允许 IIFE。",
             "新增或保留 `helper`、`utils`、`wrapper`、`adapter`、`factory`、`compose`、`withXxx`、转发函数或只负责拼接配置的模块前，必须先用 CodeGraph 列出至少两个当前真实调用点的文件路径和符号；未来可能复用、不同参数、目录整齐、测试调用和同一调用链的转发均不计数。证据不足时直接内联到唯一消费点，禁止以任何命名或 private 文件规避。",
             "配置合并、对象包装和 API 转发同样受单点内联约束：只有两个及以上独立宿主真实消费同一合并行为时才允许库导出 helper；唯一宿主必须在自身真实入口直接组合配置和调用。",
             "本条是阻断规则：未在本轮工作记录中给出 CodeGraph 的两个独立真实消费点证据时，不得新增、保留或改名伪装任何抽取；发现既有单点抽取时，必须在同一轮内联并删除。若无法内联，返回 `Reuse Evidence Required`，不得宣称任务完成。每次涉及此类改动的收尾前，必须逐项列出抽取名称、两个消费点文件路径和符号；缺任一项即视为验证失败。",
-            "无参数 class 的实例创建若同步完成全部工作，且创建后没有独立状态、后续生命周期或第二个真实动作，必须把唯一逻辑直接放进 `constructor`，调用方只写 `new ClassName()`；禁止额外暴露只被构造后立即调用一次的 `sync`、`init`、`run`、`start` 或同义方法。只有异步动作、需要延后触发、存在多个真实调用时机，或实例创建后仍维护状态与生命周期时，才允许保留独立公开方法。",
             "具体实现前先做真实实现前置检查：确认真实输入、真实配置、真实调用路径、真实副作用和真实验证方式；缺任一关键条件时先阻塞并列缺项，不先写象征实现。",
             "真实实现：用户要求具体实现时，必须接入真实调用路径、真实配置、真实文件、真实命令或真实接口；禁止用 mock、stub、dummy、示例数据、空方法、只改状态的象征实现冒充完成。",
             "涉及真实外部系统的完整链路，必须按最早可观察边界逐级取证：调用入口 -> 操作实际提交 -> 生产者状态变化 -> 异步任务开始或结束 -> 原始响应 -> 本项目解析或持久化 -> 消费者显示；前一层未证实时，禁止修改后一层。",
@@ -331,7 +340,7 @@ const global: GlobalSource = {
             "缺少真实实现所需信息时暂停实现并列出缺项；涉及服务器、远端服务或账号能力时，缺少 IP、域名、端口、用户名、密码、token、密钥、路径、进程名、协议或启动命令中的任一必要项，都必须标记为阻塞，不写虚假实现。",
             "缺少真实信息时，只实现不依赖缺项且可验证的部分；依赖缺项的代码保持未实现或显式阻塞，不创建假配置、假返回、假进程控制或假网络调用。",
             "禁止用“逻辑跑通”替代真实可用；没有真实输入、真实副作用、真实返回或真实验证路径时，不能宣称已完成，只能说明当前是未接线、未验证或等待信息。",
-            "归一化放置顺序：单点消费内联到当前消费点；同一视图或路由私有内容放在该视图或路由目录；业务状态、业务参数、状态提示、协议字段和多 action 共用逻辑放进已有切片仓库或业务对象；只有跨业务真实复用且没有既有业务边界时才创建新模块。",
+            "归一化放置顺序：单点模块实现内联到当前消费点；同一视图或路由私有内容放在该视图或路由目录；方法和 action 逻辑可以放进方先生已定义的切片仓库、class 或业务对象，但不得借放置逻辑新增或改变数据成员；只有跨业务真实复用且没有既有业务边界时才创建新模块。",
             "能继承的类型不套娃；能由实际调用点自动推导的类型不手写、不导出。",
           ],
         },
@@ -420,7 +429,7 @@ const global: GlobalSource = {
           title: "pnpm 公共库与传递依赖冲突",
           items: [
             "pnpm workspace 包导入：消费者在 package.json 以 `\"生产者包名\": \"workspace:*\"` 声明依赖；代码可以以生产者包名作为根直接导入其真实磁盘路径。不得以相对路径、绝对路径、`file:` 或 `link:` 指向其他 package 的文件；不得用导出映射、转发入口或别名改变名称或路径。",
-            "本机 `F:/pro` 下存在多个独立 pnpm 根项目，它们会通过 `../extends-*` 共同消费相邻公共库；同一个公共库可能同时成为多个根 workspace 的成员。出现冲突时先确定当前发生问题的消费项目根，不把公共库目录现有的 node_modules 当作当前项目的可靠依赖环境。",
+            "同一父目录下存在多个独立 pnpm 根项目并共同消费相邻公共库时，同一个公共库可能同时成为多个根 workspace 的成员。出现冲突先确定当前发生问题的消费项目根，不把公共库目录现有的 node_modules 当作当前项目的可靠依赖环境。",
             "当前 pnpm workspace 内的包依赖必须使用包名加 `workspace:*`（或用户明确的 workspace 版本范围）；禁止使用 `file:`、`link:`、相对路径、绝对路径或直接源码相对 import 伪装包依赖。发现目标包在相邻目录但未被 `pnpm-workspace.yaml` 纳入时，先报告 `Workspace Membership Required`；只有用户明确将其纳入当前 workspace 后，才修改 workspace 清单并使用 `workspace:*`，绝不以 `file:` 作为兜底。",
             "修改 package.json 的本地包依赖后，必须在消费项目根执行 `pnpm install`，再以 TypeScript 或实际构建确认解析路径；安装成功不能替代验证。最终检查必须搜索本轮涉及 package.json 中是否仍有 `file:`、`link:` 或相对路径依赖，并对每一项报告明确的外部协议例外或移除。",
             "上述本地包规则覆盖 `dependencies`、`devDependencies`、`peerDependencies`、`optionalDependencies` 和任何 pnpm catalog/override 引用；不得以测试、开发依赖、私有包、相邻目录、临时迁移或“先跑起来”为由使用 `file:` 或相对路径。`pnpm why` 显示的解析结果 `link:` 仅可作为 `workspace:*` 的正常解析结果，绝不能成为 package.json 声明 `link:` 的理由。",
@@ -431,7 +440,7 @@ const global: GlobalSource = {
             "依赖里的依赖发生冲突时，先用 `pnpm why` 找到引入冲突版本的上游包并优先升级或调整上游；只有确认版本范围和运行行为兼容后才允许根项目使用 pnpm overrides 统一版本，版本明确不兼容时禁止强制覆盖。",
             "多个版本只有在类型、实例、全局状态和 singleton 都不跨包边界时才允许共存；Hono router、Zustand creator、React object 等对象跨边界时必须统一依赖来源，不能依靠 adapter、wrapper 或类型断言伪装兼容。",
             "相邻 `../extends-*` 公共库被多个 pnpm 根项目消费时，每个消费根都要独立检查 `injectWorkspacePackages` 或具体依赖的 injected 配置；配置属于消费项目，不依赖另一个根项目最后一次 pnpm install 碰巧留下的解析环境。",
-            "package.json、lockfile 和 `pnpm why` 看起来一致但 TypeScript 仍报告同名类型不兼容，或错误路径同时出现两个 `F:/pro` 项目的 node_modules 时，才进一步从消费项目和公共库目录分别检查 `require.resolve`、realpath 与实际版本，确认是否仍从其他工作区解析。",
+            "package.json、lockfile 和 `pnpm why` 看起来一致但 TypeScript 仍报告同名类型不兼容，或错误路径同时出现两个独立项目根的 node_modules 时，才进一步从消费项目和公共库目录分别检查 `require.resolve`、realpath 与实际版本，确认是否仍从其他工作区解析。",
             "Hono router 不兼容、Zustand persist/immer mutator 不兼容和 setState producer 类型异常可能是同一个依赖来源冲突的不同下游表现；错误路径指向不同根项目时必须先解决依赖来源，禁止逐个修补这些泛型报错。",
             "禁止把 `as unknown as`、复制 Hono/Zustand 泛型、手改 node_modules、删除公共库 node_modules 或只统一 package.json 版本当作完成；这些操作没有证明消费方和公共库使用了稳定兼容的依赖环境。",
             "修复后必须从发生问题的消费项目根重新执行 `pnpm install`、`pnpm why/list -r` 和完整 typecheck/build；不能只以安装成功、单包类型检查或 package.json 版本一致判定完成。",
@@ -495,14 +504,14 @@ const global: GlobalSource = {
             "切片仓库必须直接定义并由主仓库直接合并；禁止 create、factory、wrapper、adapter、转发函数或创建后再调用层包裹，所有项目均无例外。",
             "页面、路由和服务端跨文件调用可以消费已经构建主仓库的公开根成员；切片目录中的 Hono index、组件和其他业务消费者可以消费完整主仓库并跨切片协作。",
             "被主仓库组合消费的切片仓库定义文件（通常 `${dir}/store.ts`）不得导入父级主仓库或通过 `../store` 反向依赖组合根；跨组合根访问使用 Zustand StateCreator 注入的第三个 `api` 参数。",
-            "MCP server、transport、response adapter 及对应工具描述归其业务切片 owner；共享归属按真实消费与生命周期判断。",
+            "MCP server、transport、response adapter 及工具注册方法按方先生已定义的项目成员结构放置；方法和 action 不以共享数量决定位置，不得为了容纳 MCP 自行创建数据根成员。",
           ],
         },
         {
           title: "主仓库",
           items: [
-            "主仓库只负责组合切片、配置 persist/immer、定义持久化和 rehydrate；不要在主仓库实现具体业务 action。",
-            "主仓库不定义业务类型、业务常量、schema、工具函数或业务对象；只组合切片并保留全局显式配置边界已经固定的根成员。",
+            "主仓库的数据根成员与持久化结构只采用方先生明确给出的定义；AI 不得依据业务实现自行增加、删除、移动或改型。",
+            "主仓库仍直接组合切片并配置 persist/immer；已有 Actions 或对象中的实现方法不受共享数量限制，但不得借方法实现改变根成员结构。",
             "主仓库类型只表达切片并入关系；前端可用 `ReturnType<typeof createFile> & ReturnType<typeof createTpl>` 推导，服务端可按既有切片 `Store` 类型交叉并入。",
             "主仓库导入切片时只默认导入切片工厂；除项目既有服务端 `Store` 类型交叉并入外，不从切片导入私有类型、常量或工具函数。",
           ],
@@ -511,9 +520,9 @@ const global: GlobalSource = {
           title: "切片定义",
           items: [
             "切片仓库直接定义并由主仓库直接合并；禁止 create、factory、wrapper、adapter、转发函数或创建后再调用层，所有项目均无例外。",
-            "切片按 scope-style 已确认的对象名声明根成员：存在真实可持久化业务数据时定义 `${dir}`，存在跨文件 action、非持久化运行态或展示映射时定义 `${dir}Actions`；没有持久化数据时禁止为了结构对称创建空 `${dir}: {}`。",
+            "切片只能实现方先生已经明确声明的 `${dir}`、`${dir}Actions` 及其数据成员；AI 不得依据持久化、跨文件调用、结构对称或实现便利自行创建、删除或改型根成员。",
             "切片仓库私有类型在切片内部完成；除项目既有服务端 Store 类型外，不导出无外部消费的私有类型。",
-            "切片一级根成员使用同目录对象名和 `${dir}Actions`；二者是否同时存在由真实持久化数据和跨文件行为决定，具体对象边界先按 scope-style。",
+            "方先生已定义 `${dir}Actions` 后，AI 可以按实现需要增加和组织 action、非持久化实现方法及展示映射，不要求多个消费者；这些方法不得暗中增加 `${dir}` 数据字段。",
           ],
           code: {
             language: "ts",
@@ -548,7 +557,7 @@ const global: GlobalSource = {
         {
           title: "后端仓库",
           items: [
-            "后端切片存在持久化数据时使用 `${dir}`，存在跨路由/跨文件方法或非持久化运行态时使用 `${dir}Actions`；边界由 scope-style 确定，不创建没有真实数据的空根成员。",
+            "后端切片的数据根成员与 Actions 根成员只采用方先生已经明确的结构；已有 Actions 内的方法可按实现需要组织，不以跨路由、跨文件或消费数量作为准入条件。",
             "服务端跨文件调用可以消费已构建主仓库的公开根成员和各切片 `${dir}Actions`，并可跨切片协作。",
             "后端长流程、订阅推送、流式事件和跨路由共享状态进入服务端仓库 action 或业务对象边界。",
           ],
@@ -556,13 +565,13 @@ const global: GlobalSource = {
         {
           title: "根成员",
           items: [
-            "切片数据根成员名必须与同目录名完全一致，例如 `chat/store.ts` 返回 `{ chat }`，`tpl/store.ts` 返回 `{ tpl }`，`file/store.ts` 返回 `{ file }`。",
-            "切片跨文件方法根成员名使用同目录名加 `Actions`，例如 `chatActions`、`tplActions`；方法属于该根成员，不散落到主仓库或游离模块。",
-            "切片按需使用 `${dir}` 和 `${dir}Actions`：前者只含真实需要持久化的业务数据，后者包含跨文件 action、非持久化运行态和展示映射；缺少对应内容时不创建空根成员。",
+            "切片数据根成员、Actions 根成员及命名以方先生给出的定义为唯一依据；未经授权不得用目录名、持久化需求、跨文件行为或既有惯例推导并新建根成员。",
+            "已定义 Actions 根成员中的 action、非持久化实现方法和展示映射可以按功能对象组织，允许为可读性加深路径，不要求共享或多个消费者。",
+            "新增方法和 action 不等于取得数据结构修改权；任何状态、配置、运行时字段、默认值或持久化属性变化仍须先获得方先生明确授权。",
             "服务端切片的数据与行为仍按对象生产者收敛；一个大对象可以组合多个独立小切片，主仓库只直接组合，不重新包装。",
             "禁止用跨目录、功能前缀或长前缀命名根成员；根成员名只表达目录边界，不表达实现细节。",
-            "跨文件使用的方法只能通过 `${dir}Actions` 暴露；文件私有行为留在当前文件，不为了复用预先导出。",
-            "同一功能包含两个及以上 action 或运行态成员时必须用功能子对象加深路径，保持末端成员短且明确，例如 `mcp.server`、`agent.codexcli.chat()`、`llm.openai.config()`；不要强求扁平或给成员重复添加功能前缀。",
+            "跨文件方法优先通过方先生已经定义的 Actions 或对象公开；文件私有行为也可收纳为对象/class 私有方法，不以复用数量强迫内联或删除。",
+            "同一功能的多个 action 可用功能子对象加深路径，保持末端成员短且明确，例如 `agent.codexcli.chat()`、`llm.openai.config()`；这是方法组织方式，不得据此创建新的数据根成员。",
             "状态、agent 等领域枚举优先使用明确的数字联合类型；数字到文字、颜色或图标的映射放在对应 `${dir}Actions` 根成员，文字必须保留为可读语义，TSX 只从仓库消费映射，不另建单点常量、helper 或专用映射组件。",
           ],
         },
@@ -570,7 +579,7 @@ const global: GlobalSource = {
           title: "Action",
           items: [
             "action 表达业务动作并与业务语义同名；不暴露 `stateGet`、`stateSet` 这类包一层的基础 API。",
-            "仓库只暴露 React 会直接使用的状态和动作；内部工具、get 类方法留在 action 内部。",
+            "仓库 Actions 可以保留实现所需的明确方法，不要求必须由 React 直接消费；禁止为了方法方便新增未授权状态字段。",
             "所有对服务端发起请求、接收响应、处理错误、消费流式返回、订阅推送的逻辑都在仓库 action 内实现。",
             "页面交互按事件驱动状态实现：组件触发 action，仓库发起请求或接收事件，仓库更新状态，React 响应状态变化。",
             "同一类业务状态只能有一个写入口；多个来源影响同一状态时，先归一成事件，再在仓库 action 内处理。",
@@ -582,7 +591,7 @@ const global: GlobalSource = {
         {
           title: "放置边界",
           items: [
-            "业务参数、状态提示文案、协议字段、请求构造、流式状态和多个 action 共用的派生规则优先收敛在当前切片仓库或对应业务对象内；不要以没有位置为理由创建游离变量文件。",
+            "请求构造、派生计算和 action 共用实现可以收敛在方先生已定义的 Actions、class 或业务对象方法中；业务参数、状态、配置和协议字段属于数据成员，未经授权不得为收敛实现而加入仓库。",
             "纯视图私有文案不进入仓库，按 scope-style「前端作用域」放在消费点或视图目录。",
           ],
         },
@@ -636,10 +645,10 @@ const global: GlobalSource = {
         {
           title: "MCP",
           items: [
-            "MCP 按 scope-style 判断对象生产者边界：作为既有对象的派生能力时，以 `${dir}Actions.mcp` 功能对象聚合 server、transport、response adapter 等成员；具有独立职责、状态或生命周期时拆成自己的 `${mcpDir}Actions` 小切片，有真实持久化数据时才同时定义 `${mcpDir}`。",
-            "只有至少两个已存在、相互独立的切片真实共享且生命周期属于整个应用的 MCP runtime，才允许成为主仓库根成员；不得以以后可能复用为由提升。",
-            "主 Hono 入口只组合 `.route` 和启动，不写切片 tool 定义；切片 index 直接构造并默认导出完整 router，`/<slice>-mcp` 也由该切片挂载。",
-            "每个切片一个 MCP server；工具与 Hono route 一一对应，input schema 复用 Hono 验证 schema，handler 在同进程使用该 router.request()，不走网络、不复制业务实现。",
+            "一个应用默认复用一个 MCP runtime 和一个正式 endpoint；具体业务模块只向既有 server 注册本模块工具。只有方先生明确要求独立服务、权限或生命周期时才拆分第二个 MCP server。",
+            "MCP runtime 的数据成员和根成员位置只采用方先生已定义的结构；工具注册、response adapter 和调用方法可以放在既有 Actions、class 或模块内，不以共享数量作为准入条件，也不得为了 MCP 自行新增仓库数据成员。",
+            "主 Hono 入口挂载唯一 MCP endpoint 并启动服务；业务模块在自身真实入口注册工具，不复制 Hono 业务实现。",
+            "工具与已有 Hono route 或业务 action 一一对应，input schema 复用已有验证 schema；同进程优先直接调用真实 router/action，不走本机网络、不复制业务实现。",
             "registerTool 名称机械来自 Hono 路径：slash 转 dot，HTTP method 放最后并使用合法字符，例如 `account.profile.GET`；title 和 description 必须清楚说明用途、输入、输出与副作用，不能只写 `GET /path`。",
             "HTTP 有 body 时返回原 body；204 返回真实状态码文本；禁止伪造 null、成功文案或空 content。",
             "server、transport 只实例化一次，tool 只注册一次；重复请求不得重复注册。",
@@ -760,7 +769,7 @@ const global: GlobalSource = {
           code: {
             language: "ts",
             content: [
-              "const response = await tpl2Router.request(\"/tpl2/source?workspacePath=<workspacePath>\");",
+              "const response = await router.request(\"/resource?scope=<scope>\");",
               "const body = await response.json();",
               "return ctx.json(body);",
             ].join("\n"),
@@ -1076,6 +1085,8 @@ const global: GlobalSource = {
             "直接物化只执行下方代码，禁止经 Hono/HTTP 包装。",
             "AI 只根据插件是否存在和方先生是否已启动服务决定下一步，不绕过公开接口直接操作模板服务内部状态、缓存或生成文件。",
             "用户级与项目级物化必须幂等；重复创建输出对象并物化同一目标不是异常，不得用实例状态横向污染下一实例。",
+            "共享配置文件按结构化部分所有权物化：生成器只替换 source 明确拥有的键、section 或文件；不属于 source 的内容无论位于受管内容之前、之间或之后都必须保持原位置与原文。禁止假设受管内容连续、位于文件末尾或始终保持相同空格格式；格式变化时按结构识别所有权，只有拥有段缺失、重复或结构歧义时才安全阻断。",
+            "物化状态文件只记录生成器拥有内容的基线，不代表取得整份共享文件的覆盖权；重新物化必须逐个受管 section 合并，禁止用旧状态中的连续字符串覆盖后来加入的外部配置。",
             "方先生指出模板或规则不符合习惯时，普通项目通过模板接口读取、更新、物化并验证，说明对应接口、skill 名、section 标题和具体规则；不得转而修改模板服务源码或生成产物。",
           ],
           code: {
@@ -1165,6 +1176,7 @@ const global: GlobalSource = {
             "修改 TypeScript 模板字符串中的 Markdown、glob 或代码示例时，必须检查新增反引号是否会提前闭合宿主模板字符串；需要反引号时正确转义，能不用时使用普通文字。每个最小 patch 后立即运行真实 parser 或 TypeScript 检查，出现连锁语法错误时停止后续 patch。",
             "禁止使用 `Set-Content`、`Out-File`、重定向、管道、字符串拼接脚本或跨 shell 转发来改写仓库文本；格式化器和受控生成器除外，但必须有真实入口和验证。",
             "禁止任何读取命令的输出直接进入写入命令；读取、判断、修改必须是三个可审计步骤。",
+            "多个生产者共享同一结构化配置文件时，写入方必须声明自己的键或 section 所有权，只修改这些受管部分并原样保留全部非拥有内容；不得以旧快照、连续文本块或文件尾部作为所有权边界。受管部分可以分散出现，写入前按结构验证每个拥有段唯一存在；缺失、重复或无法唯一识别时停止并报告，禁止整文件覆盖。",
             "非本轮由 Codex 新增的注释视为既有用户内容；未经方先生明确授权，禁止删除、移动、合并、改写或格式化；即使修改相邻代码也必须原样保留。",
             "禁止为了修乱码执行自动转码、重复编码/解码试验或批量替换常见乱码字符；没有权威原文时保持阻塞。",
             "具体工作者写入后必须完成任务信封要求的验证，并向 parent 返回真实文件列表、diff、UTF-8/行尾检查、语义锚点和验收证据；没有任务信封明确授权时不得自行执行 Git commit、push 或其他外部发布。",

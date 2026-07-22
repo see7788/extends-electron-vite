@@ -135,9 +135,9 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
-- [~] [20:16] T-076 方先生确认：将全局模板源中的 Chrome DevTools MCP 从固定 `--browserUrl http://127.0.0.1:9222` 改为 Chrome 144+ 的 `--autoConnect`，复用正常 Chrome 用户资料与既有登录状态；源码保存后通过真实 MCP 更新用户级 source 并物化，核对最终 `config.toml`。
+- [~] [20:16] T-076 方先生确认：将全局模板源中的 Chrome DevTools MCP 从固定 `--browserUrl http://127.0.0.1:9222` 改为 Chrome 144+ 的 `--autoConnect`，复用正常 Chrome 用户资料与既有登录状态；同时把当前 MCP 以 `todo-mcp` 和固定源码路径的 npx/tsx stdio 入口纳入全局 source，使服务未启动时新会话也能正式加载。源码保存后通过真实 stdio MCP 更新用户级 source 并物化，核对最终 `config.toml`。
 	- [x] [20:16] parent：只修改权威模板源的 chrome-devtools 参数并建立 Git 检查点 `fe6e52a`；honoapp TypeScript、UTF-8 无 BOM 与差异检查通过。
-		- [!] [20:24] parent：真实 MCP `tpl2.source.PUT` 已返回 204，但 `tpl2.output.materialize.POST` 返回 `Internal Server Error`。原始异常确认 `config.toml` 在模板管理的 chrome/codegraph 之后另有不属于 source 的 `honoapp` URL MCP，现有 `configTomlRebase` 拒绝保留该尾部段。继续需要方先生确认：修正物化器以原位保留任意非模板 MCP 段，或把 URL MCP 纳入全局 source/schema。
+		- [~] [20:24] parent：真实 MCP `tpl2.source.PUT` 已返回 204；首次物化因模板管理的 chrome/codegraph 之后存在外部 `honoapp` URL MCP 而被安全检查阻断。方先生已授权修正物化器：只替换 source 明确拥有的 MCP section，任意位置的非模板 section 原样保留，重复或缺失模板所有段仍明确失败。
 - [~] [20:00] T-075 方先生确认：调整全局 Codex 模板的成员与方法权限边界。对象、class、Zustand 仓库中的数据、状态、配置、运行时字段及根成员只能由方先生定义；AI 未获明确授权不得新增、删除、改名、移动或改变其类型、默认值与持久化属性。局部变量与形参不在此限；已定义对象中的 Actions、class 方法及实现方法解除“必须共享、必须多个消费者”等放置限制，但仍须遵守类型、命名、Immer 写法、真实返回值和错误边界。只修改 `apps/honoapp/source.ts`，随后通过真实 MCP 更新用户级模板 source 并物化。
 	- [~] [20:00] worker：修改权威模板源中的 variable、scope、Zustand 与 MCP 相关约束，清除与新边界冲突的旧规则；不得编辑物化文件或其他业务源码。
 		- [>] [20:00] parent：源码检查点提交后，调用真实 `/mcp` 执行用户级 source 更新与物化，并核验生成的 skills、编码及 Git 状态。
