@@ -402,8 +402,9 @@ const global: GlobalSource = {
           items: [
             "仓库由主仓库和切片仓库组成：主仓库负责组合和生命周期配置，切片仓库负责业务状态和 action。",
             "切片仓库必须直接定义并由主仓库直接合并；禁止 create、factory、wrapper、adapter、转发函数或创建后再调用层包裹，所有项目均无例外。",
-            "页面、路由和服务端跨文件调用只使用切片暴露的同目录根成员或 `${dir}Actions`。",
-            "切片目录内（包括切片 store、Hono router、组件和业务入口）禁止导入父级主仓库或通过 `../store` 反向依赖组合根；切片读取或修改组合后仓库只能使用 Zustand StateCreator 注入的第三个 `api` 参数，并通过本切片 `${dir}Actions` 暴露给路由和外部消费者；禁止直接调用 `rootStore.getState/setState`。",
+            "页面、路由和服务端跨文件调用可以消费已经构建主仓库的公开根成员；切片目录中的 Hono index、组件和其他业务消费者可以消费完整主仓库并跨切片协作。",
+            "被主仓库组合消费的切片仓库定义文件（通常 `${dir}/store.ts`）不得导入父级主仓库或通过 `../store` 反向依赖组合根；跨组合根访问使用 Zustand StateCreator 注入的第三个 `api` 参数。",
+            "MCP server、transport、response adapter 及对应工具描述归其业务切片 owner；共享归属按真实消费与生命周期判断。",
           ],
         },
         {
@@ -457,7 +458,7 @@ const global: GlobalSource = {
           title: "后端仓库",
           items: [
             "后端切片默认区分 `{ ${dir}, ${dir}Actions }`，数据、schema 配置放 `${dir}`，跨路由/跨文件调用的方法放 `${dir}Actions`。",
-            "服务端跨文件调用只使用切片暴露的同目录根成员或 `${dir}Actions`，不越过仓库边界读写内部状态。",
+            "服务端跨文件调用可以消费已构建主仓库的公开根成员和各切片 `${dir}Actions`，并可跨切片协作。",
             "后端长流程、订阅推送、流式事件和跨路由共享状态进入服务端仓库 action 或业务对象边界。",
           ],
         },
@@ -539,6 +540,18 @@ const global: GlobalSource = {
             "服务端接口禁止 `ctx.json() as ...`；响应类型写在 `ctx.json<T>(...)` 的泛型参数里。",
             "普通无数据 JSON 响应写 `ctx.json(null, 200)`，无 body 响应用 `ctx.body(null, 204)`；流式、SSE 和 WebSocket 响应按对应协议规则。",
             "错误要明确 throw 或返回明确错误结构；禁止空 catch、静默兜底和隐藏失败原因的兼容逻辑。",
+          ],
+        },
+        {
+          title: "MCP",
+          items: [
+            "一个业务切片默认拥有自己的一套 MCP server、transport 和 response adapter，并与该切片的 Hono router、tool 描述同根维护；仅该切片消费的 runtime 放在 `${dir}Actions`（非持久化），禁止因未来可能复用而提升到主仓库。",
+            "只有至少两个已存在、相互独立的切片真实共享且生命周期属于整个应用的 MCP runtime，才允许成为主仓库根成员；不得以以后可能复用为由提升。",
+            "主 Hono 入口只组合 `.route` 和启动，不写切片 tool 定义；切片 index 直接构造并默认导出完整 router，`/<slice>-mcp` 也由该切片挂载。",
+            "每个切片一个 MCP server；工具与 Hono route 一一对应，input schema 复用 Hono 验证 schema，handler 在同进程使用该 router.request()，不走网络、不复制业务实现。",
+            "registerTool 名称机械来自 Hono 路径：slash 转 dot，HTTP method 放最后并使用合法字符，例如 `account.profile.GET`；title 和 description 必须清楚说明用途、输入、输出与副作用，不能只写 `GET /path`。",
+            "HTTP 有 body 时返回原 body；204 返回真实状态码文本；禁止伪造 null、成功文案或空 content。",
+            "server、transport 只实例化一次，tool 只注册一次；重复请求不得重复注册。",
           ],
         },
         {
