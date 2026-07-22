@@ -135,6 +135,11 @@ pnpm --dir honoapp-vscode-plugin run build
 ---
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
+- [~] T-071 方先生提出：收口 Codex 模板源集成并发布 GitHub。保持本轮由 parent 直接接管、不派其他工作者，但必须持续记录和标记进度；删除 `src/tpl/source.ts`、`src/tpl2/source.ts`，合并仅由 parent 消费且总是同时加载的 `parentWorkflow` 与 `docStyle`，完成类型/构建验证、逐文件 Git 保存、版本 tag 和远端发布。
+	- [x] parent：已建立并保护 `apps/honoapp/source.ts` 作为同时包含 global/project 的唯一权威工作稿；`tpl`、`tpl2` 已改为只读消费该文件，旧 source import 已清零。
+	- [~] parent：将 `docStyle` 的文档与 tree 规则整体收纳为 `parentWorkflow` 子章节，删除独立 node/skill 定义和强制双加载规则，保持 watcher 与具体工作者不可见。
+	- [ ] parent：删除已无消费者的 `apps/honoapp/src/tpl/source.ts`、`apps/honoapp/src/tpl2/source.ts`，验证无遗留引用并通过 honoapp TypeScript 与构建。
+	- [ ] parent：审计现有提交、工作区未提交内容与远端状态；为本次可用集成创建语义化 tag，推送当前分支及 tag 到 GitHub，并记录真实远端结果。
 - [>] T-070 方先生提出：按全项目体检结果逐项修复 TypeScript 基线、无套壳约束与类型错误；每项必须直接修改真实 owner，不新增 factory、wrapper、barrel、alias、兼容层或兜底，完成后在该子节点记录真实 typecheck 证据。
 	- [>] 01 P0：根 package `extends-electron-vite` 补充自身 `tsconfig.json`，明确根只编排 workspace、不得混编子 package；补齐根级逐 package TypeScript 检查入口。
 	- [>] 02 P0：`libs/extends_chatgtp_com/userapp/src` 是含 TS/TSX 的独立 package，补充自身 `tsconfig.json` 并覆盖全部真实源码；不得缩小 include 或隐藏错误。
