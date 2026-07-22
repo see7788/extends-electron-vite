@@ -136,6 +136,7 @@ pnpm --dir honoapp-vscode-plugin run build
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
 
+- [>] [00:00] T-087 方先生确认：自动化的细节任务信封模板以后再实现；当前先建立立即生效的最小派工规范。parent 派工必须给出精确文件路径与读写 ownership、任务目标和验收条件，并提供完成任务必需的源码上下文，其中必须覆盖相关生产者、真实 import/导出边界和消费者调用代码；不得让工作者自行读取完整对话、完整项目或无关文档来猜测任务。待 workerMax 本轮只读审计结束后，将该通用规范补入全局 Codex 权威 source 并物化。
 - [~] [23:55] T-086 方先生确认：parent 自己发现的流程问题也必须立即写入台账，明确记录发现者、证据和处置，不能只在对话中说明；watcher 应在任务 ownership、读写基线或并发安排冲突时发出阻断级报警，parent 必须立即中断相关工作者，并在继续分析和重新派工前记录 watcher 反馈与任务“已中断”状态。
 	- [x] [23:55] parent 发现：T-083 的 workerMax 正在基于 `source.ts` 建立审计基线时，T-084 的 workerMedium 同时修改该文件；workerMax 返回 `Text Integrity Check Failed` 后，parent 才识别出真实并发冲突。本次不是 watcher 发现，说明 watcher 未获得持续任务事件和 ownership 快照，监督没有生效。
 	- [x] [23:55] parent 处置：已停止 workerMax 写入并要求废弃旧基线；T-084 建立 Git checkpoint 后再恢复审计。后续 watcher 发现同类冲突时，必须先触发阻断级报警，由 parent 中断工作者、写入台账，再调整 ownership 和重新派工。
