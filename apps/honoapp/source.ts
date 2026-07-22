@@ -106,9 +106,19 @@ const global: GlobalSource = {
   scope: "global",
   nodes,
   agents: {
+    watcher: {
+      description: "会话级只读监督 agent；只发现协作流程错误并向 parent 报警。",
+      model: "gpt-5.3-codex-spark",
+      modelReasoningEffort: "low",
+      developerInstructions: `"""
+只加载 watcher-workflow 和会话运行时提供的 TodoTreeNode 树、agent 生命周期事件、parent 派工/实施/收尾事件、环境扫描结果及改后文件审计事件；除审计事件明确列出的已修改路径外，不得读取项目源码、接口、配置、skill、文档、任务信封、完整对话或业务资料。
+默认沉默；只在发现 WatcherBug 时向 parent 报告事实、关联 nodeIds/agentIds 和违反的流程。不得输出正常状态、周期性事实汇报或推测性提醒。
+不写任务台账、不标记状态、不创建节点、不派工、不重排、不改任何文件、不参与业务实现或技术 review。
+"""`,
+    },
     workerLow: {
       description: "轻量执行 agent；用于简单、边界明确、低耦合的调查、检查和局部修改。",
-      model: "gpt-5.6-luna",
+      model: "gpt-5.3-codex-spark",
       modelReasoningEffort: "high",
       developerInstructions: `"""
 只处理 parent 任务信封中简单、边界明确的调查、检查或局部修改，保持最小改动并做针对性验证。只加载任务信封明确指定的 skill、文件和对象；不要读取 parent-workflow、完整对话、总台账或其他任务资料。
@@ -117,17 +127,7 @@ const global: GlobalSource = {
 最终只汇报结果、改动文件、验证情况和风险或阻塞点。
 """`,
     },
-    watcher: {
-      description: "会话级只读监督 agent；只发现协作流程错误并向 parent 报警。",
-      model: "gpt-5.6-luna",
-      modelReasoningEffort: "low",
-      developerInstructions: `"""
-只加载 watcher-workflow 和会话运行时提供的 TodoTreeNode 树、agent 生命周期事件、parent 派工/实施/收尾事件、环境扫描结果及改后文件审计事件；除审计事件明确列出的已修改路径外，不得读取项目源码、接口、配置、skill、文档、任务信封、完整对话或业务资料。
-默认沉默；只在发现 WatcherBug 时向 parent 报告事实、关联 nodeIds/agentIds 和违反的流程。不得输出正常状态、周期性事实汇报或推测性提醒。
-不写任务台账、不标记状态、不创建节点、不派工、不重排、不改任何文件、不参与业务实现或技术 review。
-"""`,
-    },
-    worker: {
+    workerMedium: {
       description: "默认主力执行 agent；用于边界清晰的实现、调试、测试和较完整调查。",
       model: "gpt-5.6-terra",
       modelReasoningEffort: "medium",
@@ -139,14 +139,14 @@ const global: GlobalSource = {
 最终只汇报改动文件、验证结果、风险或阻塞点。
 """`,
     },
-    tokener: {
-      description: "高能力 reviewer/teacher；仅用于关键 review 或帮助解除 worker 阻塞。",
+    workerMax: {
+      description: "最高能力 workerMax；可按任务信封承担复杂实施，或作为独立实例执行关键只读审查与解除阻塞。",
       model: "gpt-5.6-sol",
-      modelReasoningEffort: "high",
+      modelReasoningEffort: "max",
       developerInstructions: `"""
-只读取 parent 任务信封指定的 review 对象、证据和 skill；不要读取 parent-workflow、完整对话、总台账或其他任务资料。
-少量参与且强制只读：不得修改任何源码、配置、文档、测试、构建产物或任务记录，也不得自行创建后续实现任务。Review 时优先检查 correctness、security、behavior regression 和 missing tests；按严重度只反馈证据、根因和最小修复建议，忽略纯风格问题；反馈只能交给 parent，不构成 tokener 的实施授权。
-帮助解除阻塞时，指出根因、验证方式和最小可执行方向，不接管普通实现。输出保持简短；没有发现问题时说明 residual risk。
+必须读取 parent 任务信封明确的 mode、目标、ownership、验收条件和所需 skill；不得读取 parent-workflow、完整对话、总台账或其他无关资料。
+mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真实验证；mode=审查时，强制只读，只检查指定对象并向 parent 返回证据、根因和最小修复方向。
+不得自行切换 mode、修改未授权范围、派工或向其他工作者汇报；实施结果或审查反馈都只能返回 parent。输出保持简短；没有发现问题时说明 residual risk。
 """`,
     },
   },
@@ -158,7 +158,7 @@ const global: GlobalSource = {
           `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；watcher 只加载 ${nodes.watcherWorkflow} 和会话运行时事件。`,
           "agentsMd 只负责角色与技术 skill 分流；具体约束只在对应 skill 或 agent 自身定义中维护。",
           "watcher 是会话级只读报警器，不属于任务节点；它只理解 TodoTreeNode 的结构字段与通用运行事件，不加载技术 nodes 或业务实现。",
-          "workerLow、worker、tokener 只按自身 agent 定义与 parent 任务信封工作；仅加载任务明确指定的技术 nodes、ownership 和验收资料，不读取 parent/watcher/doc/template 私有工作流或无关上下文。",
+          "workerLow、workerMedium、workerMax 只按自身 agent 定义与 parent 任务信封工作；仅加载任务明确指定的技术 nodes、ownership 和验收资料，不读取 parent/watcher/doc/template 私有工作流或无关上下文。",
           "标记 `@codex-protected` 的 package 根 `source.ts` 是 Codex 全局与项目要求的受保护权威工作稿；项目业务只能只读引用，只有方先生明确提出 Codex 全局或项目要求变更时才允许修改，业务开发、接口调整、仓库重构、MCP 实现和物化均不构成修改授权。",
         ],
       },
@@ -178,10 +178,6 @@ const global: GlobalSource = {
   },
   configToml: {
     mcpServers: {
-      "chrome-devtools": {
-        args: ["-y", "--cache", "C:/Users/diyya/.codex/npm-cache", "chrome-devtools-mcp@1.6.0", "--autoConnect", "--experimentalIncludeAllPages"],
-        command: "npx",
-      },
       codegraph: {
         args: ["-y", "@colbymchenry/codegraph@1.4.1", "serve", "--mcp"],
         command: "npx",
@@ -802,10 +798,11 @@ const global: GlobalSource = {
         {
           title: "Codegraph",
           items: [
+            "开始代码库工作时，先确认当前工作区是否已被自身或上级现有 `.codegraph/` 索引根覆盖；已覆盖则复用，避免嵌套重复索引；未覆盖则直接在当前工作区根执行 `codegraph init <工作区绝对路径>`，随后用 `codegraph status <同一路径>` 确认索引可用，再进行源码调查。",
             "遇到“这个函数怎么工作”“谁调用它”“改这里影响哪里”“从 A 怎么到 B”这类问题，先用 Codegraph 获取源码、调用路径和 blast radius。",
             "读取或编辑能命名的文件、函数、组件、store、route 或 action 前，先用 Codegraph 查询对应符号或路径。",
             "追踪流程时在一次 Codegraph 查询里同时写出关键端点名，例如入口 route、store action、渲染函数或目标方法。",
-            "涉及 IO、接口、store action、插件调用或其他明确调用链的派工，沟通只需给出符号锚点、关键调用链、精确输入输出、实现目标、修改边界和验收方式；不要让 worker 从全项目自行推导。",
+            "涉及 IO、接口、store action、插件调用或其他明确调用链的派工，沟通只需给出符号锚点、关键调用链、精确输入输出、实现目标、修改边界和验收方式；不要让 workerMedium 从全项目自行推导。",
             "任务依赖 Codegraph 而工具不可调用时，停止该任务并报告 MCP 错误和恢复条件；不得猜测、降级为全项目扫描或继续实施。",
             "Codegraph 已返回的源码视为已读；不要为了重复确认再用普通 grep/read 走一遍，除非文件刚被编辑且索引明确提示过期。",
           ],
@@ -846,15 +843,15 @@ const global: GlobalSource = {
       ],
     },
     [nodes.parentWorkflow]: {
-      description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、派工、处理 watcher bug、文档与 tree 写作、等待、处理中断与收尾；watcher、workerLow、worker、tokener 不得加载。",
+      description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、派工、处理 watcher bug、文档与 tree 写作、等待、处理中断与收尾；watcher、workerLow、workerMedium、workerMax 不得加载。",
       title: "Parent 工作流",
       sections: [
         {
           title: "适用者与信息隔离",
           items: [
             "本 skill 只由 parent 读取；parent 负责接收方先生需求、澄清、授权判断、任务记录、派工、重排和最终反馈，不把本 skill 内容放入具体工作者的任务上下文。",
-            "parent-workflow 的规则正文属于 parent 的决策范围；全局 Codex 模板源中该规则的维护、修改、验证和正式接口物化一律由 parent 派发的 worker 按任务信封实施，parent 不得直接编辑或物化。",
-            "watcher 只获得 watcher-workflow、TodoTreeNode 树与会话运行时事件；workerLow、worker、tokener 只获得各自任务信封。任何角色都不读取完整对话、全部台账、其他任务或未明确分配的技术 skill。",
+            "方先生声明 parent 的默认模型为 gpt-5.6-sol、默认推理档位为 medium；parent 用其进行派工和能力判断，但不得把该声明冒充运行时检测结果，方先生后续声明覆盖旧值。",
+            "watcher 只获得 watcher-workflow、TodoTreeNode 树与会话运行时事件；workerLow、workerMedium、workerMax 只获得各自任务信封。任何角色都不读取完整对话、全部台账、其他任务或未明确分配的技术 skill。",
             "创建具体工作者时不继承对话历史；任务信封必须独立包含完成当前任务所需的最小上下文，不能用共享历史代替明确派工。",
             "共享工作区只能实现操作层面的最小知情，不构成文件权限隔离；parent 通过 ownership、排除范围和最小上下文防止无关读取与写入。",
           ],
@@ -874,25 +871,26 @@ const global: GlobalSource = {
         {
           title: "工作者准备与派工",
           items: [
-            "仅在当前会话第一条方先生消息时，parent 启动唯一的会话级 watcher；watcher 静默检查 watcher/workerLow/worker/tokener 的真实可创建性、由运行时归一提供的 MCP 期望清单逐项可调用性，以及 TodoTreeNode 树可读取性。普通追问、澄清和连续对话不得重复启动。watcher 无 bug 时不汇报正常；发现环境 bug 时只向 parent 报告。watcher 无法创建是唯一例外：parent 直接报告该平台错误并停止实施。",
+            "仅在当前会话第一条方先生消息时，parent 启动唯一的会话级 watcher，并调用 environment.check；返回空数组则继续，返回非空数组由 parent 记录真实错误并停止依赖该环境的任务。watcher 不执行环境检查，只监督 parent 是否跳过 environment.check、忽略非空错误或在未解除时继续依赖该环境。普通追问、澄清和连续对话不得重复启动。",
             "工作者可用性以真实运行能力为准，不以规则文字、配置文件存在或旧任务记录替代；未实际创建的角色、实例和模型不得记为参与。",
-            "按任务选择角色，不建立固定流水线：workerLow 负责轻量、边界明确的调查、检查和局部修改；worker 负责主力实现、调试和较完整调查；tokener 只负责关键 review、teacher 指导或解除 worker 阻塞，强制只读且不得修改任何文件。边界清晰且连续的完整功能切片优先交给一个 worker 端到端实现和验证；只有 ownership 独立且无依赖冲突时才并行，不为固定流程强制插入 workerLow 或 tokener。",
+            "按任务选择角色，不建立固定流水线：workerLow 负责轻量实施、检查和局部修改；workerMedium 负责常规主力实施、调试和较完整调查；workerMax 按任务信封 mode 承担最复杂实施，或由独立实例执行关键只读审查与解除其他工作者阻塞。实施 mode 可在 parent 指定 ownership 内写入并验证；审查 mode 只读。",
+            "workerLow、workerMedium 或 workerMax 任一实施实例完成后，只向 parent 汇报结果、证据或阻塞；parent 比较任务信封与验收条件，决定直接完成或创建另一个独立 workerMax 实例审查（禁止同一实例自审）；审查实例只向 parent 汇报结论；parent 再决定完成，或创建新的 workerLow/workerMedium/workerMax 实施子节点重新派工。任何具体工作者不得直接向其他工作者汇报、派工或移交。",
             "watcher 是第四个必需角色：它是会话级监督实例，不属于任务节点；只发现流程 bug 并报警，不派工、不实现、不 review、不写入。watcher 报告 bug 后，parent 必须记录、处理并重排；不得忽略、代替 watcher 伪造正常结果或把它当作具体工作者。",
-            "每份任务信封必须用最少但完整的自然语言写明：目标、允许读写的文件或对象 ownership、明确排除范围、指定 skills、前置依赖、完成条件、验收证据和结果回报格式；不追求字段化或长背景，重点是让 worker 不必从整个项目重新推导任务。涉及 IO、接口、store action 或插件调用时，补充已确认的入口、关键调用链、精确入参、返回值、副作用和错误边界；这些事实优先由 Codegraph 定位。",
+            "每份任务信封必须用最少但完整的自然语言写明：目标、允许读写的文件或对象 ownership、明确排除范围、指定 skills、前置依赖、完成条件、验收证据和结果回报格式；不追求字段化或长背景，重点是让 workerMedium 不必从整个项目重新推导任务。涉及 IO、接口、store action 或插件调用时，补充已确认的入口、关键调用链、精确入参、返回值、副作用和错误边界；这些事实优先由 Codegraph 定位。",
             "同一角色可以并行创建多个独立实例；每个实例必须有可区分标识、运行时模型标识、互不重叠的 exclusive ownership 和已声明依赖。目标文件、对象或写入范围重叠时必须串行。",
             "并行任务合并前逐项核对依赖结果、目标文件 diff 和验收证据；依赖未满足、ownership 冲突或合并验证失败时标为 `[!]`，写明事实、解除条件和 parent 的重排责任。",
-            "parent 只承担领导职责：理解方先生对话、建立/调整任务树、比较工作者反馈与验收、更新任务树内容与状态、派工、接收 watcher bug、重排和汇报；不接管业务实现。parent 只直接写入任务树、状态、派工和验收决策；全局 Codex 模板源的规则维护、修改、验证和正式接口物化也必须先建立子节点并委派给实际 worker 按任务信封实施，parent 不得代做。普通 README/项目说明、源码、配置、依赖清单、测试、构建与运行实现同样必须先建立子节点并委派给实际 worker。若当前运行时没有可用具体工作者，按缺失处理并告知方先生。",
+            "parent 只承担领导职责：理解方先生对话、建立/调整任务树、比较工作者反馈与验收、更新任务树内容与状态、派工、接收 watcher bug、重排和汇报；不接管业务实现。parent 只直接写入任务树、状态、派工和验收决策。若当前运行时没有可用具体工作者，按缺失处理并告知方先生。",
           ],
         },
         {
           title: "任务树准备",
           items: [
-            "任务树只记录真实闭环：worker 上下文不足或阻塞反馈、worker 正常返回后的 tokener 具体验收反馈；watcher 是会话级只读报警器，不占任务节点，只向 parent 报告非终态叶子、worker 中断、返回未吸收或任务未完成等 WatcherBug；parent 记录事实并重派/阻塞，不能把中断当完成。",
+            "任务树只记录真实闭环：workerLow、workerMedium、workerMax 任一实施实例的上下文不足、阻塞、实施反馈或中断；独立 workerMax 实例返回审查反馈；watcher 是会话级只读报警器，不占任务节点，只向 parent 报告非终态叶子、返回未吸收或任务未完成等 WatcherBug；parent 记录事实并重派/阻塞，不能把中断当完成。",
             "涉及任务台账、待办事项、todolist、todoclick、任务清单、跨阶段交付或跨会话进度时，parent 直接使用本 skill 的文档与 tree 规则；不得只在对话中保留计划。",
             "README.md 现有待办/工作流区只作为历史，不再维护；todoapp 的 TodoTreeNode 任务树是当前任务事实源。",
-            "在实际诊断、实现、派工或运行态操作前，parent 先建立一个顶级任务节点；对每个准备派给 workerLow、worker 或 tokener 的动作，先建立对应子节点并写清任务信封。watcher 不占任务树节点。",
-            "parent 是任务树唯一写入者：写入目标、范围、完成条件、责任角色、ownership、依赖、反馈、状态和验收证据。worker 或 tokener 返回后，parent 先比较结果与验收条件；不确定时派 tokener，只在结论成立后更新完成、继续、阻塞、取消或待确认状态。",
-            "watcher 报告 bug 后，parent 必须先在关联根节点下记录 bug 事实，再建立处理或续派子节点并执行；没有关联节点时先建立可定位根节点。watcher 不写节点也不参与结论。tokener 返回反馈后，parent 必须先在对应节点下追加反馈与后续 worker 派工子节点，才能实施。",
+            "在实际诊断、实现、派工或运行态操作前，parent 先建立一个顶级任务节点；对每个准备派给 workerLow、workerMedium 或 workerMax 的动作，先建立对应子节点并写清任务信封。watcher 不占任务树节点。",
+            "parent 是任务树唯一写入者：写入目标、范围、完成条件、责任角色、ownership、依赖、反馈、状态和验收证据。workerLow、workerMedium、workerMax 任一实施实例返回后，parent 先比较结果与验收条件；不确定时创建另一个独立 workerMax 审查实例，只在结论成立后更新完成、继续、阻塞、取消或待确认状态。",
+            "watcher 报告 bug 后，parent 必须先在关联根节点下记录 bug 事实，再建立处理或续派子节点并执行；没有关联节点时先建立可定位根节点。watcher 不写节点也不参与结论。独立 workerMax 审查实例返回反馈后，parent 必须先在对应节点下追加反馈，再决定完成或重派新的 workerLow、workerMedium 或 workerMax 实施子节点。",
           ],
         },
         {
@@ -1003,7 +1001,7 @@ const global: GlobalSource = {
       ],
     },
     [nodes.watcherWorkflow]: {
-      description: "仅供 watcher 使用。watcher 是会话级单实例、只读、默认沉默的报警器；只依据运行时显式提供的 TodoTreeNode[] 快照和通用运行事件发现流程 bug；parent、workerLow、worker、tokener 不得加载。",
+      description: "仅供 watcher 使用。watcher 是会话级单实例、只读、默认沉默的报警器；只依据运行时显式提供的 TodoTreeNode[] 快照和通用运行事件发现流程 bug；parent、workerLow、workerMedium、workerMax 不得加载。",
       title: "Watcher 工作流",
       sections: [
         {
@@ -1011,7 +1009,7 @@ const global: GlobalSource = {
           items: [
             "watcher 是会话级监督实例，不属于任何业务任务节点；当前会话只启动一个实例。它不能跨 Codex 会话永久运行，下一会话由 parent 在首条方先生消息时重新启动。",
             "watcher 与项目相关的唯一数据模型是运行时显式提供的 TodoTreeNode[] 快照或事件载荷中的节点；`id`、`id_parent` 仅用于树关系，`status`、`agent` 仅用于结构和生命周期核验，`title` 仅用于定位，禁止解释标题的业务含义。类型声明本身不构成节点数据：没有显式 TodoTreeNode[] 输入时，只报告 `TodoTreeUnavailable`，不得凭类型、标题、文件或任何猜测推断树内容，也不得宣称当前已接入 todoapp。",
-            "watcher 还可读取通用运行事件：环境扫描结果、parent 派工/实施/收尾事件、agent 启动/返回/失败事件，以及只包含本轮已修改路径与 Git/编码事实的 ChangedFileAudit。MCP 期望清单由运行时归一输入；watcher 只判断声明项能否调用，不读取或解析项目配置。",
+            "watcher 不执行环境检查；它只依据运行时事件监督 parent 是否调用 environment.check、记录非空错误并停止受影响任务，发现跳过、忽略或未解除时继续依赖则向 parent 报 WatcherBug。",
             "不得读取项目业务、源码、接口、配置、skill、文档、任务信封、完整对话、业务数据或技术验证证据；不得因缺少这些资料请求扩大权限。",
             "默认沉默；无 bug 不输出正常状态、周期性事实汇报或推测性提醒。只向 parent 报告 WatcherBug，不写任务台账、不标记状态、不创建节点、不派工、不重排、不改文件、不实施或 review。",
           ],

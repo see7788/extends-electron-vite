@@ -136,6 +136,22 @@ pnpm --dir honoapp-vscode-plugin run build
 
 ## 可审计的工作流 [?] 待确认、[ ] 待办、[>] 未派工、[~] 运行中、[<] 已反馈、[|] 已中断、[x] 已完成、[!] 阻塞、[-] 已取消
 
+- [~] [23:31] T-083 方先生确认：全局 Codex 模板审计采用离线问题清单，不让高能力模型常驻问答。workerMax 先一次性把全部待问问题写入 `.log/codex-template-audit.md` 后休息；parent 按顺序逐题询问并记录答案；全部回答后再次启动 workerMax 汇总决策、修改权威 source、验证并物化，最终清理临时审计文件。
+	- [~] [23:31] workerMax：只读审计 `apps/honoapp/source.ts`，排除已确认事项；每题保存不少于 20 个汉字的原文、冲突或后果及单一问题，不修改任何正式源码或文档。
+- [>] [23:27] T-082 方先生确认：从全局 Codex 模板中直接删除“每项技术工作开始前先检查当前会话实际暴露的 MCP 工具，并按任务选择需要的 MCP”；不增加每任务 MCP 清单检查或能力快照替代条款。待本轮只读文档审计形成一组已确认修改后，由 workerMedium 一次性更新权威 source 并物化。
+- [!] [23:09] T-081 方先生提出：为 parent 建立可复用的任务信封模板，减少重复派工文本；至少覆盖实施、只读审查、迁移/重命名和运行态验证，并自动包含 ownership、排除范围、依赖、完成条件、验收证据及反馈格式。当前阻塞于 TodoTree MCP 与任务接口尚未定型；待 T-073 的任务/反馈接口确定后，以正式任务对象实现，不绑定临时 Markdown 台账。
+- [~] [23:06] T-080 方先生确认：将 Hono 专用 MCP 基础能力从独立 `extends-mcp` 迁入长期库 `extends-hono/createMcpServer/`；该目录默认提供可直接挂载的 Hono MCP router，各业务切片自行注册工具并挂载自己的 MCP 路径。补齐生产者依赖，统一现有消费者为 pnpm 包路径，验证无遗留消费者后删除 `F:/pro/extends-mcp`。
+	- [<] [23:09] workerMedium：已迁移源码、依赖和消费路径并通过两边 TypeScript 检查；parent 运行时验收发现 `extends-hono/createMcpServer/mcp/public` 被目录式 exports 解析为不存在的 `mcp/public/index.ts`，因此本次反馈未通过验收，源 `extends-mcp` 保持未删除。
+		- [|] [23:19] workerMedium：已完成 public 目录化及 browser/codegraph 内联，但 parent 在公开边界再次调整后中断后续写入和长时间验证；该节点不作为完成结果。
+			- [<] [23:26] workerMedium：最终三文件结构、外部/内部公开边界、消费者同步、两边 TypeScript、基础动态导入与文本检查均已完成；`mcp/public` 的真实初始化已通过 Chrome 阶段，但在 CodeGraph `connect` 或 `listTools` 阶段 94 秒超时，未完成 stdio `tools/list`，验证进程已清理。
+				- [~] [23:26] parent：定位 CodeGraph 子进程阻塞，恢复公共工具入口的真实初始化与 stdio `tools/list`；在此之前不删除 `extends-mcp`，不把 T-080 标记完成。
+	- [ ] [23:06] parent：验收迁移后的默认导出、`/tpl2-mcp` 挂载、依赖解析和 MCP 工具清单；确认 `extends-mcp` 无消费者且迁移文件完整后执行删除，并建立限定范围 Git 检查点。
+	- [~] [23:06] watcher：只读监督越界写入、脏基线覆盖、遗漏消费者、验证前删除、乱码、状态滞后和未完成收尾；仅发现真实流程 bug 时反馈。
+- [~] [21:36] T-079 方先生确认 AI 环境生产/消费边界：当前仓库只是 AI 环境与模板的开发生产者；普通项目 parent 只知道已物化规则、当前项目资料及 `todo-mcp` 公共工具，不知道 `honoapp`、`extends-codex`、`tpl2` 或生产仓库路径。parent 向工作者提供任务目标、必要外部上下文、精确文件 ownership、指定 skills/MCP 和验收条件；工作者不读取完整对话、其他任务或无关资料。
+	- [~] parent：全局 source 已提交 `4f5e456` 并通过 todo-mcp PUT/物化 204；物化 AGENTS 和 skill 文件已移除 template-service，但旧 skill 空目录待清理、运行中服务 source GET 的 nodes 常量待重启后验证。
+	- [x] 方先生决定：立即移除 `template-service` skill；保留 `tpl2` 工具名；`todo-mcp` 独立 npx 入口由方先生后期处理。
+	- [ ] 当前执行顺序：通用 MCP → preload 真实验证 → TodoTree 有上下文闭环 → 完成遗留任务。
+	- [ ] 后续通用 MCP 阶段：在 `extends-mcp` 实现 Chrome DevTools MCP 的薄适配接口供 `todo-mcp` 集成；保留上游工具名、schema、description 和原始返回，只负责固定版本与专用 cache、环境检查、连接诊断，并对已有真实证据的特定工具参数做确定性修正，其余参数原样透传；禁止重写 browser API 或复制整套 Chrome MCP。
 - [x] [20:49] T-077 方先生提出：AI 调试过程中产生的历史文件、一次性脚本、诊断输出、截图、日志、缓存和恢复候选不得散落；统一收纳到仓库根 `.log/`，任务结束后由创建者清理，只有明确长期维护且存在真实消费者的交付物才进入正式目录。
 	- [x] parent：已核实现有规则只覆盖截图和调试日志，缺少完整临时产物范围、owner、清理时点及长期文件准入条件；补充为通用文件读写约束，并保留创建文件前必须取得授权的边界。
 	- [x] parent：源码经 TypeScript、diff 与 UTF-8 检查后保存为提交 `e72aa40`；真实 `todo-mcp` 依次完成 source PUT 和物化并均返回 204，生成的 file-io skill 已逐字包含临时产物落点及清理规则。
@@ -160,7 +176,7 @@ pnpm --dir honoapp-vscode-plugin run build
 		- [ ] [19:34] parent：MCP 接线后以 TodoTree Zustand 数据和有类型 MCP 接口作为任务唯一事实源；页面 Tree 负责观察与操作，Markdown 只允许作为可选只读投影或导出，不再承担任务创建、状态更新、反馈写入或并发协作。
 	- [ ] [15:54] parent：实现 watcher 特权接口。watcher 可以向任意既有 nodeId 追加不可变的异常反馈子节点，但不能创建任务、修改原节点状态或删除内容；它只读取相关任务子树、任务信封、agent 生命周期和实际变更文件事实，监督信封缺项、parent 私自实施、可并行任务无理由串行、状态滞后、中断、Git 检查点及具体文件限制，并对同一异常去重。
 	- [ ] [15:54] parent：实现期间逐项比较已确认闭环与现有 MCP 能力；任何行为没有准确接口时，必须先在本任务下记录缺口、影响和建议新增的最小接口，取得确认后补齐，禁止借用无关接口、解析自由文本、扩大角色权限或以绕行调用掩盖接口不足。
-	- [ ] [15:54] parent：MCP 未真实接线前继续由 parent 在 README 以 `[HH:mm]` 维护纯文本台账；接线后迁移全部非终态节点，并以多角色真实调用验证任务信封可见、反馈自动成子节点、watcher 任意节点报警、parent 后续派工与状态闭环，验证通过后本文档退出运行态并发写入职责。
+	- [x] [23:25] parent：方先生确认当前任务台账由 parent 在当前项目根目录文档中以 `[HH:mm]` 维护；todoapp 的 TodoTree 完成后改由 `todo-mcp` 维护 TodoTreeNode，迁移全部非终态节点并完成多角色真实调用验证，随后 Markdown 停止承担运行态事实源。
 - [x] T-072 方先生提出：由 parent 接管本轮全部工作，恢复唯一 watcher、保持其他工作者休息；核实废弃 MCP 边界，强化 watcher 对改后文件乱码与 Git 发布遗漏的报警职责，收敛 `apps/honoapp/source.ts` 的 helper、外部泛型、导出类型和默认导出结构，使用中文 Git tag 保存并发布。
 	- [x] parent：已恢复唯一只读 watcher，其他工作者没有启动新任务；watcher 使用改后文件审计事件真实报告了提交前 `commit/tag/push` 缺失，parent 随后建立源码提交 `7c4dedf`，报警已处理。
 	- [x] parent：CodeGraph 证实 `apps/honoapp/src/mcp.ts` 的唯一消费者是 `apps/mcpserver/index.ts`；`apps/mcpserver` 没有启动脚本、Codex MCP 配置或其他消费者，当前运行态闲置。该链仍保存 email/file/旧 tpl 的 MCP 注册能力，未获删除授权前保持不动。

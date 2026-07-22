@@ -65,8 +65,7 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
     }
     return sourceValue;
   };
-  const sourceRead = (workspacePath: string) => get().tpl2[workspacePath]?.source
-    ?? sourceTextRead(source[sourceScopeRead(workspacePath)]);
+  const sourceRead = (workspacePath: string) => get().tpl2[workspacePath]?.source?? sourceTextRead(source[sourceScopeRead(workspacePath)]);
   const outputRead = (workspacePath: string) => new CodexOutput({
     path: join(workspacePath, ".codex"),
     source: sourceValidatedRead(workspacePath, sourceRead(workspacePath)),

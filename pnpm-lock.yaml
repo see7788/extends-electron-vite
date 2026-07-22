@@ -46,35 +46,28 @@ importers:
 
   ../extends-hono:
     dependencies:
+      '@hono/mcp':
+        specifier: ^0.3.1
+        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.30))(hono@4.12.30)(zod@4.4.3)
       '@hono/node-server':
         specifier: ^1.13.8
         version: 1.19.14(hono@4.12.30)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.29.0
+        version: 1.29.0(zod@4.4.3)
       hono:
         specifier: ^4.9.8
         version: 4.12.30
       vite:
         specifier: ^8.0.11
         version: 8.1.5(@types/node@26.1.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.1)
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^26.0.1
         version: 26.1.1
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  ../extends-mcp:
-    dependencies:
-      '@hono/mcp':
-        specifier: ^0.3.1
-        version: 0.3.1(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.30))(hono@4.12.30)(zod@4.4.3)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(zod@4.4.3)
-    devDependencies:
-      '@types/node':
-        specifier: ^20.19.40
-        version: 20.19.40
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -151,9 +144,6 @@ importers:
       extends-hono:
         specifier: workspace:*
         version: link:../../../extends-hono
-      extends-mcp:
-        specifier: workspace:*
-        version: link:../../../extends-mcp
       extends-zustand:
         specifier: workspace:*
         version: link:../../../extends-zustand

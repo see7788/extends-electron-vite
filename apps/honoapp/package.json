@@ -13,7 +13,6 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@openai/codex-sdk": "^0.136.0",
     "extends-hono": "workspace:*",
-    "extends-mcp": "workspace:*",
     "extends-zustand": "workspace:*",
     "hono": "^4.12.18",
     "imapflow": "^1.3.3",

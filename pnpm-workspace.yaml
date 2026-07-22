@@ -5,5 +5,4 @@ packages:
   - '../extends-react'
   - '../extends-antd'
   - '../extends-hono'
-  - '../extends-mcp'
   - '../extends-zustand'

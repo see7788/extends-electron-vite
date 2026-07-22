@@ -2,7 +2,6 @@
 
 import { serve } from "@hono/node-server";
 import createViteRouter from "extends-hono/create-reactapp-router";
-import mcp from "extends-mcp/honomcp";
 import { Hono } from "hono";
 import { fileURLToPath} from "node:url";
 import emailRouter from "./email";
@@ -14,10 +13,6 @@ import tpl2Router from "./tpl2";
 import globalTplRouter from "./tpl/global";
 const app = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
-  .all("/mcp", async (ctx) => {
-    if (!mcp.server.isConnected()) await mcp.server.connect(mcp.transport);
-    return mcp.transport.handleRequest(ctx);
-  })
   .route("/", tplRouter)
   .route("/", tpl2Router)
   .route("/", globalTplRouter)
