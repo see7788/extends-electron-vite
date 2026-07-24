@@ -14,22 +14,25 @@ const packageName = (root: string) => {
 
 export default (
   {
-    mainEntry,
-    rendererPort,
+    honoEntry,
+    honoHost,
+    honoPort,
   }: {
-    mainEntry: string;
-    rendererPort: number;
+    honoEntry: string;
+    honoHost: string;
+    honoPort: number;
   },
   ...reactRoots: string[]
 ): UserConfig => {
-  if (isAbsolute(mainEntry) || reactRoots.some(isAbsolute)) {
-    throw new Error("mainEntry and reactRoots must be relative to process.cwd()");
+  if (isAbsolute(honoEntry) || reactRoots.some(isAbsolute)) {
+    throw new Error("honoEntry and reactRoots must be relative to process.cwd()");
   }
   if (reactRoots.length === 0) throw new Error("At least one React root is required");
 
   const cwd = process.cwd();
-  const entry = resolve(cwd, mainEntry);
+  const entry = resolve(cwd, honoEntry);
   if (!existsSync(entry)) throw new Error(`Electron main entry not found: ${entry}`);
+  const vitePort = Math.max(5173, honoPort + 1);
   const roots = reactRoots.map(root => resolve(cwd, root));
   const rendererRoot = dirname(roots[0]);
   if (roots.some(root => dirname(root) !== rendererRoot)) {
@@ -61,12 +64,12 @@ export default (
       },
       plugins: [react()],
       server: {
-        host: "127.0.0.1",
-        port: rendererPort,
+        host: honoHost,
+        port: vitePort,
         strictPort: true,
         hmr: {
-          host: "127.0.0.1",
-          clientPort: rendererPort,
+          host: honoHost,
+          clientPort: vitePort,
         },
       },
     },

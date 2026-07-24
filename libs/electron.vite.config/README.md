@@ -8,8 +8,9 @@ import createUserConfig from "electron.vite.config/honoreact/createUserConfig";
 
 export default defineConfig(createUserConfig(
   {
-    mainEntry: "src/routers/index.ts",
-    rendererPort: 5173,
+    honoEntry: "src/routers/index.ts",
+    honoHost: "127.0.0.1",
+    honoPort: 8788,
   },
   "../admin-web",
   "../user-web",
