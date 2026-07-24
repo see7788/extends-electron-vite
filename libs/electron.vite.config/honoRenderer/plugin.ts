@@ -60,9 +60,10 @@ export default (
     name: "electron-hono-renderer",
     config(config) {
       const rendererRoot = resolve(config.root ?? process.cwd());
+      const rendererInput = config.build?.rolldownOptions?.input ?? config.build?.rollupOptions?.input;
       emptyRenderer = (
         config.build?.lib === undefined
-        && config.build?.rollupOptions?.input === undefined
+        && !rendererInput
         && !existsSync(join(rendererRoot, "index.html"))
       );
       managedWrite = config.build?.write;
@@ -70,7 +71,7 @@ export default (
         define,
         build: emptyRenderer
           ? {
-              rollupOptions: { input: emptyRendererId },
+              rolldownOptions: { input: emptyRendererId },
               write: false,
             }
           : undefined,
