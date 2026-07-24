@@ -1,5 +1,6 @@
 import type { Cookie, WebContents } from "electron";
-
+// extends_chatgtp_com管理端
+// chatgpt-com-tocodex的具体 BrowserWindow
 type ImportedCookie = Cookie & {
   domain: string;
   path: string;
