@@ -20,14 +20,20 @@ const honoHandler: Handler = async (context) => {
   }
 
   if (!app.isPackaged) {
-    const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-    if (!rendererUrl) throw new Error("ELECTRON_RENDERER_URL is unavailable");
+    const rendererUrl = process.env[`HONO_RENDERER_URL_${name}`];
+    if (!rendererUrl) return context.notFound();
+    const rendererOrigin = new URL(rendererUrl);
     const targetUrl = new URL(context.req.url);
-    targetUrl.protocol = new URL(rendererUrl).protocol;
-    targetUrl.host = new URL(rendererUrl).host;
+    targetUrl.protocol = rendererOrigin.protocol;
+    targetUrl.host = rendererOrigin.host;
     const headers = new Headers(context.req.raw.headers);
     headers.delete("host");
-    return proxy(targetUrl, { headers, raw: context.req.raw });
+    const response = await proxy(targetUrl, { headers, raw: context.req.raw });
+    const location = response.headers.get("location");
+    if (location?.startsWith(rendererOrigin.origin)) {
+      response.headers.set("location", `${new URL(context.req.url).origin}${location.slice(rendererOrigin.origin.length)}`);
+    }
+    return response;
   }
 
   const root = rendererRoot();
