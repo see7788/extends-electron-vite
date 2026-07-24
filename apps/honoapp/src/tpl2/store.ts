@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import immerStateCreator from "extends-zustand/immerStateCreator";
 import { Project } from "ts-morph";
 import CodexOutput from "./output";
-import source from "../../source";
+import source from "./source";
 
 type Source = typeof source.global | typeof source.project;
 

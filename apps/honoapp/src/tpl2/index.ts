@@ -12,9 +12,6 @@ const workspacePathSchema = z.object({
 const sourceInputSchema = workspacePathSchema.extend({
   source: z.string().min(1),
 });
-
-export { sourceInputSchema, workspacePathSchema };
-
 const tpl2Router = new Hono()
   .get("/tpl2/source", zValidator("query", workspacePathSchema), (ctx) => ctx.json(
     store.getState().tpl2Actions.sourceRead(ctx.req.valid("query").workspacePath),
@@ -35,7 +32,6 @@ const tpl2Router = new Hono()
     store.getState().tpl2Actions.outputRebase(ctx.req.valid("json").workspacePath);
     return ctx.body(null, 204);
   })
-  .route("/tpl2-mcp", mcp);
 
 mcp.registerTool("tpl2.source.GET", {
   title: "读取 Codex 模板源码",

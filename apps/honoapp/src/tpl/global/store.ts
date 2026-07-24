@@ -5,7 +5,7 @@ import { Project } from "ts-morph";
 import type { StateCreator } from "zustand";
 import type { Store } from "../../store";
 import CodexOutput from "../../tpl2/output";
-import source from "../../../source";
+import source from "../../tpl2/source";
 
 type GlobalSource = typeof source.global;
 

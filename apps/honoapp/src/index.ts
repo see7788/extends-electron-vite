@@ -2,8 +2,9 @@
 
 import { serve } from "@hono/node-server";
 import createViteRouter from "extends-hono/create-reactapp-router/index.ts";
+import mcp from "extends-hono/createMcpServer/index.ts"
 import { Hono } from "hono";
-import { fileURLToPath} from "node:url";
+import { fileURLToPath } from "node:url";
 import emailRouter from "./email";
 import fileRouter from "./file";
 import { ssePushRouter, sseRouter } from "./sse";
@@ -13,6 +14,7 @@ import tpl2Router from "./tpl2";
 import globalTplRouter from "./tpl/global";
 const app = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
+  .route("/mcp", mcp)
   .route("/", tplRouter)
   .route("/", tpl2Router)
   .route("/", globalTplRouter)

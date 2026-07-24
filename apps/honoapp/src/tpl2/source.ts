@@ -167,7 +167,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
         items: [
           `代码库检索、调用关系、影响范围和代码库 MCP 选择使用 ${nodes.codebaseMcpStyle}。`,
           "MCP 工作环境检查范围固定为全局 configToml 与当前项目 configToml 中 mcpServers/mcp_servers 的列名并集；同名项按当前任务/启动参数覆盖、离当前目录最近的项目配置、用户级配置的顺序只取最终生效配置，不合并、不重复启动且只检查一次；所有最终生效列名均须逐项确认当前会话实际可调用。",
-          `运行侧判断、技术选择、组件结构、对象生产者、对象边界、切片拆分组合、复用、导出、运行时配置和 pnpm 包边界使用 ${nodes.scopeStyle}；对象确定需要仓库状态后再向下使用 ${nodes.zustandStoreStyle}。`,
+          `运行侧判断、技术选择、组件结构、class 实现、对象生产者、对象边界、切片拆分组合、复用、导出、运行时配置和 pnpm 包边界使用 ${nodes.scopeStyle}；对象确定需要仓库状态后再向下使用 ${nodes.zustandStoreStyle}。`,
           `Hono API、页面 API、外部 HTTP、SSE、WebSocket 和同进程 Hono 调用使用 ${nodes.netStyle}。`,
           `前端/后端对象经 ${nodes.scopeStyle} 确定边界后，其 store、action、业务状态流转、流式状态和订阅推送实现使用 ${nodes.zustandStoreStyle}；${nodes.zustandStoreStyle} 不独立决定对象归属或切片边界。`,
           `变量、形参、对象方法、store action 和路由层级命名使用 ${nodes.variableStyle}。`,
@@ -178,12 +178,8 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
   },
   configToml: {
     mcpServers: {
-      codegraph: {
-        args: ["-y", "@colbymchenry/codegraph@1.4.1", "serve", "--mcp"],
-        command: "npx",
-      },
       "todo-mcp": {
-        args: ["-y", "tsx", "F:/pro/extends-electron-vite/apps/honoapp/src/mcp.ts"],
+        args: ["-y", "tsx", "F:/pro/extends-electron-vite/apps/honoapp/src/index.ts"],
         command: "npx",
       },
     },
@@ -244,7 +240,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
       ],
     },
     [nodes.scopeStyle]: {
-      description: "涉及前端组件作用域、后端业务对象边界、复用归一化、拆分、导出、样式放置、公共库依赖或 pnpm workspace 冲突时使用。约束最小作用域、真实复用后抽象、前后端边界与跨工作区依赖来源。",
+      description: "涉及前端组件作用域、后端业务对象边界、class 实现、复用归一化、拆分、导出、样式放置、公共库依赖或 pnpm workspace 冲突时使用。约束纯面向对象最小实现、最小作用域、真实复用后抽象、前后端边界与跨工作区依赖来源。",
       title: "作用域风格",
       sections: [
         {
@@ -288,7 +284,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
           title: "分流规则",
           items: [
             "前端组件结构、页面交互、组件拆分、UI 临时态和样式放置使用「前端作用域」或「前端样式作用域」。",
-            "后端 route handler、业务对象边界、实例复用、schema/cache 收敛使用「后端作用域」。",
+            "后端 route handler、业务对象边界、class 纯面向对象实现、实例复用、schema/cache 收敛使用「后端作用域」或「Class 纯面向对象最小实现」。",
             "抽象、复用、文件拆分和最小作用域先看「通用作用域」；跨文件导出和默认导出看「导出边界」。",
             "变量、形参和方法命名只引用 variable-style；业务状态流转只引用 zustand-store-style；网络协议只引用 net-style。",
           ],
@@ -329,6 +325,19 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
             "缺少真实信息时，只实现不依赖缺项且可验证的部分；依赖缺项的代码保持未实现或显式阻塞，不创建假配置、假返回、假进程控制或假网络调用。",
             "归一化放置顺序：单点模块实现内联到当前消费点；同一视图或路由私有内容放在该视图或路由目录；方法和 action 逻辑可以放进方先生已定义的切片仓库、class 或业务对象，但不得借放置逻辑新增或改变数据成员；只有跨业务真实复用且没有既有业务边界时才创建新模块。",
             "能继承的类型不套娃；能由实际调用点自动推导的类型不手写、不导出。",
+          ],
+        },
+        {
+          title: "Class 纯面向对象最小实现",
+          items: [
+            "先确定入口 class 的公开主方法；每个主方法按正常顺序直接读取成员、调用自身或成员对象的方法、同步状态并返回结果，这条扁平调用链就是业务主线。禁止先设计类图、分层、队列、`*Run()`、execute/internal 包装或备用对象。",
+            "成员只保存主线当前真实需要的状态、依赖或固定配置；方法直接读取、改变或使用这些成员。没有当前状态转换就不创建对应 API，尤其禁止为可能需要而预造 reset、clear、delete、dispose、start、init 等方法。",
+            "简单值和简单状态由入口直接维护；只有某项能力当前确实需要独立维护复杂状态、不变量、生命周期或一组协作方法时才拆成 class。无可变状态的工具 class 也必须直接完成校验、转换、协议或资源处理，不能只是转发、改名或重新暴露已有调用。",
+            "入口直接调用真实成员对象；固定依赖在成员定义或构造器中确定，每次变化的输入才作为方法参数。已有方法已经完整表达检查、刷新或同步时直接复用，不重新展开、重复验证或层层构造中间对象。",
+            "方法之间只传递下一步真实需要的对象或原始值；禁止为“已校验”“已解析”或单字段结果创建 class、payload/result、重复字段或名义类型。只有稳定协议或必须共同维护多个不变量与行为时才建立独立类型或值对象。",
+            "单点且内联后仍清楚的 helper、临时类型和透传 getter 直接内联；承担真实状态转换、校验、恢复、协议或资源行为的方法可以保留，不以调用点数量决定。类型断言不得冒充运行时验证。",
+            "对象内部能恢复的异常由该对象恢复；其余异常在最早能准确说明问题的边界抛出并保留 cause，不用全局 catch 隐藏。公开方法只需表达状态同步成功且后续仍由同一实例承担时返回 `this`，不另造成功结果。",
+            "每个公开主方法只添加一句用途注释，说明调用者为什么使用它；内部顺序由主线代码本身表达，不把步骤说明、未来规划或对象关系重复写进注释。",
           ],
         },
         {

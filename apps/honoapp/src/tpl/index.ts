@@ -1,7 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import source from "../../source";
+import source from "../tpl2/source";
 import store from "../store";
 import { workspacePathSchema } from "./store";
 

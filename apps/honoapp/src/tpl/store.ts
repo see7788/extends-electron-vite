@@ -6,7 +6,7 @@ import type { StateCreator } from "zustand";
 import { z } from "zod";
 import type { Store } from "../store";
 import CodexOutput from "../tpl2/output";
-import source from "../../source";
+import source from "../tpl2/source";
 
 type ProjectSource = typeof source.project;
 

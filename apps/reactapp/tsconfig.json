@@ -13,6 +13,5 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "vite.config.ts"],
-  "exclude": ["src/**/*.bak", "src/**/*._bak", "src/**/tpl_bak"],
+  "include": ["src", "vite.config.ts"]
 }
