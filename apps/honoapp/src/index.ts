@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import honoServer from "extends-vite/src/vite-config-honoreact/honoServer";
+import honoServer from "vite.config/honoServer";
 import { Hono } from "hono";
 import emailRouter from "./email";
 import fileRouter from "./file";

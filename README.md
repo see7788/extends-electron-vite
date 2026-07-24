@@ -110,7 +110,7 @@ extends-codex/
 
 ## 开发
 
-仓库使用 pnpm workspace，并依赖同级的 `extends-hono`、`extends-vite`、`extends-ssh`、`extends-zustand` 和 `extends-antd` 工作区；其中 `extends-ssh` 是 `extends-vite` 的 `workspace:*` 依赖，必须加入同一个根 workspace 才能完成安装。安装依赖后可运行：
+仓库使用 pnpm workspace，并依赖同级的 `extends-hono`、`extends-hono/libs/vite.config`、`extends-vite`、`extends-ssh`、`extends-zustand` 和 `extends-antd` 工作区；`honoapp` 直接使用公共 `vite.config` 包，`extends-ssh` 是 `extends-vite` 的 `workspace:*` 依赖，因此后两者仍须加入同一个根 workspace。安装依赖后可运行：
 
 ```bash
 pnpm install

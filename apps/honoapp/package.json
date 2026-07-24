@@ -13,7 +13,7 @@
     "@hono/zod-validator": "^0.8.0",
     "@openai/codex-sdk": "^0.136.0",
     "extends-hono": "workspace:*",
-    "extends-vite": "workspace:*",
+    "vite.config": "workspace:*",
     "extends-zustand": "workspace:*",
     "hono": "^4.12.18",
     "imapflow": "^1.3.3",

@@ -1,4 +1,4 @@
-import honoReactVite from "extends-vite/src/vite-config-honoreact/vite";
+import honoReactVite from "vite.config/vite";
 import store from "./src/store";
 
 const { hostname, port: honoPort } = store.getState().runtimeActions;

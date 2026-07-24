@@ -5,6 +5,7 @@ packages:
   - '../extends-react'
   - '../extends-antd'
   - '../extends-hono'
+  - '../extends-hono/libs/vite.config'
   - '../extends-ssh'
   - '../extends-vite'
   - '../extends-zustand'
