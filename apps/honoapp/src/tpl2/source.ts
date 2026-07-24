@@ -94,12 +94,13 @@ type GlobalSource = z.infer<typeof globalSourceSchema>;
 const nodes = {
   parentWorkflow: "parent-workflow-styleskill", // parent 私有工作流：需求澄清、派工、状态治理和中断恢复
   watcherWorkflow: "watcher-workflow-styleskill", // watcher 私有工作流：会话级流程错误发现与报警
-  codebaseMcpStyle: "codebase-mcp-styleskill", // 代码库调查：源码检索、调用关系和影响范围
+  codebaseMcpStyle: "codebase-mcp-styleskill", // 代码库 MCP：项目级 MCP 接管后再确定长期边界
   fileIo: "file-io-styleskill", // 文件操作：安全读写、编码检查和事故恢复
-  netStyle: "net-styleskill", // 网络边界：Hono API、HTTP、SSE 和 WebSocket
-  scopeStyle: "scope-styleskill", // 作用域：对象边界、复用、导出、依赖和运行时配置
-  variableStyle: "variable-styleskill", // 命名：变量、形参、方法、action 和路由层级
-  zustandStoreStyle: "zustand-store-styleskill", // Zustand：主/切片仓库、action、状态流和持久化
+  codeStyle: "code-styleskill", // 通用代码：正向业务链、命名、对象边界和最小实现
+  codeReactStyle: "code-react-styleskill", // React：组件、hooks、路由、TSX 和 CSS
+  codeZustandStyle: "code-zustand-styleskill", // Zustand：主/切片仓库、action、状态流和持久化
+  codeNetStyle: "code-network-styleskill", // 网络边界：Hono API、HTTP、SSE 和 WebSocket
+  codePackageStyle: "code-package-styleskill", // 包：extends-* 保护、依赖、导出与编译
 } as const;
 
 const global: GlobalSource = {
@@ -167,10 +168,11 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
         items: [
           `代码库检索、调用关系、影响范围和代码库 MCP 选择使用 ${nodes.codebaseMcpStyle}。`,
           "MCP 工作环境检查范围固定为全局 configToml 与当前项目 configToml 中 mcpServers/mcp_servers 的列名并集；同名项按当前任务/启动参数覆盖、离当前目录最近的项目配置、用户级配置的顺序只取最终生效配置，不合并、不重复启动且只检查一次；所有最终生效列名均须逐项确认当前会话实际可调用。",
-          `运行侧判断、技术选择、组件结构、class 实现、对象生产者、对象边界、切片拆分组合、复用、导出、运行时配置和 pnpm 包边界使用 ${nodes.scopeStyle}；对象确定需要仓库状态后再向下使用 ${nodes.zustandStoreStyle}。`,
-          `Hono API、页面 API、外部 HTTP、SSE、WebSocket 和同进程 Hono 调用使用 ${nodes.netStyle}。`,
-          `前端/后端对象经 ${nodes.scopeStyle} 确定边界后，其 store、action、业务状态流转、流式状态和订阅推送实现使用 ${nodes.zustandStoreStyle}；${nodes.zustandStoreStyle} 不独立决定对象归属或切片边界。`,
-          `变量、形参、对象方法、store action 和路由层级命名使用 ${nodes.variableStyle}。`,
+          `通用代码入口、正向业务链、命名、对象生产者、对象边界、class、复用和运行时配置使用 ${nodes.codeStyle}。`,
+          `React 组件、hooks、路由、TSX、UI 临时态和样式在 ${nodes.codeStyle} 已确定对象边界后使用 ${nodes.codeReactStyle}。`,
+          `store、action、业务状态流转、流式状态和订阅推送在 ${nodes.codeStyle} 已确定对象边界后使用 ${nodes.codeZustandStyle}。`,
+          `Hono API、页面 API、外部 HTTP、SSE、WebSocket、MCP 和同进程 Hono 调用使用 ${nodes.codeNetStyle}。`,
+          `自有工具库保护、package owner、pnpm workspace 依赖、公开导出和包级编译使用 ${nodes.codePackageStyle}。`,
           `仓库文件读写、文本完整性、最小 patch 和事故恢复使用 ${nodes.fileIo}。`,
         ],
       },
@@ -185,231 +187,148 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
     },
   },
   skills: {
-    [nodes.variableStyle]: {
-      description: "涉及变量、形参、对象方法、store action、路由层级或文件内命名时使用。约束语义命名、状态名在前、避免动词前置和无意义形参。",
-      title: "变量命名风格",
+    [nodes.codeStyle]: {
+      description: "涉及通用代码规则、对象/函数/文件边界、命名和业务入口编排时使用。以基础能力扁平化、业务编排单点化组织真实实现。",
+      title: "通用代码风格",
       sections: [
         {
-          title: "分流规则",
+          title: "正向业务链",
           items: [
-            "前端组件、hook、props、UI 状态和前端 store action 命名使用「前端变量」。",
-            "后端 route、handler、业务对象、schema、缓存、协议字段和后端 store action 命名使用「后端变量」。",
-            "对象方法和仓库 action 命名使用「方法和 action」。",
-            "本 skill 只处理变量、形参和命名语义；作用域拆分看 scope-style，状态流转看 zustand-store-style，网络协议看 net-style。",
+            "先用一句话确定本次实现要完成的真实结果，再确定唯一负责该结果的业务入口。入口可以是 class 公开主方法、普通函数、高阶函数、模块方法、route handler、store action、命令或事件处理器。",
+            "入口沿成功路径依次写出真实的读取、修改、验证和执行调用；每一行都推进一个可说明的业务步骤，入口长度服从主线完整性。",
+            "某一步失败时，在该调用点紧接具体补救方法；补救仍可能失败时继续沿同一调用点串接下一层补救，直至恢复主线或保留原始原因结束 Promise。",
+            "主线出现新的真实需要后，才在对应对象或当前文件补充一个原子能力；实现顺序是入口提出需要，基础能力满足需要，再回到入口继续推进。",
+            "主线完成后以真实文件、状态、响应、进程或生产者结果验证；局部函数返回、日志或无异常只证明该调用结束，不替代业务结果成立。",
+            "原子能力只完成一次读取、修改、验证或执行：成功正常返回下一步需要的值，状态已同步且仍由同一实例继续承担时返回 `this`；失败抛出保留 cause 的准确异常。",
+            "原子能力内部维护完成本动作必需的技术调用、后置校验和资源清理；业务顺序、重试、兜底、恢复和下一步统一由入口显式编排。",
           ],
+          code: {
+            language: "ts",
+            content: [
+              "await sourceRead()",
+              "  .catch(sourceRepair)",
+              "  .catch(sourceRequest);",
+              "await targetWrite()",
+              "  .catch(targetRepair);",
+              "return this;",
+            ].join("\n"),
+          },
         },
         {
-          title: "通用命名",
+          title: "命名与参数",
           items: [
-            "对象、class 和 Zustand 仓库中的数据、状态、配置、运行时字段及根成员只能由方先生定义；未经本轮明确授权，AI 不得新增、删除、改名、移动或改变其类型、默认值与持久化属性。局部变量、形参、对象方法、class 方法和 store action 不属于此成员授权范围。",
-            "命名必须表达业务语义或状态语义，不用 `data`、`item`、`temp`、`value` 这类无法区分含义的泛名，除非作用域极小且含义唯一。",
-            "形参最小化：单点逻辑直接读当前作用域；真实复用后，才把差异提升为形参。",
-            "禁止为了包一层、传一遍、套壳或制造统一形式创建无复用形参。",
-            "项目自定义函数、方法、构造器和 store action 只有在跨层/跨包、多个独立调用者、可选字段组合或稳定请求契约存在时，才使用对象形参；单一调用点、同文件且没有独立业务语义的参数组合保持直接形参，即使有两个及以上业务值也不为形式创建对象包裹、Input/DTO 或 helper。对象形参类型优先从完整领域类型用 Pick/Omit、泛型约束、继承或组合派生，只有多个真实消费点时才允许命名 type/interface；禁止为同一字段集合手工重复声明近似类型、重复 action 或字段更新逻辑。框架或第三方规定的回调签名、rest 参数除外。",
-            "形参名使用调用方能理解的业务名，不用 `param`、`args`、`payload` 兜所有场景；事件对象、库回调等约定俗成名称除外。",
-            "布尔值命名表达判断语义，例如 `isReady`、`hasError`、`canSubmit`；不要用需要反向理解的含糊名称。",
-            "数组和集合命名表达元素领域，例如 `messages`、`skillDirs`；不要只写 `list`。",
-            "命名以当前最小作用域为判断边界；在该作用域内能无歧义表达含义时越短越好，上级对象特征符和既有上下文已经表达的语义不得在变量、成员或方法名中重复。名称需要承载多层语义时，优先把语义拆进递归对象路径，末端只保留当前作用域所需的最短明确名称；方法数量少不构成长名称理由。全局模板中的命名示例不得使用具体项目、产品或技术名称。",
+            "名称以当前最小作用域为边界，使用能唯一表达业务或状态的最短词；上级对象路径已经表达的语义不在末端重复。",
+            "布尔值表达判断语义，集合表达元素领域，形参使用调用方理解的业务名；第三方协议字段和框架回调保留其约定名称。",
+            "对象方法和 action 使用状态名在前、动作在后，例如 `dataSet`、`itemAdd`、`messageSend`；对象路径承载功能层级，末端方法只表达当前层动作。",
+            "单点逻辑直接读取当前作用域；出现真实复用后再把差异提升为形参。固定依赖属于对象成员，每次变化的输入才属于方法形参。",
+            "跨层、跨包、多个独立调用者、可选字段组合或稳定请求契约已经成立时使用对象形参，并优先从完整领域类型派生。",
+            "方先生已经定义的数据、状态、配置、运行时字段和根成员是固定边界；当前实现需要的方法、局部变量、形参和 action 可沿主线补充，但不借此改变既有成员结构。",
           ],
         },
-        {
-          title: "前端变量",
-          items: [
-            "前端组件、hook、props、局部状态和 store action 命名必须表达 UI 或业务状态语义，不用 `data`、`item`、`value` 兜底。",
-            "布尔 UI 状态命名表达判断语义，例如 `isOpen`、`hasError`、`canSubmit`。",
-            "数组和集合命名表达元素领域，例如 `messages`、`selectedIds`、`skillDirs`；不要只写 `list`。",
-          ],
-        },
-        {
-          title: "后端变量",
-          items: [
-            "后端 route、handler、业务对象、schema、缓存和协议字段命名必须表达领域语义，不用 `data`、`payload`、`result` 兜所有场景。",
-            "路由路径、对象方法和 store action 的业务层级保持一致，避免把领域压扁成难读名称。",
-            "第三方协议字段按对方协议保留；本项目内部变量和派生值按当前业务语义命名。",
-          ],
-        },
-        {
-          title: "方法和 action",
-          items: [
-            "对象方法和仓库 action 命名使用状态名在前、动作在后的方式，例如 `dataSet`、`targetIdSet`、`itemAdd`、`itemDel`、`listReset`、`messageSend`、`responseReceive`。",
-            "禁止动词前置命名，例如 `setData`、`setTargetId`、`addItem`、`deleteItem`。",
-            "路径可以深、末端方法名尽量短；对象路径按功能对象在前、具体成员或动作在后表达领域，例如使用 `objectActions.capability.subCapability.action()`，不用 `objectActions.capabilitySubCapabilityAction()`；进入功能对象后不得在末端成员重复功能前缀。",
-            "路由路径和仓库 action 保留相同的对象特征符层级，禁止压扁、跳层、重排或改名。",
-          ],
-        },
-      ],
-    },
-    [nodes.scopeStyle]: {
-      description: "涉及前端组件作用域、后端业务对象边界、class 实现、复用归一化、拆分、导出、样式放置、公共库依赖或 pnpm workspace 冲突时使用。约束纯面向对象最小实现、最小作用域、真实复用后抽象、前后端边界与跨工作区依赖来源。",
-      title: "作用域风格",
-      sections: [
         {
           title: "运行侧与技术选择",
           items: [
-            "先判断运行侧：React 页面按前端作用域处理，Hono、Electron main 和 Node 进程按后端作用域处理；横切能力仍放回具体运行侧语境。",
-            "除本 skill 对非方先生自有库的 React 路由与 CSS 绝对规则外，用户和既有项目没有指定冲突技术时，优先使用 TypeScript、React、Hono、antd、Vite、zustand、immer；不得为了套用其他偏好替换项目已经确定的技术边界。",
+            "先确认代码实际运行在 React 页面、Hono、Electron main、preload、Node 进程或其他已存在运行侧，再把对象、状态和副作用放回该运行侧的真实生产者。",
+            "既有项目技术边界优先；用户和项目均未指定冲突技术时，默认选择 TypeScript、React、Hono、antd、Vite、zustand 和 immer。",
           ],
         },
         {
           title: "对象特征符与边界",
           items: [
-            "先从生产者角度确认对象：谁创建、更新、销毁它，谁维护持久状态与稳定 ID；前后端项目默认以服务端对象目录作为 owner 边界。",
-            "对象指一切具体或抽象存在，不受行业、介质或实现形式限制。对象特征符是对象高度抽象后的统一表达并且可以递归组合：`aa`、`bb`、`cc` 各自是对象特征符，`aa.bb` 和 `aa.bb.cc` 也分别是对象特征符，分隔符表达层级组合关系。",
-            "同一对象在任何实际载体中必须保留对象特征符相同的字母、大小写、顺序和层级；只允许按语法把对象属性分隔符 `.` 换成目录或 URL 分隔符 `/`。禁止映射、压扁、改名、跳层、重排或创建别名；某载体不存在时不创建空壳。",
-            "class、store、前端、后端、数据、行为、协议、文件、持久化、MCP 和任务只是对象可能的载体、组成或投影，不能限定对象范围。`${object}Actions`、方法动作词和协议 method 是对象行为标记，不改变对象特征符。",
-            "数据只存在于对象数据路径，方法只存在于对应 Actions；Hono route 只能调用 Actions 方法，不得直接读写数据或调用 setState。持久化只保存数据，并过滤所有以 `Actions` 结尾的根成员。",
-            "一个领域对象只有一个 owner；对象类型、schema、持久状态和本对象 action 在 owner 目录内收敛，不得在多个切片仓库或传输层重复建模。",
-            "切片是对象生产者的实现单元，不以固定大小判断；强一体化的数据、运行态和动作属于同一对象，可以形成大切片，也可以由多个各自拥有明确生产者边界的小切片直接组合。",
-            "对象、class 和仓库的数据成员、状态字段、配置字段、运行时字段及根成员以方先生已经定义的结构为固定边界；AI 不得依据消费数量、目录整齐或实现便利自行增删、移动、改名或改变其类型、默认值与持久化属性。",
-            "已定义对象内的方法、class 方法和 store action 可以按实现职责组织为功能子对象或明确路径，不要求共享、多个消费者或独立生命周期作为放置前提；方法和 action 的调整不得暗中创建或改变数据成员。",
-            "功能对象的边界变化时整体迁移：成为独立生产者就整体拆成切片，只剩单文件消费就整体收回文件私有作用域；不得把其成员散落后逐个迁移。",
-            "严禁引用未落地的 owner 名称：若对象目录不存在对应 owner，先回到任务需求确认再创建目录或切片。",
-            "先实现方先生已经确认的 owner、对象目录和成员结构；方法与 action 可以按当前实现需要补充，但备用数据成员、类型字段和预留 DTO 未获授权不得加入。",
-            "对象暴露的服务端路由放在该对象目录内；页面路由、功能目录和服务端对象目录保留相同对象特征符，路由汇总层只组合，不拥有领域状态。",
-            "消费者只允许通过稳定 ID、owner action 或只读视图 DTO 使用对象；禁止从页面字段、请求 contract 或组件状态反推并新建领域对象。",
-            "消费者携带的 ID、URL 查询或恢复参数只允许在 owner 状态不存在时用于初始化；owner 已有对象或关系后，重连、恢复和页面状态不得覆盖它，关系变更必须调用 owner action。",
-            "组合页面可以调用多个 owner 的 action 完成场景编排，但不得跨 owner 直接修改状态，也不得把组合结果升级为新的领域对象。",
+            "先从生产者角度确认对象：创建、更新和销毁它的一方是 owner；持久状态、稳定 ID、类型、schema 和维护不变量的 action 一起收敛到该 owner。",
+            "对象可以是任何具体或抽象存在。对象特征符用递归路径统一表达对象层级，例如 `aa`、`aa.bb`、`aa.bb.cc`；class、store、前后端、协议、文件、持久化和 MCP 都只是它的载体或投影。",
+            "同一对象在各载体中保持相同字母、大小写、顺序和层级；目录与 URL 只按语法把 `.` 换成 `/`。真实载体存在时才建立对应投影。",
+            "一个领域对象只有一个 owner。对象数据位于数据路径，行为位于对应 Actions；持久化保存数据并过滤 Actions，route 通过 Actions 触发状态变化。",
+            "切片按生产者边界确定，不按行数或固定大小确定。强一体化的数据、运行态和动作形成一个切片；多个独立生产者形成多个小切片并由主仓库直接组合。",
+            "方先生已经定义的对象、class 和仓库成员结构保持不变；当前主线需要的方法与 action 可在既有对象内按功能路径组织。",
+            "功能对象成为独立生产者时整体迁移为独立切片；只剩单文件消费时整体回收到文件私有作用域，迁移始终保持对象完整。",
+            "owner 目录真实存在或由当前需求明确确认后再引用；先实现已确认的 owner、对象目录和成员，再按当前主线补充方法。",
+            "服务端路由归对象目录，页面路由、功能目录和服务端目录保持相同对象特征符；路由汇总层只组合，不拥有领域状态。",
+            "消费者通过稳定 ID、owner action 或只读视图使用对象。owner 尚无状态时，消费者输入可用于初始化；owner 已有对象或关系后，变化通过 owner action 完成。",
+            "组合入口可以依次调用多个 owner 的 action 完成场景编排，各 owner 仍自行维护自己的状态和不变量。",
           ],
         },
         {
           title: "生产者、消费者与契约归属",
           items: [
-            "跨模块、跨包、跨窗口、跨进程或对外 API 的频道名、请求、响应、状态和 bridge 类型，必须由唯一明确的生产者在其真实目录定义并导出；消费者只 import 和使用，禁止在消费者目录重新定义、复制或用 `.d.ts` 伪造同一接口。",
-            "生产者契约必须放在生产者的具体运行侧或对象目录内；不得为了目录整齐在包根或消费者侧创建 `common`、`shared`、无 owner 的 `protocol` 或平行 contract。决定文件位置前先说明生产者是谁、消费者如何取得它。",
-            "消费者绝对不得为了接入、调试、验证、修复或便利而修改生产者或提供者的任何东西，包括源码、默认导出、导出表、内部 store、运行时状态、依赖、配置与生成产物；消费者只能消费生产者既有且公开的包入口、默认/具名导出或正式接口。接口不足时消费者必须停止并向方先生报告缺口。只有方先生明确授权生产者项目本身的独立改造任务，才允许在生产者范围内修改。",
-            "消费者自己的页面状态、view props、局部输入和内部辅助类型仍归消费者所有；本规则只约束生产者向外提供的契约，不得借此把所有类型强行集中或提取为公共模块。",
+            "跨模块、包、窗口、进程或外部 API 的频道名、请求、响应、状态和 bridge 类型，由唯一生产者在其真实运行侧或对象目录定义并导出；消费者直接 import 该契约。",
+            "决定契约位置时先说明生产者是谁、契约由谁维护、消费者从哪个正式入口取得；共享目录只有在自身成为真实生产者时成立。",
+            "消费者围绕生产者已经公开的入口实现自身逻辑；公开能力不足时明确报告缺口。只有当前任务明确授权生产者改造时，才同步修改生产者及全部真实消费者。",
+            "页面状态、view props、局部输入和内部辅助类型仍归消费者自身；只把跨边界的稳定契约放回生产者。",
           ],
         },
         {
           title: "分流规则",
           items: [
-            "前端组件结构、页面交互、组件拆分、UI 临时态和样式放置使用「前端作用域」或「前端样式作用域」。",
-            "后端 route handler、业务对象边界、class 纯面向对象实现、实例复用、schema/cache 收敛使用「后端作用域」或「Class 纯面向对象最小实现」。",
-            "抽象、复用、文件拆分和最小作用域先看「通用作用域」；跨文件导出和默认导出看「导出边界」。",
-            "变量、形参和方法命名只引用 variable-style；业务状态流转只引用 zustand-store-style；网络协议只引用 net-style。",
+            "本 skill 定义所有代码共同遵守的正向业务链、命名、对象边界、最小作用域和 class 实现。",
+            `React 视图进入 ${nodes.codeReactStyle}，业务仓库进入 ${nodes.codeZustandStyle}，网络边界进入 ${nodes.codeNetStyle}，package 边界进入 ${nodes.codePackageStyle}。`,
+            "子 skill 只增加对应技术的真实差异；对象归属、入口主线、命名和抽象时机继续遵守本 skill。",
           ],
         },
         {
           title: "显式配置边界",
           items: [
-            "项目主仓库 `store.ts` 是 `process.env` 的唯一读取边界。",
+            "项目主仓库 `store.ts` 统一读取 `process.env`，在该边界构造完整、带类型的运行时配置；其他对象接收已经确定的配置或 owner 数据。",
           ],
         },
         {
-          title: "缺省值与失败边界",
+          title: "输入、默认值与失败",
           items: [
-            "默认先把输入定义为必填；只有缺失本身是合法领域状态时才使用可选类型。调用方掌握机器、用户、部署或业务语境的值，由调用方明确提供；被调用方不得通过环境、目录结构、当前进程、历史文件或常见习惯猜测。",
-            "任何值若不能由已确认的必填输入、确定性派生或方先生已明确确认的 owner 数据唯一确定，必须在写入或运行前停止，向方先生说明缺失字段、候选来源和影响，并请求明确值或策略；不得扫描环境、端口、网卡、目录、历史候选或选择第一个结果，也不得以静态常量继续。",
-            "禁止使用 `Partial<Config>`、可选构造参数或默认空对象把一组实际必填配置降为可选，再在 class、函数、store 或 route 内使用 optional chaining、`??`、`||`、条件补值、延迟执行或静默跳过处理明确运行时数据。应由调用方构造完整配置，类型系统直接指出缺项；未成立须直接失败并保留原始错误。",
-            "派生值不算兜底：从已经必填且有效的 owner 输入确定性计算出的路径、标识或协议字段可以留在被调用方；但当源输入缺失时不得改用第二来源、备用目录或静态常量继续运行。",
-            "合法的生产者默认必须同时满足：值由当前 owner 定义、与调用方业务选择无关、对全部真实消费者语义一致、缺省不会掩盖错误。无法逐项证明时，默认值移到调用方；禁止以方便、兼容旧代码或多数机器如此作为理由。",
-            "默认值和容错例外的举证责任在实现者，且证据必须早于本轮实现：用户明确要求、第三方权威协议、已有生产者契约或已有真实测试至少命中一项；否则按必填值处理。禁止用本轮新建的注释、测试或抽象制造自证闭环。",
-            "找不到文件、对象、配置或外部能力时，返回明确的不存在状态仅限调用契约本来允许不存在；操作要求其存在时必须明确失败。禁止 catch 后返回空集合、空字符串、false 或旧缓存，让消费者误判操作成功。",
-            "错误边界可以补充业务上下文，但必须保留原始 cause、错误类型或可定位证据；禁止捕获后改写成无原因的通用错误、布尔失败或 undefined。日志成功、函数返回和进程未崩溃都不能替代真实结果成立。",
-            "try/catch 仅可在真实外部协议边界补充上下文后原样抛出；禁止日志或 warn 后继续、空值或旧缓存、换端口、找网卡、延迟执行、静默跳过或继续启动。",
+            "输入默认定义为必填；缺失本身是合法领域状态时才使用可选类型。机器、用户、部署和业务选择由掌握语境的调用方明确提供。",
+            "一组共同成立的必填配置使用完整类型交付，让类型系统直接指出缺项；被调用对象消费完整配置，不在内部逐项猜测或补齐。",
+            "路径、标识和协议字段可以从已经有效的必填输入或 owner 数据确定性派生；源输入缺失时，该原子能力以准确异常结束。",
+            "默认值只由当前 owner 定义，并同时满足：与调用方业务选择无关、对全部真实消费者语义一致、缺省不会掩盖错误。其他值留给调用方显式提供。",
+            "用户明确要求、第三方权威协议、既有生产者契约或已有真实验证是默认值和容错例外的依据；依据不存在时保持必填。",
+            "不存在是合法结果时返回明确的不存在状态；当前操作要求对象存在时抛出准确异常，不用空值、布尔失败、旧缓存或日志代替。",
+            "错误在最早能准确说明问题的边界抛出；跨外部协议时可以补充业务上下文，同时保留原始 cause、错误类型或可定位证据。",
+            "无法由必填输入、确定性派生或已确认 owner 数据唯一确定的值，在写入或运行前向方先生说明缺失项、候选来源和影响，再取得明确值或策略。",
           ],
         },
         {
-          title: "通用作用域",
+          title: "最小作用域与真实实现",
           items: [
-            "模块级常量、命名类型、函数、组件、配置、DTO、wrapper、adapter 或文件，只有在存在多个真实消费点，或自身维护独立状态、生命周期、不变量时才允许定义；否则保持在当前目标文件的最小私有作用域。本条不约束方先生已定义对象、class 或仓库内部的方法和 action。",
-            "无套壳阻断规则：所有领域对象、Hono router、Zustand 主/切片仓库、项目入口、React 页面、配置对象、schema、协议对象必须由真实 owner 直接定义、消费和导出；只转发、构造、拼装、重命名或包裹其他实现，以及项目自定义 factory、wrapper、adapter、barrel、转发入口、创建后再调用、兼容层、恢复层、兜底层或预留层一律禁止，所有项目均无例外。class 禁止 `new` 后立即调用 start/run/init；React 禁止只转发 props 的 App、Layout 或路由壳；配置禁止用 configCreate、mergeConfig 或同义包装单一配置；类型和 schema 禁止平行 DTO 或转发类型文件；包入口和 export 禁止 barrel、重导出或别名；API、IPC、WebSocket 禁止只转发的 bridge、adapter 或 facade；命令、事件和订阅禁止转调 handler 或 wrapper；目标文件内部的单消费者 helper 和 utils 按文件边界内联。仅在缺少真实外部事实时可报告阻塞。",
-            "方先生明确要求将 `name.ext` 目录化时，只能变为 `name/index.ext`，目录名保持原文件名；原内容、导出和行为必须先原样等价迁入。目录化本身禁止新增、删减、抽取或迁移其他文件或公开面；只有方先生另行明确要求才能增加文件。",
-            "按文件边界处理整理：目标文件内部仅在该文件使用的 helper 属于目标文件的正常整理范围，可以自动内联或删除；涉及其他文件的 import、export、生产者或消费者时，parent 必须在派工前依据相关真实源码上下文确定目标文件与处理范围，工作者不得在实施中自行扩大到未授权文件。",
-            "多个 Codex source 共同消费的静态模板常量必须由真实 owner 使用普通命名 `export const` 定义，其他 source 直接 import；禁止为了让同一 source 对象访问 `nodes` 等常量而使用 IIFE、闭包参数、factory 或回调包裹对象。只有立即计算本身具有真实输入、状态或生命周期时才允许 IIFE。",
-            "除方先生明确指定的公共 API 外，任务上下文必须为每个 export 给出目标文件之外的真实消费者文件与消费符号；同文件使用不算外部消费，未来规划、可能复用和实现便利不构成导出依据，没有真实外部消费者时必须保持文件私有。只有任务信封未覆盖的新跨文件情况才反馈 parent 重新确定范围。",
-            "具体实现前先做真实实现前置检查：确认真实输入、真实配置、真实调用路径、真实副作用和真实验证方式；缺任一关键条件时先阻塞并列缺项，不先写象征实现。",
-            "真实实现：用户要求具体实现时，必须接入真实调用路径、真实配置、真实文件、真实命令或真实接口；禁止用 mock、stub、dummy、示例数据、空方法、只改状态的象征实现冒充完成。",
-            "自动操作第三方页面时，点击工具、切换模式、导航或其他可能重建页面的动作后，必须重新查询目标 DOM，再填写和提交；executeJavaScript、click 或事件派发成功只表示动作已执行，必须以生产者状态确实变化证明业务提交成功。",
-            "缺少真实实现所需信息时暂停实现并列出缺项；涉及服务器、远端服务或账号能力时，缺少 IP、域名、端口、用户名、密码、token、密钥、路径、进程名、协议或启动命令中的任一必要项，都必须标记为阻塞，不写虚假实现。",
-            "缺少真实信息时，只实现不依赖缺项且可验证的部分；依赖缺项的代码保持未实现或显式阻塞，不创建假配置、假返回、假进程控制或假网络调用。",
-            "归一化放置顺序：单点模块实现内联到当前消费点；同一视图或路由私有内容放在该视图或路由目录；方法和 action 逻辑可以放进方先生已定义的切片仓库、class 或业务对象，但不得借放置逻辑新增或改变数据成员；只有跨业务真实复用且没有既有业务边界时才创建新模块。",
-            "能继承的类型不套娃；能由实际调用点自动推导的类型不手写、不导出。",
+            "先在当前消费点直接实现。多个真实消费点已经出现，或能力自身维护独立状态、生命周期、不变量时，再提升为模块、函数、类型、class 或文件。",
+            "领域对象、router、仓库、项目入口、页面、配置、schema 和协议由真实 owner 直接定义、消费和导出；基础能力直接完成动作，入口直接组合这些能力。",
+            "只转发一个调用点的 helper、factory、wrapper、adapter、barrel、facade、兼容层和预留层内联回真实入口；承担独立状态、不变量、协议转换或资源生命周期的对象保留自己的边界。",
+            "把 `name.ext` 目录化时等价迁入 `name/index.ext`，保持原文件名、公开面和行为；新增协作文件由新的真实需要单独决定。",
+            "文件内私有实现留在文件内；跨文件能力先确认真实生产者、消费者和公开符号，再在该边界导出。",
+            "实现前确认真实输入、配置、调用路径、副作用和验证方式；条件齐全后接入真实文件、命令、进程或接口。",
+            "关键事实缺失时，先完成不依赖缺项且可验证的部分，并把依赖缺项的路线明确保留为阻塞，不用示例数据或象征状态冒充结果。",
+            "自动操作可能重建页面后重新取得目标 DOM，再填写和提交；以生产者状态变化验证业务结果。",
+            "类型优先由实际调用点、完整领域类型和第三方契约推导；稳定跨边界契约已经形成时才命名并导出类型。",
           ],
         },
         {
           title: "Class 纯面向对象最小实现",
           items: [
-            "先确定入口 class 的公开主方法；每个主方法按正常顺序直接读取成员、调用自身或成员对象的方法、同步状态并返回结果，这条扁平调用链就是业务主线。禁止先设计类图、分层、队列、`*Run()`、execute/internal 包装或备用对象。",
-            "成员只保存主线当前真实需要的状态、依赖或固定配置；方法直接读取、改变或使用这些成员。没有当前状态转换就不创建对应 API，尤其禁止为可能需要而预造 reset、clear、delete、dispose、start、init 等方法。",
-            "简单值和简单状态由入口直接维护；只有某项能力当前确实需要独立维护复杂状态、不变量、生命周期或一组协作方法时才拆成 class。无可变状态的工具 class 也必须直接完成校验、转换、协议或资源处理，不能只是转发、改名或重新暴露已有调用。",
-            "入口直接调用真实成员对象；固定依赖在成员定义或构造器中确定，每次变化的输入才作为方法参数。已有方法已经完整表达检查、刷新或同步时直接复用，不重新展开、重复验证或层层构造中间对象。",
-            "方法之间只传递下一步真实需要的对象或原始值；禁止为“已校验”“已解析”或单字段结果创建 class、payload/result、重复字段或名义类型。只有稳定协议或必须共同维护多个不变量与行为时才建立独立类型或值对象。",
-            "单点且内联后仍清楚的 helper、临时类型和透传 getter 直接内联；承担真实状态转换、校验、恢复、协议或资源行为的方法可以保留，不以调用点数量决定。类型断言不得冒充运行时验证。",
-            "对象内部能恢复的异常由该对象恢复；其余异常在最早能准确说明问题的边界抛出并保留 cause，不用全局 catch 隐藏。公开方法只需表达状态同步成功且后续仍由同一实例承担时返回 `this`，不另造成功结果。",
-            "每个公开主方法只添加一句用途注释，说明调用者为什么使用它；内部顺序由主线代码本身表达，不把步骤说明、未来规划或对象关系重复写进注释。",
-          ],
-        },
-        {
-          title: "前端作用域",
-          items: [
-            "React 组件只负责渲染状态、绑定交互和触发仓库 action；禁止组件直接承载业务状态流转。",
-            "非方先生自有库的 React 项目必须使用 react-router-dom，并且必须存在 src/routers.tsx；禁止没有 routers.tsx 的单文件实现，禁止用自制 pathname 判断或条件渲染替代 React Router。方先生自有库不受本条限制。",
-            "src/routers.tsx 是唯一前端路由入口，只组合子路由、布局和共享挂载，并默认导出 router 或 routes 路由对象；无实际复用时直接 `export default createHashRouter([...])`，不要先定义 `const router` 再导出；禁止导出 `function Routers()` 这类组件式路由入口；视图逻辑进入对应路由目录，业务流转进入 zustand-store-style「前端仓库」。",
-            "src/main.tsx 只负责 createRoot、全局 Provider、Suspense 和 RouterProvider 挂载；禁止在入口文件直接承载页面 JSX、业务状态、路由判断、页面切换逻辑、document.body/document.documentElement/rootElement 样式副作用。src/routers.tsx 默认导出可直接消费的 `createHashRouter(...)` 实例。",
-            "组件不超过 100 行且逻辑没有复用时必须内联，不得创建独立 hook；超过 100 行不等于必须拆分，只有复杂状态、派生逻辑或真实复用需要时才考虑组件目录内的 `useHook.ts`。",
-            "组件私有 `useHook.ts` 只使用项目已安装且实际需要的 hook API，并保持 default export。",
-            `复杂业务数据、长流程异步、订阅推送、流式返回和多 action 协作进入 ${nodes.zustandStoreStyle}「前端仓库」。`,
-            "组件私有状态只保存纯 UI 临时态，例如弹窗开关、输入框草稿、hover、focus。",
-            "组件私有 hook 的状态来源只能是自身作用域、主仓库对应私有方法或父级方法；禁止越过边界调用兄弟组件私有方法。",
-            "组件拆分后保持默认导出风格；禁止为了私有组件使用 `export function Xxx` 或 `export const Xxx`。",
-            "禁止为单调用点组件制造 props 透传；组件需要的数据优先在自身最小作用域读取仓库、hook 或上下文。",
-            "单组件私有动作不要为了拆组件变成 props 传递；动作依赖的 hook/ref 应留在消费组件内，或移动到真正消费该动作的组件内。",
-            `跨组件共享的按钮文案、接口标签、状态提示等显示名称必须在最小共同作用域归一；视图私有文案放视图目录或消费点，业务状态、请求和流式提示文案按 ${nodes.zustandStoreStyle} 放进切片仓库或业务对象。`,
-            "React 中优先依赖组件 props、实际使用的 hook 和仓库调用点推导类型。",
-            "抽屉类交互优先使用项目统一的可调整尺寸 Drawer 组件；不要在页面里混用 antd 原生 Drawer 和本地临时实现。",
-          ],
-          code: {
-            language: "tsx",
-            content: [
-              "// src/routers.tsx",
-              'import { lazy } from "react";',
-              'import { createHashRouter } from "react-router-dom";',
-              "",
-              'const Page = lazy(() => import("package-name/src/page.tsx"));',
-              'export default createHashRouter([{ path: "/page", element: <Page /> }]);',
-              "",
-              "// src/main.tsx",
-              'import { Suspense } from "react";',
-              'import { createRoot } from "react-dom/client";',
-              'import { RouterProvider } from "react-router-dom";',
-              'import router from "package-name/src/routers.tsx";',
-              "",
-              'createRoot(document.getElementById("root")!).render(',
-              '  <Suspense fallback={null}><RouterProvider router={router} /></Suspense>,',
-              ");",
-            ].join("\n"),
-          },
-        },
-        {
-          title: "前端样式作用域",
-          items: [
-            "非方先生自有库不得创建 CSS 文件；方先生自有库不受本条限制。",
-            "默认不写样式；只有用户明确要求、功能布局必需或修复明确视觉问题时才添加样式。",
-            "路由入口不放视图样式；视图私有样式放对应路由目录，组件私有样式放组件内，第三方组件默认外观不改；页面需要修改 document.body、document.documentElement 或 rootElement 样式时，放对应页面组件 useEffect，并在卸载时恢复旧值。",
-            "样式采用内联写法，遵守满足要求即可的写法，不猜测方式加多余样式。",
-            "禁止为了视觉延续、统一观感、显得更好看或个人审美，擅自给 antd 等第三方组件添加背景、hover、padding、边框、阴影、颜色等样式。",
-            "需要默认组件或等价实现时，保留组件默认外观；只连接必要数据、事件和状态。",
+            "先确定入口 class 的公开主方法；主方法按业务顺序直接读取成员、调用自身或成员对象的原子方法、同步状态并返回结果，这条扁平调用链就是业务主线。",
+            "成员只保存当前主线真实需要的状态、固定依赖和配置；方法直接读取、改变或使用这些成员。新的状态转换真实出现后再补充对应方法。",
+            "简单值和简单状态由入口 class 直接维护；某项能力需要独立维护复杂状态、不变量、资源生命周期或一组协作方法时，才拆成新的 class。",
+            "无可变状态的工具 class 也直接完成校验、转换、协议或资源处理；只有转发或改名作用的层回收到调用入口。",
+            "固定依赖在成员定义或构造器中确定，每次变化的输入作为方法参数；方法之间只传递下一步真实需要的对象或原始值。",
+            "复用原子方法时，入口仍显式保留当前业务步骤和补救顺序；只包裹一个调用点且没有独立状态或不变量的 helper 直接内联。",
+            "对象在原子动作内完成技术后置校验和资源清理，并保留 cause 抛出准确异常；入口在失败调用点选择业务补救。",
+            "公开方法完成状态同步且后续仍由同一实例承担时返回 `this`；查询方法返回真实值，验证方法正常完成或抛出异常，不另造成功布尔值或名义结果。",
+            "每个公开主方法只添加一句用途注释，说明调用者为什么使用它；内部顺序由主线代码本身表达。",
           ],
         },
         {
           title: "后端作用域",
           items: [
-            "后端路由入口只负责读取请求、校验输入、调用对应 Actions 方法、返回响应；不得直接读写对象数据或调用 setState，复杂业务流程不要堆在 route handler 里。",
-            "服务端模块按真实对象或真实子包建目录；只有被多个模块共同消费的对象才上提到更高目录。",
-            "模块私有 schema、协议字段、派生值和辅助逻辑留在模块目录内；跨 route 共享的业务状态和动作收敛到同目录 store.ts。",
-            "src/index.ts 是进程入口，src/routers.ts 是路由聚合入口；二者不是业务对象目录，不放业务 action、schema、缓存实例或页面专用工具。项目入口 index.* 必须直接执行和导出真实入口行为；禁止 serviceStart、start、init、run、bootstrap 等函数或 class，以及任何 factory、wrapper、adapter、转发或创建后再调用层，所有项目均无例外。",
-            "`src/routers.ts` 同时汇总业务 Hono router 和 Vite web 托管 router；业务模块目录的 `index.ts` 默认导出已经带 basePath 的完整 Hono router，routers.ts 统一 `.route(\"/\", xxxRouter)`。",
-            "对象边界不是 class 形式要求，而是业务边界要求：状态、配置、缓存实例、schema、派生值和维护不变量的动作应收敛在同一个对象边界内。",
-            "有状态实体优先封装为对象；状态字段、派生字段和维护不变量的方法必须收敛在同一个对象内。",
-            "对象拥有的输入契约、schema、缓存和派生状态应一起收敛在对象内；禁止把单个对象私有的 schema 散落成文件级变量。",
-            "禁止用外部过程函数读取对象状态、计算后再写回；应由对象暴露表达业务意图的方法并自行维护状态变化。",
-            "调用方不要读取对象内部状态后计算再写回；状态如何变化由对象方法负责，调用方只触发动作。",
-            "不要把依赖 `this` 的实例方法裸返回；必须用闭包保持调用对象，例如 `prompt => thread.runStreamed(prompt)`。",
-            "纯数据转换、无状态工具和单点逻辑不要为了面向对象强行造类；只有需要维护状态、不变量或多处行为协作时才使用对象。",
-            `对象方法命名使用 ${nodes.variableStyle}。`,
+            "后端 route handler 按读取请求、验证输入、调用对应 Actions、返回响应的顺序形成入口；对象状态由 owner action 维护。",
+            "服务端模块按真实对象或真实子包建目录；模块私有 schema、协议字段和派生值留在该目录，跨 route 共享状态和动作收敛到同目录 owner。",
+            "`src/index.ts` 直接执行并导出进程入口，`src/routers.ts` 直接聚合 router；业务 action、schema、缓存和页面工具归真实业务对象。",
+            "业务模块目录的 `index.ts` 默认导出带真实 basePath 的完整 Hono router，`src/routers.ts` 使用 `.route(\"/\", router)` 组合业务 router 与 Vite 托管 router。",
+            "有状态实体把状态、配置、缓存、输入契约、schema、派生值和维护不变量的方法收敛在同一对象；调用方触发表达业务意图的方法。",
+            "依赖 `this` 的实例方法通过闭包保持调用对象，例如 `prompt => thread.runStreamed(prompt)`；纯转换和无状态单点逻辑保持函数或内联实现。",
           ],
         },
+      ],
+    },
+    [nodes.codePackageStyle]: {
+      description: "涉及自有工具库保护、package owner、pnpm workspace 依赖、公开导出和包级 TypeScript 编译时使用。",
+      title: "Package 代码风格",
+      sections: [
         {
           title: "个人 extends-* 工具库保护",
           items: [
@@ -479,19 +398,81 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
         },
       ],
     },
-    [nodes.zustandStoreStyle]: {
+    [nodes.codeReactStyle]: {
+      description: "涉及 React 组件、hooks、路由、TSX、UI 临时态和样式时使用。先由通用代码风格确定对象边界，再按视图职责组织渲染与交互。",
+      title: "React 代码风格",
+      sections: [
+        {
+          title: "分流与职责",
+          items: [
+            `先由 ${nodes.codeStyle} 确定对象、生产者、最小作用域和业务入口；本 skill 只负责 React 视图如何消费这些对象。`,
+            "组件负责渲染状态、绑定交互并触发 action；组件私有状态只保存弹窗开关、输入草稿、hover、focus 等纯 UI 临时态。",
+            `复杂业务数据、长流程异步、请求状态、订阅推送、流式返回和多 action 协作进入 ${nodes.codeZustandStyle}，组件只响应状态并触发动作。`,
+          ],
+        },
+        {
+          title: "组件与 Hook",
+          items: [
+            "组件在自身最小作用域读取仓库、hook 或上下文；单组件私有动作及其 hook/ref 留在真实消费组件内，跨组件共享内容放在最小共同作用域。",
+            "组件逻辑清楚且没有真实复用时保持内联；复杂状态、派生逻辑或真实复用已经出现后，才在组件目录建立 `useHook.ts`，并保持 default export。",
+            "私有 hook 从自身作用域、主仓库对应方法或父级公开输入取得状态；兄弟组件各自维护私有实现，通过共同 owner 协作。",
+            "类型优先从组件 props、实际 hook 和仓库调用点推导；组件拆分后继续使用默认导出。",
+            "项目已有统一交互组件时直接复用，例如可调整尺寸的 Drawer；同一页面保持一种真实组件来源。",
+          ],
+        },
+        {
+          title: "路由与入口",
+          items: [
+            "非方先生自有库的 React 项目使用 react-router-dom，并以 `src/routers.tsx` 作为唯一前端路由入口；方先生自有库按其真实公开边界组织。",
+            "`src/routers.tsx` 只组合子路由、布局和共享挂载，并默认导出可直接消费的 `createHashRouter(...)` 实例；视图逻辑进入对应路由目录。",
+            "`src/main.tsx` 只完成 createRoot、全局 Provider、Suspense 和 RouterProvider 挂载；页面 JSX、业务状态和页面切换留在真实路由或业务 owner。",
+          ],
+          code: {
+            language: "tsx",
+            content: [
+              "// src/routers.tsx",
+              'import { lazy } from "react";',
+              'import { createHashRouter } from "react-router-dom";',
+              "",
+              'const Page = lazy(() => import("package-name/src/page.tsx"));',
+              'export default createHashRouter([{ path: "/page", element: <Page /> }]);',
+              "",
+              "// src/main.tsx",
+              'import { Suspense } from "react";',
+              'import { createRoot } from "react-dom/client";',
+              'import { RouterProvider } from "react-router-dom";',
+              'import router from "package-name/src/routers.tsx";',
+              "",
+              'createRoot(document.getElementById("root")!).render(',
+              '  <Suspense fallback={null}><RouterProvider router={router} /></Suspense>,',
+              ");",
+            ].join("\n"),
+          },
+        },
+        {
+          title: "样式",
+          items: [
+            "样式只在用户明确要求、功能布局必需或修复明确视觉问题时添加，并采用满足当前要求的最小写法。",
+            "视图私有样式归对应路由目录，组件私有样式归组件；路由入口不承载视图样式，第三方组件保持默认外观。",
+            "非方先生自有库使用内联样式，不创建 CSS 文件；方先生自有库沿用其真实样式边界。",
+            "页面确需修改 document.body、document.documentElement 或 rootElement 时，在对应页面组件的 useEffect 中设置，并在卸载时恢复原值。",
+          ],
+        },
+      ],
+    },
+    [nodes.codeZustandStyle]: {
       description: "涉及 zustand 主仓库、切片定义、store action、业务状态流转、流式状态或订阅推送时使用。",
       title: "Zustand Store 风格",
       sections: [
         {
           title: "分流规则",
           items: [
-            `先由 ${nodes.scopeStyle} 确定对象生产者、私有/嵌套/独立切片边界和拆分组合关系；本 skill 只把已经确定的对象边界实现为 Zustand store，不反向决定对象归属。`,
+            `先由 ${nodes.codeStyle} 确定对象生产者、私有/嵌套/独立切片边界和拆分组合关系；本 skill 只把已经确定的对象边界实现为 Zustand store，不反向决定对象归属。`,
             "前端页面业务状态、请求状态、流式状态和组件触发 action 使用「前端仓库」+「Action」。",
             "后端跨路由状态、服务端切片、后台进度、流式事件和订阅推送使用「后端仓库」+「Action」。",
             "创建或调整主仓库使用「主仓库」；创建或调整切片定义使用「切片定义」。",
             "根成员命名、`${dir}` 和 `${dir}Actions` 边界使用「根成员」。",
-            "变量命名叠加 variable-style；网络请求叠加 net-style；作用域、文案放置和导出边界叠加 scope-style。",
+            `命名与对象边界继续遵守 ${nodes.codeStyle}；页面视图使用 ${nodes.codeReactStyle}，网络请求使用 ${nodes.codeNetStyle}，包级导出使用 ${nodes.codePackageStyle}。`,
           ],
         },
         {
@@ -546,7 +527,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
           items: [
             "前端页面业务状态、请求状态、流式状态、订阅推送和多 action 协作进入切片仓库。",
             "React 组件触发已定义 action 写业务状态，组件只响应状态变化。",
-            "页面切片同样分离数据与 action；复杂领域按 scope-style 确定是 `${dir}Actions` 内的功能子对象还是独立小切片，不为追求扁平牺牲对象边界和可读性。",
+            `页面切片同样分离数据与 action；复杂领域先按 ${nodes.codeStyle} 确定是 \`\${dir}Actions\` 内的功能子对象还是独立小切片，再保持该对象边界实现。`,
             "路由所需形参和方法很多时，采用切片仓库合并后被主仓库引用的方式，不把大量路由参数堆进路由组件。",
           ],
         },
@@ -579,13 +560,13 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
             "同一类业务状态只能有一个写入口；多个来源影响同一状态时，先归一成事件，再在仓库 action 内处理。",
             "外部事件源、流式响应、订阅推送和后台进度需要改变已定义仓库状态时，通过对应 action 按事件增量更新。",
             "仓库里优先围绕状态变量组织动作：状态变量保持清晰，动作只表达状态如何变化。get() 读出的状态视为只读快照；写入必须进入 set() 的 immer draft；派生读取函数只返回派生值，禁止暗中修改 store。",
-            `仓库 action、状态和路由层级命名使用 ${nodes.variableStyle}。`,
+            `仓库 action、状态和路由层级命名使用 ${nodes.codeStyle}。`,
           ],
         },
         {
           title: "放置边界",
           items: [
-            "纯视图私有文案不进入仓库，按 scope-style「前端作用域」放在消费点或视图目录。",
+            `纯视图私有文案不进入仓库，按 ${nodes.codeReactStyle} 放在消费点或视图目录。`,
           ],
         },
         {
@@ -598,7 +579,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
         },
       ],
     },
-    [nodes.netStyle]: {
+    [nodes.codeNetStyle]: {
       description: "处理 Hono 服务端接口、页面 API 调用、外部 HTTP、SSE、WebSocket 和同进程 Hono 调用时使用。统一网络边界、协议形态、状态入口和响应类型规则。",
       title: "网络调用风格",
       sections: [
@@ -627,7 +608,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
             "Vite 静态托管 router 必须最后挂载，只处理静态资源和 SPA fallback；不得吞掉 API、SSE、WebSocket、POST、PUT、DELETE 等业务请求。",
             "src/routers.ts 挂载 Vite 项目时只读取 web 项目的 package.name 和项目 root；web 项目不暴露 host、port、origin、basePath 环境变量桥接；同一 Hono 进程托管多个 web 项目时，每个 Vite middleware 必须被 package basePath 硬隔离，只处理自己的 /package-name 和 /package-name/*，禁止第一个 SPA fallback 吞掉后续 web 项目。",
             "模块 router 的类型来自真实 Hono router；web 侧使用 `hc<typeof router>` 推导接口类型，禁止为 web 手搓 contract 或倒贴类型文件。",
-            "路由路径按业务层级组织，避免把领域压扁成难读路径；路由和 action 层级命名使用 variable-style。",
+            `路由路径按业务层级组织，路由和 action 的对象层级及命名使用 ${nodes.codeStyle}。`,
             "handler 只负责读取请求、校验输入、调用对应 Actions 方法、返回响应；不得直接读写对象数据或调用 setState，复杂业务流程不要堆在 route handler 里。",
             "服务端接口禁止 `ctx.json() as ...`；响应类型写在 `ctx.json<T>(...)` 的泛型参数里。",
             "普通无数据 JSON 响应写 `ctx.json(null, 200)`，无 body 响应用 `ctx.body(null, 204)`；流式、SSE 和 WebSocket 响应按对应协议规则。",
@@ -649,7 +630,7 @@ mode=实施时，只能在 parent 指定 ownership 内修改源码并完成真�
         {
           title: "前端网络 - 页面 API",
           items: [
-            `页面交互、组件职责和 UI 临时态使用 ${nodes.scopeStyle}「前端作用域」；业务状态流转使用 ${nodes.zustandStoreStyle}「前端仓库」。`,
+            `页面交互、组件职责和 UI 临时态使用 ${nodes.codeReactStyle}；业务状态流转使用 ${nodes.codeZustandStyle}。`,
             "页面请求本项目 Hono API 时优先使用项目统一的 Hono `hc` 客户端类型推导，不在组件里散写裸 `fetch`。",
             "页面 API 类型必须来自服务端真实导出的 Hono router 类型；不要在 web 项目或 contract 包里手写一份平行接口类型。",
             "前端浏览器中的 HTTP、SSE、WebSocket 和 `hc` 连接统一通过原生 `window.location.origin` 获取当前 origin，不硬编码 host 或 port；后端不适用本条。",
