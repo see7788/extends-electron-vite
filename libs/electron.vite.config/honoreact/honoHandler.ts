@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 const rendererRoot = () => join(app.getAppPath(), "out", "renderer");
 
-const load: Handler = async (context) => {
+const honoHandler: Handler = async (context) => {
   const name = context.req.param("name");
   if (
     !name
@@ -41,4 +41,4 @@ const load: Handler = async (context) => {
   })(context, async () => undefined) ?? context.notFound();
 };
 
-export default load;
+export default honoHandler;

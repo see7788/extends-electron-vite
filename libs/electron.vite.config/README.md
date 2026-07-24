@@ -17,14 +17,14 @@ export default defineConfig(createUserConfig(
 ));
 ```
 
-The Electron main project explicitly starts its Hono server. Register `honoreact/load` after API routes as the React fallback:
+The Electron main project explicitly starts its Hono server. Register `honoreact/honoHandler` after API routes as the React fallback:
 
 ```ts
-import load from "electron.vite.config/honoreact/load";
+import honoHandler from "electron.vite.config/honoreact/honoHandler";
 
 const app = new Hono()
   .route("/", api)
-  .all("/:name/*", load);
+  .all("/:name/*", honoHandler);
 ```
 
-Development requests use electron-vite's renderer server. Production requests read `out/renderer/<package.name>/index.html`. Preload entries remain project-owned and can be merged into the returned `UserConfig`.
+The Electron window always loads the Hono URL, such as `http://127.0.0.1:8788/admin-web/`. Development requests use electron-vite's renderer server; production requests read `out/renderer/<package.name>/index.html`. Preload entries remain project-owned and can be merged into the returned `UserConfig`.
