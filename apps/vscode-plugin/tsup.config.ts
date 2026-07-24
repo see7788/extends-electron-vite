@@ -30,7 +30,6 @@ export default defineConfig([
       options.alias = {
         ...options.alias,
         "extends-hono/create-reactapp-router/index.ts": require.resolve("extends-hono/create-reactapp-router/index"),
-        "extends-hono/createMcpServer/index.ts": require.resolve("extends-hono/createMcpServer/index"),
       };
     },
     banner: {

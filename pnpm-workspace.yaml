@@ -6,6 +6,7 @@ packages:
   - '../extends-antd'
   - '../extends-hono'
   - '../extends-hono/libs/vite.config'
+  - '../extends-hono/libs/mcpServer'
   - '../extends-ssh'
   - '../extends-vite'
   - '../extends-zustand'

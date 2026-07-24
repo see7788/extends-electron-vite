@@ -4,7 +4,7 @@ import tplStore, { type TplStore } from "./tpl/store";
 import globalTplStore, { type GlobalTplStore } from "./tpl/global/store";
 import tpl2Store, { type Tpl2Store } from "./tpl2/store";
 import { createStore } from "zustand";
-import McpServer from "extends-hono/createMcpServer/index"
+import McpServer from "mcp-server/index"
 import { immer } from "zustand/middleware/immer";
 import { homedir } from "node:os";
 import path from "node:path"
