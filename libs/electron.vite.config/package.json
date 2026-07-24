@@ -1,0 +1,21 @@
+{
+  "name": "electron.vite.config",
+  "version": "0.1.0",
+  "type": "module",
+  "peerDependencies": {
+    "@hono/node-server": "^1.19.11",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^39.2.6",
+    "electron-vite": "^5.0.0",
+    "hono": "^4.12.18"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^1.19.11",
+    "@types/node": "^26.0.1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^39.2.6",
+    "electron-vite": "^5.0.0",
+    "hono": "^4.12.18",
+    "typescript": "^5.9.3"
+  }
+}
