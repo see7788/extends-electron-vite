@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "publisher": "see7788",
   "displayName": "extends-codex",
-  "description": "在当前工作区启动 extends-codex 服务。",
+  "description": "VS Code React 开发抽屉。",
   "icon": "src/media/icon.png",
   "categories": [
     "Other"
@@ -37,7 +37,7 @@
       "extends-codex": [
         {
           "id": "extendsCodex.vscodeDrawer",
-          "name": "服务状态",
+          "name": "开发抽屉",
           "type": "webview",
           "visibility": "collapsed"
         }
@@ -46,13 +46,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "vite --config vite.config.ts --configLoader runner --mode drawer-development",
-    "build:extension": "vite build --config vite.config.ts --configLoader runner --mode extension-production",
-    "build:drawer": "vite build --config vite.config.ts --configLoader runner --mode drawer-production",
-    "build": "pnpm run build:extension && pnpm run build:drawer",
-    "build:dev": "vite build --config vite.config.ts --configLoader runner --mode extension-development",
-    "package": "pnpm run build && vsce package --no-dependencies --out dist/extends-codex.vsix",
-    "package:dev": "pnpm run build:dev && vsce package --no-dependencies --out dist/extends-codex-dev.vsix"
+    "dev": "vite --config vite.config.ts --configLoader runner",
+    "build": "vite build --config vite.config.ts --configLoader runner",
+    "package": "pnpm run build && vsce package --no-dependencies --out dist/extends-codex-dev.vsix"
   },
   "devDependencies": {
     "@types/node": "20.19.40",

@@ -1,108 +1,17 @@
 import { randomBytes } from "node:crypto";
-import { createServer, type Server } from "node:http";
 import * as vscode from "vscode";
 
-export type VscodeDrawerIncoming = { type: "ready" } | { type: "toggle" };
-export type VscodeDrawerOutgoing = {
-  type: "status";
-  endpoint: string;
-  state: "running" | "stopped" | "operating" | "error";
-  error?: string;
-};
-
-const honoHost = import.meta.env.VITE_HONO_HOST;
-const honoPort = Number(import.meta.env.VITE_HONO_PORT);
-
-class NativeHttpController {
-  private server: Server | undefined;
-  private status: VscodeDrawerOutgoing = { type: "status", endpoint: this.endpoint, state: "stopped" };
-
-  constructor(private readonly statusPost: (status: VscodeDrawerOutgoing) => void) {}
-
-  get statusGet() {
-    return this.status;
-  }
-
-  async toggle() {
-    if (this.server) return this.stop();
-    return this.start();
-  }
-
-  async start() {
-    if (this.server) return;
-    this.statusSet({ type: "status", endpoint: this.endpoint, state: "operating" });
-    const server = createServer((_request, response) => response.end());
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const listenError = (error: Error) => reject(error);
-        server.once("error", listenError);
-        server.listen(honoPort, honoHost, () => {
-          server.off("error", listenError);
-          resolve();
-        });
-      });
-      this.server = server;
-      this.statusSet({ type: "status", endpoint: this.endpoint, state: "running" });
-    } catch (error) {
-      server.close();
-      this.statusSet({ type: "status", endpoint: this.endpoint, state: "error", error: error instanceof Error ? error.message : String(error) });
-    }
-  }
-
-  async stop() {
-    const server = this.server;
-    if (!server) return;
-    this.statusSet({ type: "status", endpoint: this.endpoint, state: "operating" });
-    try {
-      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
-      this.server = undefined;
-      this.statusSet({ type: "status", endpoint: this.endpoint, state: "stopped" });
-    } catch (error) {
-      this.statusSet({ type: "status", endpoint: this.endpoint, state: "error", error: error instanceof Error ? error.message : String(error) });
-    }
-  }
-
-  private get endpoint() {
-    return `http://${honoHost}:${honoPort}`;
-  }
-
-  private statusSet(status: VscodeDrawerOutgoing) {
-    this.status = status;
-    this.statusPost(status);
-  }
-}
-
-let nativeHttpController: NativeHttpController | undefined;
-
-export async function activate(context: vscode.ExtensionContext) {
-  let webview: vscode.Webview | undefined;
-  nativeHttpController = new NativeHttpController(status => void webview?.postMessage(status));
+export function activate(context: vscode.ExtensionContext) {
   const provider = vscode.window.registerWebviewViewProvider("extendsCodex.vscodeDrawer", {
     resolveWebviewView(view) {
-      webview = view.webview;
-      const production = import.meta.env.MODE === "extension-production";
-      const root = vscode.Uri.joinPath(context.extensionUri, "dist");
-      view.webview.options = { enableScripts: true, localResourceRoots: production ? [root] : [] };
       const nonce = randomBytes(16).toString("base64");
       const origin = "http://127.0.0.1:5173";
-      const script = production
-        ? view.webview.asWebviewUri(vscode.Uri.joinPath(root, "react.js"))
-        : `${origin}/src/react.tsx`;
-      const client = production ? "" : `<script nonce="${nonce}" type="module" src="${origin}/@vite/client"></script>`;
-      const csp = production
-        ? `default-src 'none'; script-src 'nonce-${nonce}';`
-        : `default-src 'none'; script-src 'nonce-${nonce}' ${origin}; connect-src ${origin} ws://127.0.0.1:5173;`;
-      view.webview.html = `<!DOCTYPE html><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><div id="root"></div>${client}<script nonce="${nonce}" type="module" src="${script}"></script>`;
-      view.webview.onDidReceiveMessage((message: VscodeDrawerIncoming) => {
-        if (message.type === "ready") return void webview?.postMessage(nativeHttpController?.statusGet);
-        if (message.type === "toggle") void nativeHttpController?.toggle();
+      view.webview.options = { enableScripts: true };
+      view.webview.html = `<!DOCTYPE html><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' ${origin}; connect-src ${origin} ws://127.0.0.1:5173;"><div id="root"></div><script nonce="${nonce}" type="module" src="${origin}/@vite/client"></script><script nonce="${nonce}" type="module" src="${origin}/src/react.tsx"></script>`;
+      view.webview.onDidReceiveMessage((message: { type?: unknown }) => {
+        if (message.type === "close") void vscode.commands.executeCommand("workbench.action.closeSidebar");
       });
     },
   });
   context.subscriptions.push(provider);
-  await nativeHttpController.start();
-}
-
-export function deactivate() {
-  return nativeHttpController?.stop();
 }
