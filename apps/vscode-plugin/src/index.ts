@@ -1,183 +1,101 @@
-import { spawn } from "node:child_process";
-import { createServer } from "node:net";
-import { join } from "node:path";
-import honoappStore from "honoapp/src/store";
+import { randomBytes } from "node:crypto";
+import { createServer, type Server } from "node:http";
 import * as vscode from "vscode";
+import type { VscodeDrawerIncoming, VscodeDrawerOutgoing } from "./vscodeDrawer/protocol";
 
-const serviceRuntime = honoappStore.getState().runtimeActions;
-const serviceOrigin = `http://${serviceRuntime.hostname}:${serviceRuntime.port}`;
-type ServiceState = "starting" | "running";
+const honoHost = import.meta.env.VITE_HONO_HOST;
+const honoPort = Number(import.meta.env.VITE_HONO_PORT);
 
-class StatusViewProvider implements vscode.TreeDataProvider<string> {
-  private readonly changeEmitter = new vscode.EventEmitter<void>();
-  readonly onDidChangeTreeData = this.changeEmitter.event;
-  private state: ServiceState = "starting";
+class NativeHttpController {
+  private server: Server | undefined;
+  private status: VscodeDrawerOutgoing = { type: "status", endpoint: this.endpoint, state: "stopped" };
 
-  constructor(private readonly mcpOrigin: string) {}
+  constructor(private readonly statusPost: (status: VscodeDrawerOutgoing) => void) {}
 
-  stateSet(state: ServiceState) {
-    this.state = state;
-    this.changeEmitter.fire();
+  get statusGet() {
+    return this.status;
   }
 
-  getChildren() {
-    return ["service"];
+  async toggle() {
+    if (this.server) return this.stop();
+    return this.start();
   }
 
-  getTreeItem() {
-    const pending = this.state === "starting";
-    const running = this.state === "running";
-    const item = new vscode.TreeItem(
-      this.mcpOrigin,
-      vscode.TreeItemCollapsibleState.None,
-    );
-    item.command = pending ? undefined : { command: "extendsCodex.serviceOpen", title: "打开 extends-codex" };
-    item.iconPath = new vscode.ThemeIcon(
-      pending ? "loading~spin" : "server-process",
-      new vscode.ThemeColor(pending ? "foreground" : "testing.iconPassed"),
-    );
-    return item;
-  }
-}
-
-class ServiceController {
-  private state: ServiceState = "starting";
-
-  constructor(
-    private readonly extensionPath: string,
-    private readonly output: vscode.OutputChannel,
-    private readonly stateChange: (state: ServiceState) => void,
-  ) {}
-
-  get stateGet() {
-    return this.state;
-  }
-
-  /** 插件激活时确保本机唯一的 Hono 服务已经运行。 */
   async start() {
-    this.stateSet("starting");
-    if (await this.portIdleRead()) {
-      this.serviceProcessStart();
-      await this.portOccupiedWait();
-    }
-    this.stateSet("running");
-    return this;
-  }
-
-  async open() {
-    await vscode.env.openExternal(vscode.Uri.parse(serviceOrigin));
-    return this;
-  }
-
-  private portIdleRead() {
-    return new Promise<boolean>((resolve, reject) => {
-      const server = createServer();
-      server.once("error", (error: NodeJS.ErrnoException) => {
-        if (error.code === "EADDRINUSE") resolve(false);
-        else reject(error);
+    if (this.server) return;
+    this.statusSet({ type: "status", endpoint: this.endpoint, state: "operating" });
+    const server = createServer((_request, response) => response.end());
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const listenError = (error: Error) => reject(error);
+        server.once("error", listenError);
+        server.listen(honoPort, honoHost, () => {
+          server.off("error", listenError);
+          resolve();
+        });
       });
-      server.once("listening", () => {
-        server.close(error => error ? reject(error) : resolve(true));
-      });
-      server.listen(serviceRuntime.port, serviceRuntime.hostname);
-    });
-  }
-
-  private serviceProcessStart() {
-    const servicePath = join(this.extensionPath, "dist", "honoapp", "index.js");
-    const serviceProcess = spawn(process.execPath, [servicePath], {
-      cwd: this.extensionPath,
-      detached: true,
-      env: {
-        ...process.env,
-        ELECTRON_RUN_AS_NODE: "1",
-        NODE_ENV: "production",
-      },
-      stdio: "ignore",
-      windowsHide: true,
-    });
-    serviceProcess.once("error", error => this.output.appendLine(error.stack ?? error.message));
-    serviceProcess.unref();
-  }
-
-  private async portOccupiedWait() {
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      if (!(await this.portIdleRead())) return;
-      await new Promise(resolve => setTimeout(resolve, 100));
+      this.server = server;
+      this.statusSet({ type: "status", endpoint: this.endpoint, state: "running" });
+    } catch (error) {
+      server.close();
+      this.statusSet({ type: "status", endpoint: this.endpoint, state: "error", error: error instanceof Error ? error.message : String(error) });
     }
-    throw new Error(`extends-codex 未能占用 ${serviceOrigin}`);
   }
 
-  private stateSet(state: ServiceState) {
-    this.state = state;
-    this.stateChange(state);
+  async stop() {
+    const server = this.server;
+    if (!server) return;
+    this.statusSet({ type: "status", endpoint: this.endpoint, state: "operating" });
+    try {
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+      this.server = undefined;
+      this.statusSet({ type: "status", endpoint: this.endpoint, state: "stopped" });
+    } catch (error) {
+      this.statusSet({ type: "status", endpoint: this.endpoint, state: "error", error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  private get endpoint() {
+    return `http://${honoHost}:${honoPort}`;
+  }
+
+  private statusSet(status: VscodeDrawerOutgoing) {
+    this.status = status;
+    this.statusPost(status);
   }
 }
 
-// 以后如需恢复由插件控制独立 Chrome 窗口，可启用以下实现。
-// const browserProfilePath = vscode.Uri.joinPath(context.globalStorageUri, "chrome-profile").fsPath;
-// const browserProcess = browserProcessStart({ origin: serviceOrigin, profilePath: browserProfilePath });
-//
-// function browserProcessStart(input: { origin: string; profilePath: string }) {
-//   const chromePath = chromePathGet();
-//   if (!chromePath) throw new Error("未找到 Google Chrome。");
-//   return spawn(chromePath, [
-//     `--app=${input.origin}`,
-//     `--user-data-dir=${input.profilePath}`,
-//     "--no-default-browser-check",
-//     "--no-first-run",
-//   ], { stdio: "ignore", windowsHide: true });
-// }
-//
-// function chromePathGet() {
-//   const candidates = process.platform === "win32"
-//     ? [
-//       process.env.PROGRAMFILES && `${process.env.PROGRAMFILES}\\Google\\Chrome\\Application\\chrome.exe`,
-//       process.env["PROGRAMFILES(X86)"] && `${process.env["PROGRAMFILES(X86)"]}\\Google\\Chrome\\Application\\chrome.exe`,
-//       process.env.LOCALAPPDATA && `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
-//     ]
-//     : process.platform === "darwin"
-//       ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"]
-//       : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable"];
-//   return candidates.find(path => typeof path === "string" && existsSync(path));
-// }
-//
-// function browserProcessStop(browserProcess: ChildProcess | undefined) {
-//   if (!browserProcess || browserProcess.exitCode !== null || browserProcess.pid === undefined) return Promise.resolve();
-//   if (process.platform !== "win32") {
-//     browserProcess.kill("SIGTERM");
-//     return new Promise<void>(resolve => browserProcess.once("exit", () => resolve()));
-//   }
-//   return new Promise<void>(resolve => {
-//     const taskkill = spawn("taskkill.exe", ["/PID", String(browserProcess.pid), "/T", "/F"], {
-//       stdio: "ignore",
-//       windowsHide: true,
-//     });
-//     taskkill.once("exit", () => resolve());
-//     taskkill.once("error", () => resolve());
-//   });
-// }
+let nativeHttpController: NativeHttpController | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
-  const output = vscode.window.createOutputChannel("extends-codex");
-  const workspaceName = vscode.workspace.name;
-  const statusProvider = new StatusViewProvider(
-    workspaceName ? `${serviceOrigin}/mcp/${encodeURIComponent(workspaceName)}` : `${serviceOrigin}/mcp`,
-  );
-  const statusRender = (state: ServiceState) => {
-    statusProvider.stateSet(state);
-  };
-  const service = new ServiceController(context.extensionPath, output, statusRender);
-  statusRender(service.stateGet);
-  const statusView = vscode.window.createTreeView("extendsCodex.status", { treeDataProvider: statusProvider });
-  context.subscriptions.push(
-    output,
-    statusView,
-    vscode.commands.registerCommand("extendsCodex.serviceOpen", () => service.open()),
-  );
-  await service.start();
+  let webview: vscode.Webview | undefined;
+  nativeHttpController = new NativeHttpController(status => void webview?.postMessage(status));
+  const provider = vscode.window.registerWebviewViewProvider("extendsCodex.vscodeDrawer", {
+    resolveWebviewView(view) {
+      webview = view.webview;
+      const production = import.meta.env.MODE === "extension-production";
+      const root = vscode.Uri.joinPath(context.extensionUri, "dist", "vscodeDrawer");
+      view.webview.options = { enableScripts: true, localResourceRoots: production ? [root] : [] };
+      const nonce = randomBytes(16).toString("base64");
+      const origin = "http://127.0.0.1:5173";
+      const script = production
+        ? view.webview.asWebviewUri(vscode.Uri.joinPath(root, "index.js"))
+        : `${origin}/src/vscodeDrawer/renderer.tsx`;
+      const client = production ? "" : `<script nonce="${nonce}" type="module" src="${origin}/@vite/client"></script>`;
+      const csp = production
+        ? `default-src 'none'; script-src 'nonce-${nonce}';`
+        : `default-src 'none'; script-src 'nonce-${nonce}' ${origin}; connect-src ${origin} ws://127.0.0.1:5173;`;
+      view.webview.html = `<!DOCTYPE html><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><div id="root"></div>${client}<script nonce="${nonce}" type="module" src="${script}"></script>`;
+      view.webview.onDidReceiveMessage((message: VscodeDrawerIncoming) => {
+        if (message.type === "ready") return void webview?.postMessage(nativeHttpController?.statusGet);
+        if (message.type === "toggle") void nativeHttpController?.toggle();
+      });
+    },
+  });
+  context.subscriptions.push(provider);
+  await nativeHttpController.start();
 }
 
 export function deactivate() {
-  return undefined;
+  return nativeHttpController?.stop();
 }

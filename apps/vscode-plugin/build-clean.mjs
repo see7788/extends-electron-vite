@@ -1,4 +1,0 @@
-import { rmSync } from "node:fs";
-
-rmSync(new URL("dist", import.meta.url), { force: true, recursive: true });
-rmSync(new URL("reactapp/dist", import.meta.url), { force: true, recursive: true });

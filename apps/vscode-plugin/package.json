@@ -13,7 +13,6 @@
   "main": "./dist/index.js",
   "files": [
     "dist/",
-    "reactapp/dist/",
     "src/media/icon.png",
     "src/media/icon-activity.png"
   ],
@@ -37,32 +36,34 @@
     "views": {
       "extends-codex": [
         {
-          "id": "extendsCodex.status",
+          "id": "extendsCodex.vscodeDrawer",
           "name": "服务状态",
+          "type": "webview",
           "visibility": "collapsed"
         }
       ]
-    },
-    "commands": [
-      {
-        "command": "extendsCodex.serviceOpen",
-        "title": "打开 extends-codex"
-      }
-    ]
+    }
   },
   "scripts": {
-    "prebuild": "node build-clean.mjs",
-    "build": "pnpm --dir ../reactapp exec vite build --base /reactapp/ --outDir ../vscode-plugin/reactapp/dist --emptyOutDir && tsup",
-    "package": "pnpm run build && vsce package --no-dependencies --out extends-codex.vsix"
-  },
-  "dependencies": {
-    "honoapp": "workspace:*"
+    "typecheck": "tsc --noEmit",
+    "dev": "vite --config vite.config.ts --configLoader runner --mode drawer-development",
+    "build:extension": "vite build --config vite.config.ts --configLoader runner --mode extension-production",
+    "build:drawer": "vite build --config vite.config.ts --configLoader runner --mode drawer-production",
+    "build": "pnpm run build:extension && pnpm run build:drawer",
+    "build:dev": "vite build --config vite.config.ts --configLoader runner --mode extension-development",
+    "package": "pnpm run build && vsce package --no-dependencies --out dist/extends-codex.vsix",
+    "package:dev": "pnpm run build:dev && vsce package --no-dependencies --out dist/extends-codex-dev.vsix"
   },
   "devDependencies": {
     "@types/node": "20.19.40",
     "@types/vscode": "1.120.0",
     "@vscode/vsce": "3.6.2",
-    "tsup": "8.5.1",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vite": "^8.0.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^5.1.1"
   }
 }
