@@ -4,8 +4,8 @@ import { dirname, join } from "node:path";
 import { Project } from "ts-morph";
 import type { StateCreator } from "zustand";
 import type { Store } from "../../store";
-import CodexOutput from "../../tpl2/output";
-import source from "../../tpl2/source";
+import CodexOutput from "../output";
+import source from "../source";
 
 type GlobalSource = typeof source.global;
 

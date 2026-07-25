@@ -135,7 +135,6 @@ export default (
         }
         return;
       }
-
       await Promise.allSettled(servers.splice(0).map(server => server.close()));
       for (const project of projects) delete process.env[`HONO_RENDERER_URL_${project.name}`];
     },

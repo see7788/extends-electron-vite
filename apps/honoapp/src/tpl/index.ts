@@ -1,46 +1,45 @@
+import { existsSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
-import source from "../tpl2/source";
 import store from "../store";
-import { workspacePathSchema } from "./store";
 
-export type Tpl = typeof source.project;
-
-export const tplSourceSchema = workspacePathSchema.extend({ source: z.string().min(1) });
+const workspacePathSchema = z.object({
+  workspacePath: z.string().min(1).refine(
+    workspacePath => existsSync(workspacePath) && statSync(workspacePath).isDirectory(),
+    "workspacePath must be an existing directory",
+  ),
+});
+const sourceSchema = workspacePathSchema.extend({
+  source: z.string().min(1),
+});
 
 const tplRouter = new Hono()
   .basePath("/tpl")
-  .get("/", (ctx) => ctx.redirect("/#/tpl"))
-  .get("/source", zValidator("query", workspacePathSchema), (ctx) => {
-    const { hostname, port } = store.getState().runtimeActions;
-    return ctx.json(store.getState().tplActions.sourceRead({
-      hostname,
-      port,
-      workspacePath: ctx.req.valid("query").workspacePath,
-    }));
+  .get("/", context => context.redirect(`/#/tpl?${new URLSearchParams({ workspacePath: homedir() })}`))
+  .get("/source", zValidator("query", workspacePathSchema), (context) => {
+    const { workspacePath } = context.req.valid("query");
+    return context.json(store.getState().tplActions.sourceRead(workspacePath));
   })
-  .put("/source", zValidator("json", tplSourceSchema), (ctx) => {
-    const { hostname, port } = store.getState().runtimeActions;
-    store.getState().tplActions.sourceUpdate({ ...ctx.req.valid("json"), hostname, port });
-    return ctx.json(null, 200);
+  .put("/source", zValidator("json", sourceSchema), (context) => {
+    const { source, workspacePath } = context.req.valid("json");
+    store.getState().tplActions.sourceUpdate(workspacePath, source);
+    return context.body(null, 204);
   })
-  .post("/materialize", zValidator("json", workspacePathSchema), (ctx) => {
-    const { hostname, port } = store.getState().runtimeActions;
-    store.getState().tplActions.outputMaterialize({
-      hostname,
-      port,
-      workspacePath: ctx.req.valid("json").workspacePath,
-    });
-    return ctx.json(null, 200);
+  .post("/output/filesStatus", zValidator("json", workspacePathSchema), (context) => {
+    const { workspacePath } = context.req.valid("json");
+    return context.json(store.getState().tplActions.outputFilesStatus(workspacePath));
   })
-  .get("/status", zValidator("query", workspacePathSchema), (ctx) => {
-    const { hostname, port } = store.getState().runtimeActions;
-    return ctx.json(store.getState().tplActions.sourceRead({
-      hostname,
-      port,
-      workspacePath: ctx.req.valid("query").workspacePath,
-    }));
+  .post("/output/materialize", zValidator("json", workspacePathSchema), (context) => {
+    const { workspacePath } = context.req.valid("json");
+    store.getState().tplActions.outputMaterialize(workspacePath);
+    return context.body(null, 204);
+  })
+  .post("/output/rebase", zValidator("json", workspacePathSchema), (context) => {
+    const { workspacePath } = context.req.valid("json");
+    store.getState().tplActions.outputRebase(workspacePath);
+    return context.body(null, 204);
   });
 
 export default tplRouter;

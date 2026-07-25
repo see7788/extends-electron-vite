@@ -1,87 +1,107 @@
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import immerStateCreator from "extends-zustand/immerStateCreator";
 import { Project } from "ts-morph";
-import type { StateCreator } from "zustand";
-import { z } from "zod";
-import type { Store } from "../store";
-import CodexOutput from "../tpl2/output";
-import source from "../tpl2/source";
+import CodexOutput from "./output";
+import source from "./source";
 
-type ProjectSource = typeof source.project;
-
-export const workspacePathSchema = z.object({ workspacePath: z.string().refine(existsSync, "workspacePath must exist") });
+type Source = typeof source.global | typeof source.project;
 
 export type TplStore = {
-  tpl: {
+  tpl: Record<string, {
     source: string;
-  };
+  }>;
   tplActions: {
-    outputMaterialize: (input: { hostname: string; port: number; workspacePath: string }) => void;
-    sourceRead: (input: { hostname: string; port: number; workspacePath: string }) => {
-      dirtyTargets: string[];
-      existingTargets: string[];
-      nodes: Record<string, string | number>;
-      source: string;
-      type: string;
-    };
-    sourceUpdate: (input: { hostname: string; port: number; source: string; workspacePath: string }) => void;
+    outputFilesStatus: (workspacePath: string) => ReturnType<CodexOutput["filesStatus"]>;
+    outputMaterialize: (workspacePath: string) => void;
+    outputRebase: (workspacePath: string) => void;
+    sourceRead: (workspacePath: string) => string;
+    sourceUpdate: (workspacePath: string, source: string) => void;
   };
 };
 
-const sourceInitializerGet = (input: { declaration: string; source: string }) => new Project({ skipAddingFilesFromTsConfig: true })
-  .createSourceFile("codextpl.ts", input.source)
-  .getVariableDeclarationOrThrow(input.declaration)
-  .getInitializerOrThrow()
-  .getText();
-
-export default ((set, get) => {
-  const defaultSourceGet = () => {
+const createTpl = immerStateCreator<TplStore>((set, get, api) => {
+  const workspacePathGlobal = resolve(homedir());
+  const workspacePathRead = (workspacePath: string) => resolve(workspacePath);
+  const nodesRead = () => {
+    const { hostname, port } = (api.getState() as TplStore & {
+      runtimeActions: { hostname: string; port: number };
+    }).runtimeActions;
+    const hookCommandRead = (role: "assistant" | "user") => [
+      "node",
+      JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")),
+      JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))),
+      "hook",
+      JSON.stringify(hostname),
+      port,
+      role,
+    ].join(" ");
     return {
-      source: JSON.stringify(source.project, undefined, 2),
-      type: "ProjectSource",
+      ...source.project.nodes,
+      HOOK_ASSISTANT_COMMAND: hookCommandRead("assistant"),
+      HOOK_USER_COMMAND: hookCommandRead("user"),
     };
   };
-  const nodesGet = ({ hostname, port }: { hostname: string; port: number }) => ({
-    ...source.project.nodes,
-    HOOK_ASSISTANT_COMMAND: ["node", JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")), JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))), "hook", JSON.stringify(hostname), port, "assistant"].join(" "),
-    HOOK_USER_COMMAND: ["node", JSON.stringify(join(fileURLToPath(new URL("../", import.meta.url)), "node_modules", "tsx", "dist", "cli.mjs")), JSON.stringify(fileURLToPath(new URL("../index.ts", import.meta.url))), "hook", JSON.stringify(hostname), port, "user"].join(" "),
-  });
-  const sourceParse = (input: { nodes: Record<string, string | number>; source: string }) => {
-    const parsed = source.schema.parse(new Function("nodes", `"use strict"; return (${input.source});`)(input.nodes));
-    if (parsed.scope !== "project") throw new Error("Project template source must use scope: project");
-    return parsed as ProjectSource;
+  const sourceScopeRead = (workspacePath: string) => (
+    workspacePathRead(workspacePath).toLowerCase() === workspacePathGlobal.toLowerCase()
+      ? "global"
+      : "project"
+  );
+  const sourceTextRead = (sourceValue: Source) => {
+    const { nodes: sourceNodes, ...sourceData } = sourceValue;
+    const sourceLines = JSON.stringify(sourceData, undefined, 2).split("\n");
+    sourceLines[sourceLines.length - 2] += ",";
+    return [
+      `const nodes = ${JSON.stringify(nodesRead(), undefined, 2)} as const;`,
+      "",
+      "const source = {",
+      ...sourceLines.slice(1, -1).map(line => `  ${line}`),
+      "  nodes,",
+      "};",
+    ].join("\n");
   };
-  const outputGet = (input: { hostname: string; port: number; workspacePath: string }) => new CodexOutput({
-    path: `${input.workspacePath}/.codex`,
-    source: sourceParse({ nodes: nodesGet(input), source: get().tpl.source }),
-  });
+  const sourceValidatedRead = (workspacePath: string, sourceContent: string) => {
+    const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl.ts", sourceContent);
+    const sourceText = (sourceFile.getVariableDeclaration("source")?.getInitializerOrThrow().getText() ?? sourceContent)
+      .replace(/\s+as const$/, "");
+    const sourceValue = source.schema.parse(new Function("nodes", `"use strict"; return (${sourceText});`)(nodesRead()));
+    if (sourceValue.scope !== sourceScopeRead(workspacePath)) {
+      throw new Error(`Template source scope does not match workspacePath: ${workspacePath}`);
+    }
+    return sourceValue;
+  };
+  const sourceRead = (workspacePath: string) => {
+    const workspacePathValue = workspacePathRead(workspacePath);
+    return get().tpl[workspacePathValue]?.source ?? sourceTextRead(source[sourceScopeRead(workspacePathValue)]);
+  };
+  const outputRead = (workspacePath: string) => {
+    const workspacePathValue = workspacePathRead(workspacePath);
+    return new CodexOutput({
+      path: join(workspacePathValue, ".codex"),
+      source: sourceValidatedRead(workspacePathValue, sourceRead(workspacePathValue)),
+    });
+  };
   return {
-    tpl: { source: defaultSourceGet().source },
+    tpl: {},
     tplActions: {
-      outputMaterialize: (input) => outputGet(input).materialize(),
-      sourceRead: (input) => {
-        const source = get().tpl.source;
-        const output = outputGet(input);
-        const status = output.filesStatus();
-        sourceParse({ nodes: nodesGet(input), source });
-        return {
-          ...defaultSourceGet(),
-          source,
-          nodes: nodesGet(input),
-          existingTargets: status.existing,
-          dirtyTargets: status.dirty,
-        };
+      outputFilesStatus: (workspacePath) => outputRead(workspacePath).filesStatus(),
+      outputMaterialize: (workspacePath) => {
+        outputRead(workspacePath).materialize();
       },
-      sourceUpdate: ({ hostname, port, source }) => {
-        const normalized = source.includes("const tpl")
-          ? sourceInitializerGet({ declaration: "tpl", source })
-          : source;
-        sourceParse({ nodes: nodesGet({ hostname, port }), source: normalized });
+      outputRebase: (workspacePath) => {
+        outputRead(workspacePath).rebase();
+      },
+      sourceRead,
+      sourceUpdate: (workspacePath, sourceContent) => {
+        const workspacePathValue = workspacePathRead(workspacePath);
+        const sourceValue = sourceValidatedRead(workspacePathValue, sourceContent);
         set((state) => {
-          state.tpl.source = normalized;
+          state.tpl[workspacePathValue] = { source: sourceTextRead(sourceValue) };
         });
       },
     },
   };
-}) satisfies StateCreator<Store, [["zustand/immer", never]], [], TplStore>;
+});
+
+export default createTpl;

@@ -9,7 +9,7 @@ import store,{mcpServer} from "./store";
 import tplRouter from "./tpl";
 import tpl2Router from "./tpl2";
 import globalTplRouter from "./tpl/global";
-
+mcpServer.mcpRegister("codegraph").mcpRegister("browser")
 const app = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
   .all("/mcp", mcpServer.honoHandler)

@@ -6,6 +6,7 @@ import { Project } from "ts-morph";
 import CodexOutput from "./output";
 import source from "./source";
 
+
 type Source = typeof source.global | typeof source.project;
 
 export type Tpl2Store = {
@@ -90,5 +91,4 @@ const createTpl2 = immerStateCreator<Tpl2Store>((set, get, api) => {
     },
   };
 });
-
 export default createTpl2;

@@ -12,7 +12,8 @@
   "type": "module",
   "main": "./dist/index.js",
   "files": [
-    "dist/index.js",
+    "dist/",
+    "reactapp/dist/",
     "src/media/icon.png",
     "src/media/icon-activity.png"
   ],
@@ -22,7 +23,7 @@
   "activationEvents": [
     "onStartupFinished"
   ],
-  "extensionKind": ["workspace"],
+  "extensionKind": ["ui"],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -44,14 +45,18 @@
     },
     "commands": [
       {
-        "command": "extendsCodex.serviceToggle",
-        "title": "切换 extends-codex 服务"
+        "command": "extendsCodex.serviceOpen",
+        "title": "打开 extends-codex"
       }
     ]
   },
   "scripts": {
-    "build": "tsup",
+    "prebuild": "node build-clean.mjs",
+    "build": "pnpm --dir ../reactapp exec vite build --base /reactapp/ --outDir ../vscode-plugin/reactapp/dist --emptyOutDir && tsup",
     "package": "pnpm run build && vsce package --no-dependencies --out extends-codex.vsix"
+  },
+  "dependencies": {
+    "honoapp": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "20.19.40",
