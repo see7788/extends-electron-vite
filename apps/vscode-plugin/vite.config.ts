@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     build: {
       emptyOutDir: false,
-      lib: { entry: "src/vscodeDrawer/renderer.tsx", formats: ["es"], fileName: "index" },
-      outDir: "dist/vscodeDrawer",
+      lib: { entry: "src/react.tsx", formats: ["es"], fileName: "react" },
+      outDir: "dist",
     },
   };
   if (mode === "extension-development" || mode === "extension-production") return {
@@ -31,9 +31,9 @@ export default defineConfig(({ mode }) => {
       outDir: "dist",
       rollupOptions: {
         external: moduleName => moduleName === "vscode" || moduleName.startsWith("node:") || nodeBuiltins.has(moduleName),
-        output: { entryFileNames: "index.js", format: "es", paths: moduleName => nodeBuiltins.has(moduleName) ? `node:${moduleName}` : moduleName },
+        output: { entryFileNames: "node.js", format: "es", paths: moduleName => nodeBuiltins.has(moduleName) ? `node:${moduleName}` : moduleName },
       },
-      ssr: "src/index.ts",
+      ssr: "src/node.ts",
       target: "node20",
     },
     define: {

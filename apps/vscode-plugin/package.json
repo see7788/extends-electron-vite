@@ -10,7 +10,7 @@
   ],
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
+  "main": "./dist/node.js",
   "files": [
     "dist/",
     "src/media/icon.png",

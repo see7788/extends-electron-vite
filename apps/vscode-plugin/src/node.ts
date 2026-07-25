@@ -1,7 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
 import * as vscode from "vscode";
-import type { VscodeDrawerIncoming, VscodeDrawerOutgoing } from "./vscodeDrawer/protocol";
+
+export type VscodeDrawerIncoming = { type: "ready" } | { type: "toggle" };
+export type VscodeDrawerOutgoing = {
+  type: "status";
+  endpoint: string;
+  state: "running" | "stopped" | "operating" | "error";
+  error?: string;
+};
 
 const honoHost = import.meta.env.VITE_HONO_HOST;
 const honoPort = Number(import.meta.env.VITE_HONO_PORT);
@@ -74,13 +81,13 @@ export async function activate(context: vscode.ExtensionContext) {
     resolveWebviewView(view) {
       webview = view.webview;
       const production = import.meta.env.MODE === "extension-production";
-      const root = vscode.Uri.joinPath(context.extensionUri, "dist", "vscodeDrawer");
+      const root = vscode.Uri.joinPath(context.extensionUri, "dist");
       view.webview.options = { enableScripts: true, localResourceRoots: production ? [root] : [] };
       const nonce = randomBytes(16).toString("base64");
       const origin = "http://127.0.0.1:5173";
       const script = production
-        ? view.webview.asWebviewUri(vscode.Uri.joinPath(root, "index.js"))
-        : `${origin}/src/vscodeDrawer/renderer.tsx`;
+        ? view.webview.asWebviewUri(vscode.Uri.joinPath(root, "react.js"))
+        : `${origin}/src/react.tsx`;
       const client = production ? "" : `<script nonce="${nonce}" type="module" src="${origin}/@vite/client"></script>`;
       const csp = production
         ? `default-src 'none'; script-src 'nonce-${nonce}';`
