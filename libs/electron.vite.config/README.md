@@ -37,6 +37,26 @@ honoRenderer/
 
 React paths are relative to `process.cwd()`. Each directory name must equal its `package.json` name and contain `index.html` and `vite.config.ts`. Each React project owns its Vite plugins; the shared `define` also applies to the existing renderer page.
 
+## React project configuration
+
+The plugin does not install or register `@vitejs/plugin-react`. Every React project supplies its own complete Vite configuration:
+
+```ts
+// apps/admin-web/vite.config.ts
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [react()],
+});
+```
+
+This also allows a project to use `@vitejs/plugin-react-swc` or add its own aliases, CSS options, and Vite plugins without changing `electron.vite.config`.
+
+During development, the plugin calls Vite `createServer()` with that project's `vite.config.ts`, then provides its URL to `honoHandler`. During production builds, it calls Vite `build()` with the same configuration and writes the result to `out/renderer/<package.name>`.
+
+The plugin manages renderer projects only. Electron main and preload configuration, process startup, and Hono server startup remain the responsibility of electron-vite and the application.
+
 Register `honoRenderer/honoHandler` after API routes:
 
 ```ts
