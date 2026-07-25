@@ -1,15 +1,15 @@
 # electron.vite.config
 
-`honoRenderer/plugin` adds Hono-mounted React projects to an existing electron-vite renderer without replacing its page, main, or preload configuration.
+`rendererHonoReactPlugin/plugin` 在不替换 electron-vite 现有 renderer、main 和 preload 配置的前提下，将一个或多个 React 项目挂载到 Hono。
 
 ```ts
 import { defineConfig } from "electron-vite";
-import honoRenderer from "electron.vite.config/honoRenderer/plugin";
+import rendererHonoReactPlugin from "electron.vite.config/rendererHonoReactPlugin/plugin";
 
 export default defineConfig({
   renderer: {
     plugins: [
-      honoRenderer(
+      rendererHonoReactPlugin(
         {
           honoHost: "127.0.0.1",
           honoPort: 8788,
@@ -28,18 +28,18 @@ export default defineConfig({
 ```
 
 ```text
-honoRenderer/
-├── plugin.ts                # Extends only the electron-vite renderer
-│   ├── development          # Starts isolated React Vite servers with HMR
-│   └── build                # Writes each React project below renderer outDir
-└── honoHandler.ts           # Routes Hono requests to development or built pages
+rendererHonoReactPlugin/
+├─ plugin.ts                # 扩展 electron-vite renderer
+│  ├─ 开发环境              # 启动带 HMR 的独立 React Vite 服务
+│  └─ 生产构建              # 将各 React 项目写入 renderer 输出目录
+└─ honoHandler.ts           # 将 Hono 请求转给开发服务或生产页面
 ```
 
-React paths are relative to `process.cwd()`. Each directory name must equal its `package.json` name and contain `index.html` and `vite.config.ts`. Each React project owns its Vite plugins; the shared `define` also applies to the existing renderer page.
+React 路径相对于 `process.cwd()`。每个目录的名称必须与其 `package.json` 的 `name` 一致，并包含 `index.html` 和 `vite.config.ts`。
 
-## React project configuration
+## React 项目配置
 
-The plugin does not install or register `@vitejs/plugin-react`. Every React project supplies its own complete Vite configuration:
+公共插件不会安装或注册 `@vitejs/plugin-react`。每个 React 项目自行提供完整的 Vite 配置：
 
 ```ts
 // apps/admin-web/vite.config.ts
@@ -51,20 +51,32 @@ export default defineConfig({
 });
 ```
 
-This also allows a project to use `@vitejs/plugin-react-swc` or add its own aliases, CSS options, and Vite plugins without changing `electron.vite.config`.
+项目也可以改用 `@vitejs/plugin-react-swc`，或配置自己的 alias、CSS 选项和其他 Vite 插件，不需要修改 `electron.vite.config`。
 
-During development, the plugin calls Vite `createServer()` with that project's `vite.config.ts`, then provides its URL to `honoHandler`. During production builds, it calls Vite `build()` with the same configuration and writes the result to `out/renderer/<package.name>`.
+开发时，插件使用项目自己的 `vite.config.ts` 调用 Vite `createServer()`，再把开发地址交给 `honoHandler`。生产构建时，插件使用同一份配置调用 Vite `build()`，并将结果写入：
 
-The plugin manages renderer projects only. Electron main and preload configuration, process startup, and Hono server startup remain the responsibility of electron-vite and the application.
+```text
+out/renderer/<package.name>
+```
 
-Register `honoRenderer/honoHandler` after API routes:
+插件只管理 renderer 项目。Electron main、preload、进程启动和 Hono 服务启动仍由 electron-vite 与应用负责。
+
+## 挂载 Hono
+
+API 路由注册完成后，再挂载 `rendererHonoReactPlugin/honoHandler`：
 
 ```ts
-import honoHandler from "electron.vite.config/honoRenderer/honoHandler";
+import honoHandler from "electron.vite.config/rendererHonoReactPlugin/honoHandler";
 
 const app = new Hono()
   .route("/", api)
   .all("/:name/*", honoHandler);
 ```
 
-The Electron window always uses `loadURL()` with the Hono address, such as `http://127.0.0.1:8788/admin-web/`. Development requests use the managed Vite server; production requests read `out/renderer/<package.name>/index.html`.
+Electron 窗口始终使用 Hono 地址调用 `loadURL()`，例如：
+
+```text
+http://127.0.0.1:8788/admin-web/
+```
+
+开发请求会转给对应的 Vite 服务；生产请求读取 `out/renderer/<package.name>/index.html`。
