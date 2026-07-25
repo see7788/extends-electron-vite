@@ -35,7 +35,7 @@ honoRenderer/
 └── honoHandler.ts           # Routes Hono requests to development or built pages
 ```
 
-React paths are relative to `process.cwd()`. Each directory name must equal its `package.json` name and contain `index.html`. The shared `define` also applies to the existing renderer page.
+React paths are relative to `process.cwd()`. Each directory name must equal its `package.json` name and contain `index.html` and `vite.config.ts`. Each React project owns its Vite plugins; the shared `define` also applies to the existing renderer page.
 
 Register `honoRenderer/honoHandler` after API routes:
 

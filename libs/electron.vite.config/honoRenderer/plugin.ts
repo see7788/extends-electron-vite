@@ -1,4 +1,3 @@
-import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import {
@@ -41,7 +40,9 @@ export default (
   const projects = reactRoots.map(reactRoot => {
     const root = resolve(process.cwd(), reactRoot);
     if (!existsSync(join(root, "index.html"))) throw new Error(`React index.html not found: ${root}`);
-    return { name: packageName(root), root };
+    const configFile = join(root, "vite.config.ts");
+    if (!existsSync(configFile)) throw new Error(`React Vite config not found: ${configFile}`);
+    return { configFile, name: packageName(root), root };
   });
   if (new Set(projects.map(project => project.name)).size !== projects.length) {
     throw new Error("React package names must be unique");
@@ -98,10 +99,9 @@ export default (
       for (const [index, project] of projects.entries()) {
         const server = await createServer({
           base: `/${project.name}/`,
-          configFile: false,
+          configFile: project.configFile,
           define,
           mode,
-          plugins: [react()],
           root: project.root,
           server: {
             host: honoHost,
@@ -127,10 +127,9 @@ export default (
               outDir: join(rendererOutDir, project.name),
               write: managedWrite,
             },
-            configFile: false,
+            configFile: project.configFile,
             define,
             mode,
-            plugins: [react()],
             root: project.root,
           });
         }
