@@ -15,7 +15,6 @@ export type TplStore = {
   tplActions: {
     outputFilesStatus: (workspacePath: string) => ReturnType<CodexOutput["filesStatus"]>;
     outputMaterialize: (workspacePath: string) => void;
-    outputRebase: (workspacePath: string) => void;
     sourceRead: (workspacePath: string) => string;
     sourceUpdate: (workspacePath: string, source: string) => void;
   };
@@ -88,9 +87,6 @@ const createTpl = immerStateCreator<TplStore>((set, get, api) => {
       outputFilesStatus: (workspacePath) => outputRead(workspacePath).filesStatus(),
       outputMaterialize: (workspacePath) => {
         outputRead(workspacePath).materialize();
-      },
-      outputRebase: (workspacePath) => {
-        outputRead(workspacePath).rebase();
       },
       sourceRead,
       sourceUpdate: (workspacePath, sourceContent) => {

@@ -25,12 +25,4 @@ export default createHashRouter([
     path: "/tpl",
     lazy: async () => ({ Component: (await import("./tpl")).default }),
   },
-  {
-    path: "/tpl2",
-    lazy: async () => ({ Component: (await import("./tpl2")).default }),
-  },
-  {
-    path: "/tpl/global",
-    lazy: async () => ({ Component: (await import("./tpl/global")).default }),
-  },
 ]);

@@ -19,7 +19,6 @@ export default function Tpl() {
   const sourceUpdate = appStore(state => state.tplActions.sourceUpdate);
   const outputFilesStatus = appStore(state => state.tplActions.outputFilesStatus);
   const outputMaterialize = appStore(state => state.tplActions.outputMaterialize);
-  const outputRebase = appStore(state => state.tplActions.outputRebase);
 
   useEffect(() => {
     if (workspacePath === null) return;
@@ -68,16 +67,6 @@ export default function Tpl() {
       >
         物化
       </Button>
-      {source?.includes('"scope": "global"') && <Button
-        loading={loading}
-        onClick={() => void (async () => {
-          await sourceUpdate(workspacePath, source);
-          await outputRebase(workspacePath);
-          await outputFilesStatus(workspacePath);
-        })().catch(errorShow)}
-      >
-        rebase
-      </Button>}
     </Space>
     <Card title="已有输出"><Typography.Paragraph>{existingTargets.join("\n")}</Typography.Paragraph></Card>
     <Card title="待写入输出"><Typography.Paragraph>{dirtyTargets.join("\n")}</Typography.Paragraph></Card>

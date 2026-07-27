@@ -1,25 +1,7 @@
 #!/usr/bin/env tsx
-
-import honoServer from "vite.config/honoServer";
-import { Hono } from "hono";
-import emailRouter from "./email";
-import fileRouter from "./file";
-import { ssePushRouter, sseRouter } from "./sse";
 import store,{mcpServer} from "./store";
-import tplRouter from "./tpl";
-import tpl2Router from "./tpl2";
-import globalTplRouter from "./tpl/global";
-mcpServer.mcpRegister("codegraph").mcpRegister("browser")
-const app = new Hono()
-  .get("/favicon.ico", (ctx) => ctx.body(null, 204))
-  .all("/mcp", mcpServer.honoHandler)
-  .route("/", tplRouter)
-  .route("/", tpl2Router)
-  .route("/", globalTplRouter)
-  .route("/", sseRouter)
-  .route("/", ssePushRouter)
-  .route("/", emailRouter)
-  .route("/", fileRouter);
+import honoServer from "vite.config/honoServer";
+import app from "./routers"
 const { hostname, port } = store.getState().runtimeActions;
 honoServer({ fetch: app.fetch, hostname, port }, (info) => {
   console.log(`http://${hostname}:${String(info.port)}`);

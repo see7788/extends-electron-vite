@@ -17,7 +17,6 @@ type TplActions = {
     loading: Record<string, boolean>;
     outputFilesStatus: (workspacePath: string) => Promise<void>;
     outputMaterialize: (workspacePath: string) => Promise<void>;
-    outputRebase: (workspacePath: string) => Promise<void>;
     sourceChange: (workspacePath: string, source: string) => void;
     sourceDefaultLoad: (workspacePath: string) => Promise<void>;
     sourceUpdate: (workspacePath: string, source: string) => Promise<void>;
@@ -48,21 +47,6 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
         });
         try {
           const response = await client.tpl.output.materialize.$post({
-            json: { workspacePath },
-          });
-          if (!response.ok) throw new Error(await response.text());
-        } finally {
-          set((state) => {
-            state.tplActions.loading[workspacePath] = false;
-          });
-        }
-      },
-      outputRebase: async (workspacePath) => {
-        set((state) => {
-          state.tplActions.loading[workspacePath] = true;
-        });
-        try {
-          const response = await client.tpl.output.rebase.$post({
             json: { workspacePath },
           });
           if (!response.ok) throw new Error(await response.text());
