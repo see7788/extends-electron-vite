@@ -1,8 +1,12 @@
 import { defineConfig, mergeConfig, type UserConfig } from 'electron-vite'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import react from '@vitejs/plugin-react'
-import localCodexUserConfig from 'chatgpt-com-tocodex/userConfig'
+import localCodexUserConfig, {
+  localCodexPreloadEntries,
+  localCodexRendererEntries
+} from 'chatgpt-com-tocodex/userConfig'
+import preloadCreate from 'electron.vite.config/preloadCreate'
+import rendererReactPlugin from 'electron.vite.config/rendererReactPlugin/plugin'
 import store from "honoapp/src/store"
 delete process.env.ELECTRON_RUN_AS_NODE
 
@@ -12,16 +16,12 @@ const hostUserConfig = {
   main: {
     build: {}
   },
-  preload: {},
+  preload: preloadCreate({ externalizeDeps: false }, localCodexPreloadEntries),
   renderer: {
     root: resolve(mainappDirectory, '..'),
     build: {
       outDir: resolve(mainappDirectory, 'out', 'renderer'),
-      rollupOptions: {
-        input: {
-          mainapp: resolve(mainappDirectory, 'src', 'renderer', 'index.html')
-        }
-      }
+      rollupOptions: {}
     },
     server: {
       proxy: {
@@ -33,31 +33,12 @@ const hostUserConfig = {
       host,
       port: 8887
     },
-    plugins: [react()]
+    plugins: [rendererReactPlugin(
+      { renderPort: 8887 },
+      { mainapp: resolve(mainappDirectory, 'src', 'renderer', 'index.html') },
+      localCodexRendererEntries
+    )]
   }
 } satisfies UserConfig
-
-for (const scope of ['preload', 'renderer'] as const) {
-  const inputNameOwners = new Map<string, string>()
-  for (const [owner, configuration] of [
-    ['mainapp', hostUserConfig as UserConfig],
-    ['chatgpt-com-tocodex', localCodexUserConfig as UserConfig]
-  ] as const) {
-    const input = (configuration[scope] as {
-      build?: { rollupOptions?: { input?: string | string[] | Record<string, string> } }
-    } | undefined)?.build?.rollupOptions?.input
-    if (input === undefined) continue
-    if (typeof input === 'string' || Array.isArray(input)) {
-      throw new Error(`${scope}.build.rollupOptions.input must be a named object`)
-    }
-    for (const name of Object.keys(input)) {
-      const existingOwner = inputNameOwners.get(name)
-      if (existingOwner !== undefined) {
-        throw new Error(`${scope} input name is declared by both ${existingOwner} and ${owner}: ${name}`)
-      }
-      inputNameOwners.set(name, owner)
-    }
-  }
-}
 
 export default defineConfig(mergeConfig(hostUserConfig, localCodexUserConfig))

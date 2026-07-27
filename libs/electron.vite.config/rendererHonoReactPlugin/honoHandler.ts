@@ -4,6 +4,7 @@ import type { Handler } from "hono";
 import { proxy } from "hono/proxy";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { isEntryName } from "../public.ts";
 
 const rendererRoot = () => join(app.getAppPath(), "out", "renderer");
 
@@ -11,7 +12,7 @@ const honoHandler: Handler = async (context) => {
   const name = context.req.param("name");
   if (
     !name
-    || !/^[A-Za-z0-9._~-]+$/.test(name)
+    || !isEntryName(name)
     || (context.req.method !== "GET" && context.req.method !== "HEAD")
     || context.req.header("upgrade")?.toLowerCase() === "websocket"
     || context.req.header("accept")?.includes("text/event-stream")

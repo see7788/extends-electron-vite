@@ -1,19 +1,10 @@
 import immerStateCreator from "extends-zustand/immerStateCreator";
+import runtimeConfig, { type RuntimeConfig } from "./config";
 
 export type RuntimeConfigStore = {
-  runtimeConfig: {
-    hono: {
-      host: string;
-      port: number;
-    };
-  };
+  runtimeConfig: RuntimeConfig;
 };
 
 export default immerStateCreator<RuntimeConfigStore>(() => ({
-  runtimeConfig: {
-    hono: {
-      host: "127.0.0.1",
-      port: 8788,
-    },
-  },
+  runtimeConfig,
 }));

@@ -1,5 +1,5 @@
-import { join } from 'node:path'
-import { app, clipboard, ipcMain, type WebContents } from 'electron'
+import { clipboard, ipcMain, type WebContents } from 'electron'
+import rendererLoad from 'electron.vite.config/rendererReactPlugin/load'
 import LoginState from 'extends-electron/loginState'
 import PQueue from 'p-queue'
 import { localCodexRuntimeFiles } from '../../userConfig'
@@ -57,15 +57,7 @@ export default class LocalCodexWindow extends LocalCodexWindowBase {
   protected async setupLoad(): Promise<void> {
     const webContents = this.setupWebContentsGet()
     this.setupIpcInstall(webContents)
-    if (app.isPackaged) {
-      await webContents.loadFile(
-        join(app.getAppPath(), 'out', 'renderer', localCodexRuntimeFiles.setupRenderer)
-      )
-      return
-    }
-    const rendererUrl = process.env.ELECTRON_RENDERER_URL
-    if (rendererUrl === undefined) throw new Error('Electron Vite renderer URL is unavailable in development')
-    await webContents.loadURL(new URL(localCodexRuntimeFiles.setupRenderer, `${rendererUrl}/`).toString())
+    await rendererLoad(webContents, localCodexRuntimeFiles.setupRenderer)
   }
 
   protected setupStatePublish(): void {

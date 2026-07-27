@@ -1,4 +1,4 @@
-import { serve } from "@hono/node-server";
+import { serve, type ServerType } from "@hono/node-server";
 import { app as electronApp, BrowserWindow } from "electron";
 import { join } from "node:path";
 import adminPackage from "../../package.json";
@@ -8,9 +8,9 @@ import honoRoutersRead from "./hono";
 import { bindAdminLoginReceivedEffect } from "../chatgptBrowser/admin-web-ipc";
 
 const adminHono = adminMainStore.getState().runtimeConfig.hono;
-const mainBrowser = new MainBrowser(`http://${adminHono.host}:${adminHono.port}`);
 
-let adminServer: { close: () => void } | undefined;
+let adminServer: ServerType | undefined;
+const mainBrowser = new MainBrowser();
 
 export default function appLifecycleBind() {
   electronApp.setPath("userData", join(electronApp.getPath("appData"), adminPackage.name));
@@ -27,9 +27,9 @@ export default function appLifecycleBind() {
       },
       (serverInfo) => {
         console.log(`${adminPackage.name} hono listening on ${new URL(`http://${adminHono.host}:${serverInfo.port}`).toString()}`);
+        mainBrowser.open();
       },
     );
-    mainBrowser.open();
   });
 
   electronApp.on("activate", () => {

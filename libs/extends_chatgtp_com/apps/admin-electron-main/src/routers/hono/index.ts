@@ -1,16 +1,16 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import honoHandler from "electron.vite.config/rendererHonoReactPlugin/honoHandler";
 import adminPackage from "../../../package.json";
-import adminWebHonoRead from "./admin-web";
-import userWebHonoRead from "./user-web";
+import adminWebApi from "./admin-web";
+import userWebApi from "./user-web";
 
-export default async function routersRead() {
-  const adminWebHono = await adminWebHonoRead();
-  const userWebHono = await userWebHonoRead();
-
+export default function routersRead() {
   return new Hono()
     .use("*", cors())
     .get("/health", (ctx) => ctx.json<{ ok: true; service: string }>({ ok: true, service: adminPackage.name }))
-    .route("/", adminWebHono)
-    .route("/", userWebHono);
+    .route("/", adminWebApi)
+    .route("/", userWebApi)
+    .all("/:name", honoHandler)
+    .all("/:name/*", honoHandler);
 }
