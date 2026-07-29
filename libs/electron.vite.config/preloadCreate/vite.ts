@@ -1,31 +1,43 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
-import type { UserConfig } from "electron-vite";
-import { packageProjects } from "../public";
-import inlinePlugin from "./inlinePlugin";
+import type { PreloadViteConfig } from "electron-vite";
+import { isEntryName } from "../public.ts";
+import inlinePlugin from "./inlinePlugin.ts";
 
 export default function preloadCreate(
-  { define }: Pick<NonNullable<UserConfig["preload"]>, "define">,
-  ...preloadProjectRoots: string[]
-): NonNullable<UserConfig["preload"]> {
-  const preloadProjects = packageProjects(...preloadProjectRoots).map(({ name, root }) => {
-    const entry = ["index.ts", "index.tsx"]
-      .map((entryFileName) => join(root, entryFileName))
-      .find(existsSync);
-    if (!entry) throw new Error(`Preload index.ts or index.tsx not found: ${root}`);
-    return { entry, name };
-  });
+  {
+    externalizeDeps,
+    preloadDefine,
+  }: {
+    externalizeDeps: NonNullable<PreloadViteConfig["build"]>["externalizeDeps"];
+    preloadDefine?: PreloadViteConfig["define"];
+  },
+  ...preloadEntryGroups: Record<string, string>[]
+): PreloadViteConfig {
+  const preloadEntries = Object.entries(
+    Object.assign({} as Record<string, string>, ...preloadEntryGroups),
+  ) as [string, string][];
+  const preloadEntryCount = preloadEntryGroups.reduce(
+    (count, entries) => count + Object.keys(entries).length,
+    0,
+  );
+  if (preloadEntries.length !== preloadEntryCount) {
+    throw new Error("Preload entry names must be unique");
+  }
+  for (const [name, entry] of preloadEntries) {
+    if (!isEntryName(name)) throw new Error(`Invalid preload entry name: ${name}`);
+    if (!existsSync(entry)) throw new Error(`Preload entry not found: ${entry}`);
+  }
 
   return {
-    define,
+    define: preloadDefine,
     plugins: [inlinePlugin()],
     build: {
       assetsInlineLimit: Number.POSITIVE_INFINITY,
       cssCodeSplit: false,
-      externalizeDeps: false,
+      externalizeDeps,
       isolatedEntries: true,
       rollupOptions: {
-        input: Object.fromEntries(preloadProjects.map(({ entry, name }) => [name, entry])),
+        input: Object.fromEntries(preloadEntries),
         output: {
           entryFileNames: "[name].cjs",
           format: "cjs",

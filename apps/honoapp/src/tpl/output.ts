@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import sourceDefinition from "./source";
+import sourceDefinition from "./source.ts";
 
 type Source = typeof sourceDefinition.global | typeof sourceDefinition.project;
 type GlobalSource = typeof sourceDefinition.global;

@@ -57,7 +57,10 @@ export default class LocalCodexWindow extends LocalCodexWindowBase {
   protected async setupLoad(): Promise<void> {
     const webContents = this.setupWebContentsGet()
     this.setupIpcInstall(webContents)
-    await rendererLoad(webContents, localCodexRuntimeFiles.setupRenderer)
+    await rendererLoad({
+      webContents,
+      name: localCodexRuntimeFiles.setupRenderer
+    })
   }
 
   protected setupStatePublish(): void {

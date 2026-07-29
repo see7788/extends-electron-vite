@@ -1,12 +1,10 @@
-"use strict";
-const electron = require("electron");
-const localCodexChatGptChannels = {
-  pageEvent: "local-codex-page-event"
-};
-const localCodexChatGptBridge = {
-  report(payload) {
-    if (typeof payload !== "string") throw new TypeError("Local Codex page event payload must be a string");
-    electron.ipcRenderer.send(localCodexChatGptChannels.pageEvent, payload);
-  }
-};
-electron.contextBridge.exposeInMainWorld("localCodexPageEvent", localCodexChatGptBridge);
+let electron = require("electron");
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/preload/protocol.ts
+var localCodexChatGptChannels = { pageEvent: "local-codex-page-event" };
+//#endregion
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/preload/index.ts
+electron.contextBridge.exposeInMainWorld("localCodexPageEvent", { report(payload) {
+	if (typeof payload !== "string") throw new TypeError("Local Codex page event payload must be a string");
+	electron.ipcRenderer.send(localCodexChatGptChannels.pageEvent, payload);
+} });
+//#endregion

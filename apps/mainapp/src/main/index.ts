@@ -1,4 +1,4 @@
-import { app } from 'electron/main'
+import { app} from 'electron/main'
 import { LocalCodexWindow } from 'chatgpt-com-tocodex'
 
 app.whenReady()

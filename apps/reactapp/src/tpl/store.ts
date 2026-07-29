@@ -1,8 +1,8 @@
 import { hc } from "hono/client";
 import immerStateCreator from "extends-zustand/immerStateCreator";
-import type tplRouter from "honoapp/src/tpl";
+import type { Router } from "honoapp/src/routers";
 
-const client = hc<typeof tplRouter>(location.origin);
+const client = hc<Router>(location.origin);
 
 type TplState = {
   tpl: Record<string, {
@@ -31,7 +31,7 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
       existingTargets: {},
       loading: {},
       outputFilesStatus: async (workspacePath) => {
-        const response = await client.tpl.output.filesStatus.$post({
+        const response = await client.honoapp.tpl.output.filesStatus.$post({
           json: { workspacePath },
         });
         if (!response.ok) throw new Error(await response.text());
@@ -46,7 +46,7 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
           state.tplActions.loading[workspacePath] = true;
         });
         try {
-          const response = await client.tpl.output.materialize.$post({
+          const response = await client.honoapp.tpl.output.materialize.$post({
             json: { workspacePath },
           });
           if (!response.ok) throw new Error(await response.text());
@@ -62,7 +62,7 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
         });
       },
       sourceDefaultLoad: async (workspacePath) => {
-        const response = await client.tpl.source.$get({ query: { workspacePath } });
+        const response = await client.honoapp.tpl.source.$get({ query: { workspacePath } });
         if (!response.ok) throw new Error(await response.text());
         const source = await response.json();
         set((state) => {
@@ -70,7 +70,7 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
         });
       },
       sourceUpdate: async (workspacePath, source) => {
-        const response = await client.tpl.source.$put({ json: { source, workspacePath } });
+        const response = await client.honoapp.tpl.source.$put({ json: { source, workspacePath } });
         if (!response.ok) throw new Error(await response.text());
         set((state) => {
           state.tpl[workspacePath] = { source };

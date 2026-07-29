@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-import store,{mcpServer} from "./store";
+import store from "./store";
 import honoServer from "vite.config/honoServer";
 import app from "./routers"
 const { hostname, port } = store.getState().runtimeActions;

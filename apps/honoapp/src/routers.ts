@@ -1,15 +1,24 @@
 import { Hono } from "hono";
+import Mcp from "mcp-server/index.ts";
+import todocli from "mcpCreate/index.ts";
+import pkg from "../package.json";
 import emailRouter from "./email";
 import fileRouter from "./file";
 import { ssePushRouter, sseRouter } from "./sse";
-import {mcpServer} from "./store";
-import tplRouter from "./tpl";
-mcpServer.mcpRegister("codegraph").mcpRegister("browser")
-export default new Hono()
+import tpl from "./tpl";
+
+const mcp = new Mcp({ name: pkg.name, version: pkg.version })
+  .register("create-todo-cli", todocli)
+  .register("honoapp", tpl);
+
+const router = new Hono()
   .get("/favicon.ico", (ctx) => ctx.body(null, 204))
-  .all("/mcp", mcpServer.honoHandler)
-  .route("/", tplRouter)
+  .route("/", mcp.hono)
   .route("/", sseRouter)
   .route("/", ssePushRouter)
   .route("/", emailRouter)
   .route("/", fileRouter);
+
+export type Router = typeof router;
+
+export default router;

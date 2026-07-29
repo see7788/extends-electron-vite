@@ -3,13 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    "./preloadCreate": "./preloadCreate/vite.ts",
-    "./preloadCreate/path": "./preloadCreate/path.ts",
-    "./rendererReactPlugin/vitePlugin": "./rendererReactPlugin/vitePlugin.ts",
-    "./rendererReactPlugin/load": "./rendererReactPlugin/load.ts",
-    "./rendererHonoReactPlugin/vitePlugin": "./rendererHonoReactPlugin/vitePlugin.ts",
-    "./rendererHonoReactPlugin/url": "./rendererHonoReactPlugin/url.ts",
-    "./rendererHonoReactPlugin/honoHandler": "./rendererHonoReactPlugin/honoHandler.ts"
+    ".": "./index.ts",
+    "./*": "./*.ts"
   },
   "dependencies": {
     "extends-vite": "workspace:*"

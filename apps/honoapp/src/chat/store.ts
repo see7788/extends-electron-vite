@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { hc } from "hono/client";
 import { z } from "zod";
 import type { StateCreator } from "zustand";
-import type { Store } from "../store";
+import type { Store } from "../store.ts";
 const stateSchema = z.object({
   llm: z.record(z.string(), z.object({
     protocols: z.array(z.enum(["openai", "anthropic"])),

@@ -29,13 +29,13 @@ const developmentUrl = (server: ViteDevServer) => {
 
 export default (
   {
-    define,
     honoHost,
     honoPort,
+    webDefine,
   }: {
-    define?: Record<string, unknown>;
     honoHost: string;
     honoPort: number;
+    webDefine?: Record<string, unknown>;
   },
   ...reactRoots: string[]
 ) => {
@@ -43,7 +43,7 @@ export default (
     __HONO_ORIGIN__: JSON.stringify(`http://${honoHost}:${honoPort}`),
   };
   const rendererDefine = {
-    ...define,
+    ...webDefine,
     ...mainDefine,
   };
   const projects = packageProjects(...reactRoots).map(({ name, root }) => {
@@ -78,10 +78,10 @@ export default (
         define: rendererDefine,
         build: emptyRenderer
           ? {
-              rolldownOptions: { input: emptyRendererId },
-              rollupOptions: { input: emptyRendererId },
-              write: false,
-            }
+            rolldownOptions: { input: emptyRendererId },
+            rollupOptions: { input: emptyRendererId },
+            write: false,
+          }
           : undefined,
       };
     },
@@ -146,6 +146,11 @@ export default (
               emptyOutDir: true,
               outDir: join(rendererOutDir, project.name),
               write: managedWrite,
+              rolldownOptions: {
+                output: {
+                  entryFileNames: "index.js",
+                },
+              }
             },
             configFile: project.configFile,
             define: rendererDefine,

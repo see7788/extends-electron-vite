@@ -1,5 +1,6 @@
+import react from "@vitejs/plugin-react";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   build,
   createServer,
@@ -7,17 +8,32 @@ import {
   type UserConfig,
   type ViteDevServer,
 } from "vite";
-import { packageProjects } from "../public";
+import { isEntryName } from "../public.ts";
 
 export default (
-  { define }: { define?: UserConfig["define"] },
-  ...reactRoots: string[]
+  {
+    renderPort,
+    webDefine,
+  }: {
+    renderPort: number;
+    webDefine?: UserConfig["define"];
+  },
+  ...rendererEntryGroups: Record<string, string>[]
 ): Plugin => {
-  const projects = packageProjects(...reactRoots).map(({ name, root }) => {
-    if (!existsSync(join(root, "index.html"))) throw new Error(`React index.html not found: ${root}`);
-    const configFile = join(root, "vite.config.ts");
-    if (!existsSync(configFile)) throw new Error(`React Vite config not found: ${configFile}`);
-    return { configFile, name, root };
+  const rendererEntries = Object.entries(
+    Object.assign({} as Record<string, string>, ...rendererEntryGroups),
+  ) as [string, string][];
+  const rendererEntryCount = rendererEntryGroups.reduce(
+    (count, entries) => count + Object.keys(entries).length,
+    0,
+  );
+  if (rendererEntries.length !== rendererEntryCount) {
+    throw new Error("React renderer entry names must be unique");
+  }
+  const projects = rendererEntries.map(([name, entry]) => {
+    if (!isEntryName(name)) throw new Error(`Invalid React renderer entry name: ${name}`);
+    if (!existsSync(entry)) throw new Error(`React renderer entry not found: ${entry}`);
+    return { entry, name, root: dirname(entry) };
   });
 
   const servers: ViteDevServer[] = [];
@@ -27,7 +43,7 @@ export default (
   let managedWrite: boolean | undefined;
   let mode: string;
   let rendererOutDir: string;
-  let rendererPort = 5173;
+  let rendererPort = renderPort;
   let built = false;
   const projectProxy = Object.fromEntries(projects.map((project, index) => [
     `/${project.name}/`,
@@ -50,7 +66,7 @@ export default (
         throw new Error("React renderer proxy path is already configured by the host");
       }
       return {
-        define,
+        define: webDefine,
         build: emptyRenderer
           ? {
               rolldownOptions: { input: emptyRendererId },
@@ -81,9 +97,10 @@ export default (
         const port = rendererServer.config.server.port + index + 1;
         const server = await createServer({
           base: `/${project.name}/`,
-          configFile: project.configFile,
-          define,
+          configFile: false,
+          define: webDefine,
           mode,
+          plugins: [react()],
           root: project.root,
           server: {
             host: "127.0.0.1",
@@ -106,11 +123,13 @@ export default (
             build: {
               emptyOutDir: true,
               outDir: join(rendererOutDir, project.name),
+              rollupOptions: { input: project.entry },
               write: managedWrite,
             },
-            configFile: project.configFile,
-            define,
+            configFile: false,
+            define: webDefine,
             mode,
+            plugins: [react()],
             root: project.root,
           });
         }

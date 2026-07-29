@@ -5,8 +5,8 @@ import localCodexUserConfig, {
   localCodexPreloadEntries,
   localCodexRendererEntries
 } from 'chatgpt-com-tocodex/userConfig'
-import preloadCreate from 'electron.vite.config/preloadCreate'
-import rendererReactPlugin from 'electron.vite.config/rendererReactPlugin/plugin'
+import preloadCreate from 'electron.vite.config/preloadCreate/vite'
+import rendererReactPlugin from 'electron.vite.config/rendererReactPlugin/vitePlugin'
 import store from "honoapp/src/store"
 delete process.env.ELECTRON_RUN_AS_NODE
 
