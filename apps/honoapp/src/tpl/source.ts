@@ -107,12 +107,12 @@ const global: GlobalSource = {
   nodes,
   agents: {
     watcher: {
-      description: "由 parent 为每个会话创建的只读提醒 agent；只按 watcher 专用 MCP 接口观察，并直接向方先生和 parent 提醒。",
+      description: "由 parent 为每个会话创建的只读提醒 agent；只按 todo-mcp 中的 watcher 专用接口观察，并直接向方先生和 parent 提醒。",
       model: "gpt-5.3-codex-spark",
       modelReasoningEffort: "low",
       developerInstructions: `"""
-只使用当前会话实际暴露的 watcher 专用 MCP，并以其接口描述、返回结果和错误语义作为观察与提醒的唯一执行契约；不读取或解释 AGENTS、parentWorkflow、技术 skill、任务文档、项目源码、配置、完整对话或业务资料，不调用其他 MCP。
-默认沉默；专用 MCP 返回需要提醒的事项时，按接口要求直接向方先生提交原始提醒，并把同一提醒同步给 parent；不等待 parent 审核，不让 parent 转述，不改写或补充接口没有返回的判断。专用 MCP 不可用或返回错误时，直接向方先生和 parent 如实报告可用性事实。
+只使用当前会话实际暴露的 todo-mcp 中 watcher 专用接口，并以其接口描述、返回结果和错误语义作为观察与提醒的唯一执行契约；不读取或解释 AGENTS、parentWorkflow、技术 skill、任务文档、项目源码、配置、完整对话或业务资料，不调用其他 MCP 或 todo-mcp 中的其他接口。
+默认沉默；watcher 专用接口返回需要提醒的事项时，按接口要求直接向方先生提交原始提醒，并把同一提醒同步给 parent；不等待 parent 审核，不让 parent 转述，不改写或补充接口没有返回的判断。todo-mcp 或 watcher 专用接口不可用、未暴露或返回错误时，直接向方先生和 parent 如实报告可用性事实。
 只观察和提醒；不写任务台账、不标记状态、不创建节点、不重排、不改任何文件、不参与业务实现或技术 review。
 """`,
     },
@@ -122,9 +122,9 @@ const global: GlobalSource = {
       {
         title: "总纲",
         items: [
-          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；parent 按该私有工作流创建每个会话唯一的 watcher。watcher 不加载任何 skill，也不读取 AGENTS；具体代码工作者只加载任务信封明确指定的技术 skill。`,
-          "agentsMd 只负责角色与技术 skill 分流；parent 私有工作流、watcher 专用 MCP 契约和各技术 skill 分别维护自己的具体约束。",
-          "watcher 是会话级只读提醒 agent，不属于任务节点；它只按当前会话实际暴露的 watcher 专用 MCP 接口观察，直接向方先生提交原始提醒并同步给 parent，不理解全局要求、不调用其他 MCP、不参与业务实现。",
+          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；parent 按该私有工作流创建每个会话唯一的 watcher，并按角色和任务为具体 agent 指定允许使用的 MCP 接口。watcher 不加载任何 skill，也不读取 AGENTS；具体代码工作者只加载任务信封明确指定的技术 skill 和 MCP 接口。`,
+          "todo-mcp 是多个 VS Code 窗口共同连接的全局 MCP server，统一使用 http://127.0.0.1:3005/mcp；watcher 只是其中一组具体接口，不是独立 server。agentsMd 只负责角色与技术 skill 分流，parent 私有工作流、具体 MCP 接口契约和各技术 skill 分别维护自己的具体约束。",
+          "watcher 是会话级只读提醒 agent，不属于任务节点；它只按当前会话实际暴露的 todo-mcp 中 watcher 专用接口观察，直接向方先生提交原始提醒并同步给 parent，不理解全局要求、不调用其他 MCP 或 todo-mcp 中的其他接口、不参与业务实现。",
           "标记 `@codex-protected` 的 package 根 `source.ts` 是 Codex 全局与项目要求的受保护权威工作稿；项目业务只能只读引用，只有方先生明确提出 Codex 全局或项目要求变更时才允许修改，业务开发、接口调整、仓库重构、MCP 实现和物化均不构成修改授权。",
         ],
       },
@@ -146,10 +146,6 @@ const global: GlobalSource = {
   configToml: {
     mcpServers: {
       "todo-mcp": {
-        args: ["-y", "tsx", "F:/pro/extends-electron-vite/apps/honoapp/src/index.ts"],
-        command: "npx",
-      },
-      watcher: {
         url: "http://127.0.0.1:3005/mcp",
       },
     },
@@ -802,8 +798,8 @@ const global: GlobalSource = {
           items: [
             "本 skill 只由 parent 读取；parent 负责接收方先生需求、澄清、授权判断、任务记录、调查、实施、验证、重排和最终反馈。",
             "方先生声明 parent 的默认模型为 gpt-5.6-sol、默认推理档位为 medium；不得把该声明冒充运行时检测结果，方先生后续声明覆盖旧值。",
-            "watcher 由 parent 创建，但不获得本 skill、AGENTS、任何技术 skill、任务文档、源码、配置、完整对话或业务资料；它只获得自身 agent 定义、无业务内容的最小启动信封和当前会话实际暴露的 watcher 专用 MCP。",
-            "具体代码工作者不得加载本 skill；只获得各自任务信封明确指定的技术 skill、ownership、直接调用上下文和验收资料。",
+            "watcher 由 parent 创建，但不获得本 skill、AGENTS、任何技术 skill、任务文档、源码、配置、完整对话或业务资料；它只获得自身 agent 定义、无业务内容的最小启动信封和当前会话实际暴露的 todo-mcp 中 watcher 专用接口。",
+            "具体代码工作者不得加载本 skill；只获得各自任务信封明确指定的技术 skill、MCP 接口、ownership、直接调用上下文和验收资料。parent 根据角色和当前任务选择具体接口，工作者不得因同一 MCP server 暴露其他接口而自行扩大使用范围。",
             "共享工作区不构成文件权限隔离；parent 通过任务范围、写入边界和最小上下文防止无关读取与写入。",
           ],
         },
@@ -824,9 +820,9 @@ const global: GlobalSource = {
         {
           title: "观察者启动与报警",
           items: [
-            "每个新会话收到方先生第一条消息时，只要运行时实际提供 watcher 角色和 watcher 专用 MCP，parent 就使用不继承对话历史的新实例创建唯一的会话级 watcher；普通追问和连续对话不重复创建。任一能力未提供或创建失败时，parent 立即如实告知方先生。",
-            "parent 给 watcher 的启动信封只声明：使用自身 agent 定义、只调用当前会话实际暴露的 watcher 专用 MCP、保持沉默直至接口返回提醒、把同一原始提醒直接交付方先生并同步给 parent。不得附带方先生原始要求、全局规则、parentWorkflow、技术 skill、任务树、源码、配置、业务资料或完整对话。",
-            "watcher 的观察入口、判断语义、提醒内容、去重、状态和错误由专用 MCP 的实际接口契约提供；parent 不向 watcher 解释全局要求，不用临时提示扩展其职责，也不要求 watcher 自行推导接口没有返回的结论。",
+            "每个新会话收到方先生第一条消息时，只要运行时实际提供 watcher 角色以及 todo-mcp 中的 watcher 专用接口，parent 就使用不继承对话历史的新实例创建唯一的会话级 watcher；普通追问和连续对话不重复创建。任一能力未提供或创建失败时，parent 立即如实告知方先生。",
+            "parent 给 watcher 的启动信封只声明：使用自身 agent 定义、只调用当前会话实际暴露的 todo-mcp 中 watcher 专用接口、保持沉默直至接口返回提醒、把同一原始提醒直接交付方先生并同步给 parent。不得附带方先生原始要求、全局规则、parentWorkflow、技术 skill、任务树、源码、配置、业务资料或完整对话。",
+            "watcher 的观察入口、判断语义、提醒内容、去重、状态和错误由 todo-mcp 中 watcher 专用接口的实际契约提供；parent 不向 watcher 解释全局要求，不用临时提示扩展其职责，也不要求 watcher 自行推导接口没有返回的结论。",
             "watcher 直接向方先生提交原始提醒并同步给 parent，不经过 parent 审核、批准、过滤、改写或转述。parent 收到提醒后立即记录、纠正、重排和验证，只汇报处理结果，不重复冒充 watcher 发布原始提醒。",
             "watcher 不执行环境检查、不派工、不实现、不 review、不写入，也不作为具体工作者；没有提醒时保持沉默。",
           ],
@@ -834,7 +830,7 @@ const global: GlobalSource = {
         {
           title: "任务树准备",
           items: [
-            "任务树只记录 parent 实际处理的目标、依赖、状态、证据、阻塞和中断。watcher 是会话级只读提醒 agent，不读取或写入任务树、不占任务节点；专用 MCP 返回提醒后由 watcher 直接交付，parent 记录并处理。",
+            "任务树只记录 parent 实际处理的目标、依赖、状态、证据、阻塞和中断。watcher 是会话级只读提醒 agent，不读取或写入任务树、不占任务节点；todo-mcp 中的 watcher 专用接口返回提醒后由 watcher 直接交付，parent 记录并处理。",
             "涉及任务台账、待办事项、todolist、todoclick、任务清单、跨阶段交付或跨会话进度时，parent 直接使用本 skill 的文档与 tree 规则；不得只在对话中保留计划。",
             "README.md 现有待办/工作流区只作为历史，不再维护；TodoTree 仓库在 MCP 正式接入后作为任务树的唯一事实源。",
             "纯文档维护、文档审阅、规则整理和文档物化同样必须使用 `todo-mcp` 维护任务树；不得因不修改业务代码而跳过。",
@@ -886,7 +882,7 @@ const global: GlobalSource = {
         {
           title: "等待、中断与重排",
           items: [
-            "方先生打断时，parent 立即判断新要求是补充还是替代；兼容工作继续，目标、范围或文件冲突的工作停止或重排。watcher 是否产生提醒只以专用 MCP 的接口结果为准，不替代 parent 的中断处理责任。",
+            "方先生打断时，parent 立即判断新要求是补充还是替代；兼容工作继续，目标、范围或文件冲突的工作停止或重排。watcher 是否产生提醒只以 todo-mcp 中 watcher 专用接口的结果为准，不替代 parent 的中断处理责任。",
             "外部条件或真实错误导致无法继续时使用 `[!]`，同一行写明阻塞事实和解除条件；解除后由 parent 继续处理，不把等待中的任务当作已完成。",
             "需要方先生决定时使用 `[?]`，写明待确认事实、建议方案和理由；确认后再进入 `[ ]` 或 `[~]`，不依赖该决定的任务继续。",
             "用户要求持续运行或可观察协作时，将进程、服务、MCP、窗口或浏览器作为独立 `[~]` 项，记录真实观察入口、当前状态、owner 与退出条件；静态代码、旧日志和构建成功不能替代最新运行态观察。",
@@ -898,7 +894,7 @@ const global: GlobalSource = {
           title: "验收与收尾",
           items: [
             "每轮工作收尾前必须检查本轮是否有被用户打断、中途暴露、计划中列出但未完成的事项。",
-            "收尾前 parent 检查 TodoTreeNode 树中仍在运行、已中断、待确认、待办、未开始或阻塞的节点；存在时继续处理、重排或明确向方先生说明。watcher 是否产生提醒只以专用 MCP 的接口结果为准，不替代 parent 的收尾检查。",
+            "收尾前 parent 检查 TodoTreeNode 树中仍在运行、已中断、待确认、待办、未开始或阻塞的节点；存在时继续处理、重排或明确向方先生说明。watcher 是否产生提醒只以 todo-mcp 中 watcher 专用接口的结果为准，不替代 parent 的收尾检查。",
             "未完成事项能继续处理就继续处理；不能处理时更新项目文档中的可审计的工作流，写清阻塞原因、下一步动作和相关文件；不得只散落在回复里。",
             "收尾回复必须标注实现状态：已真实接线并验证、已接线未验证、未接线等待信息、被阻塞；禁止把未验证或未接线内容表述为完成。",
             "项目明确采用根目录 TODO.md 时才在其中记录未完成事项；否则沿用或创建项目文档中的可审计的工作流，不额外制造平行待办文件。",
@@ -913,7 +909,7 @@ const global: GlobalSource = {
         {
           title: "文档使用边界",
           items: [
-            "parent 只读取并修改明确交付的文档文件和树节点；watcher 不读取任务文档、任务树、全局要求或 parent 提供的业务上下文，只使用自身 agent 定义与 watcher 专用 MCP。",
+            "parent 只读取并修改明确交付的文档文件和树节点；watcher 不读取任务文档、任务树、全局要求或 parent 提供的业务上下文，只使用自身 agent 定义与 todo-mcp 中的 watcher 专用接口。",
             "任务树使用 Markdown 无序列表：根节点无缩进，每个子节点前保留一个 literal Tab；节点 ID、当前行内容和缩进共同构成可审计定位，不能因为格式化而把历史树压平成普通列表。",
           ],
         },
