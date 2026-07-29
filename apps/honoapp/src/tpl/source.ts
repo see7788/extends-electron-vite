@@ -93,7 +93,6 @@ type GlobalSource = z.infer<typeof globalSourceSchema>;
 
 const nodes = {
   parentWorkflow: "parent-workflow-styleskill", // parent 私有工作流：需求澄清、亲自实施、状态治理和中断恢复
-  codebaseMcpStyle: "codebase-mcp-styleskill", // 代码库 MCP：项目级 MCP 接管后再确定长期边界
   fileIo: "file-io-styleskill", // 文件操作：安全读写、编码检查和事故恢复
   codeStyle: "code-styleskill", // 通用代码：正向业务链、命名、对象边界和最小实现
   codeClassStyle: "code-class-styleskill", // Class：构造、成员、生命周期、组合、抽象与继承
@@ -132,8 +131,6 @@ const global: GlobalSource = {
       {
         title: "技术分流",
         items: [
-          `代码库检索、调用关系、影响范围和代码库 MCP 选择使用 ${nodes.codebaseMcpStyle}。`,
-          "MCP 工作环境检查范围固定为全局 configToml 与当前项目 configToml 中 mcpServers/mcp_servers 的列名并集；同名项按当前任务/启动参数覆盖、离当前目录最近的项目配置、用户级配置的顺序只取最终生效配置，不合并、不重复启动且只检查一次；所有最终生效列名均须逐项确认当前会话实际可调用。",
           `通用代码入口、正向业务链、命名、对象生产者、对象边界、复用和运行时配置使用 ${nodes.codeStyle}。`,
           `Class、constructor、成员可见性、实例状态、组合、继承、抽象类、基类和对象生命周期在 ${nodes.codeStyle} 已确定对象边界与能力准入后使用 ${nodes.codeClassStyle}。`,
           `React 组件、hooks、路由、TSX、UI 临时态和样式在 ${nodes.codeStyle} 已确定对象边界后使用 ${nodes.codeReactStyle}。`,
@@ -792,74 +789,6 @@ const global: GlobalSource = {
               "return ctx.json(body);",
             ].join("\n"),
           },
-        },
-      ],
-    },
-    [nodes.codebaseMcpStyle]: {
-      description: "涉及代码库 MCP 选择、代码检索、调用关系、影响范围、仓库结构可视化和改代码前上下文获取时使用。",
-      title: "代码库 MCP 使用风格",
-      sections: [
-        {
-          title: "分流规则",
-          items: [
-            "每项技术工作开始前先检查当前会话实际暴露的 MCP 工具，并按任务选择需要的 MCP；所需 MCP 未加载、不可用或需要重启时如实记录并告知方先生，不得假装已使用或静默以臆测替代。Codegraph 是代码库结构上下文的前置工具：源码定位、调用关系、影响范围、模块边界和实现前调查都先用它获取事实。",
-            "Graphifyy 不作为清晰源码地图主方案；用户要明确文件结构、具体方法、callers/callees 调用链时，优先使用 Codegraph 或 IDE 级源码阅读能力。",
-            "Graphifyy 只作为项目级全局图谱体验工具；只在用户明确要看全局项目地图、模块关系、调用流图或可视化体验时触发。",
-            "Graphifyy、RepoGraph 或其他图谱可视化工具只作为全局结构、模块关系和依赖地图的辅助，不作为日常改代码第一入口。",
-            "安全审计、污点分析、跨函数数据流或漏洞路径分析才使用 codebadger、Joern CPG 这类安全/数据流工具。",
-            "企业级多仓库全文搜索、跨仓库符号检索或代码平台级查询才考虑 Sourcegraph 类工具。",
-          ],
-        },
-        {
-          title: "加载和安装",
-          items: [
-            "Codegraph 由生成的 config.toml 的 mcpServers.codegraph 加载，命令为 npx @colbymchenry/codegraph serve --mcp；如果当前会话没有暴露 Codegraph 工具，说明 MCP 未加载或需要重启会话，不要假装已使用。",
-            "Graphifyy 不是默认 MCP；只有用户明确要求安装时，才使用 uv tool install graphifyy，安装后会提供 graphify 和 graphify-mcp 命令。",
-            "需要把 Graphifyy 作为 Codex skill 使用时，才执行 graphify install --platform codex；模板项目中不要手改 .codex 产物来安装 Graphifyy，应回到 source.ts 维护规则。",
-          ],
-        },
-        {
-          title: "Codegraph",
-          items: [
-            "遇到“这个函数怎么工作”“谁调用它”“改这里影响哪里”“从 A 怎么到 B”这类问题，先用 Codegraph 获取源码、调用路径和 blast radius。",
-            "读取或编辑能命名的文件、函数、组件、store、route 或 action 前，先用 Codegraph 查询对应符号或路径。",
-            "追踪流程时在一次 Codegraph 查询里同时写出关键端点名，例如入口 route、store action、渲染函数或目标方法。",
-            "涉及 IO、接口、store action、插件调用或其他明确调用链时，parent 直接依据符号锚点、关键调用链、精确输入输出、副作用和错误边界完成实现，不从全项目重复推导。",
-            "任务依赖 Codegraph 而工具不可调用时，停止该任务并报告 MCP 错误和恢复条件；不得猜测、降级为全项目扫描或继续实施。",
-          ],
-        },
-        {
-          title: "Graphifyy",
-          items: [
-            "用户说“项目地图”“可视化依赖关系”“调用关系图”“让我体验图谱”且接受全局图谱体验时，使用 Graphifyy 生成图谱，而不是只给文本说明。",
-            "用户要求清晰源码地图、文件结构、具体方法、具体方法调用链、callers/callees 时，不把 Graphifyy 当主方案；改用 Codegraph 或建议 IDE call hierarchy。",
-            "没有 LLM API key 且只需要源码结构时，优先运行 graphify . --code-only；需要文档、图片或语义抽取时，再按可用 API key 选择后端。",
-            "常用可视化产物：graphify tree --graph graphify-out/graph.json --output graphify-out/GRAPH_TREE.html；graphify cluster-only . --no-label；graphify export callflow-html。",
-            "生成后把 graphify-out/graph.html、graphify-out/GRAPH_TREE.html、graphify-out/*-callflow.html 作为用户可打开的体验入口说明清楚。",
-          ],
-        },
-        {
-          title: "VS Code CDP 可观察调试",
-          items: [
-            "本节只在需要通过 Chrome DevTools MCP/CDP 观察或操作 VS Code Workbench、Webview 或官方 Codex 抽屉时适用；普通扩展调试（F5/Extension Development Host）不适用。",
-            "日后在 VS Code 插件风格的 Codex 中使用 Chrome DevTools MCP/CDP 调试 Codex 时，必须先关闭全部 VS Code 窗口，再执行下方启动脚本。调试端口属于主 Electron 进程级别；既有 VS Code 主进程未退出时，单实例会接管新启动请求，远程调试参数不会生效。",
-            "调试地址只绑定 127.0.0.1，端口为 9222。默认不使用临时 user-data-dir，以保持用户现有的扩展、登录态和布局。",
-          ],
-          code: {
-            language: "powershell",
-            content: [
-              'Start-Process -FilePath "C:\\Users\\diyya\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe" -ArgumentList @("--new-window", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=9222", "<workspace-root>")',
-            ].join("\\n"),
-          },
-        },
-        {
-          title: "验证边界",
-          items: [
-            "Codegraph 负责结构上下文，不替代真实验证；改完代码后仍用 TypeScript、测试、构建、接口响应或页面观察验证行为。",
-            "涉及 IDE、浏览器、操作系统、插件宿主或第三方平台的图标、视图、命令、生命周期、权限或状态能力时，先以本地类型、官方 API 或实际实验确认能力边界；不得把推测能力当作实现承诺。",
-            "rg 适合补充查找文本、配置、文档和 Codegraph 未覆盖内容；不要用 rg 重建 Codegraph 已经给出的调用关系。",
-            "Graphifyy 只适合回答“仓库整体长什么样”“模块怎么连”“调用流如何可视化”的粗粒度问题；具体修改仍回到 Codegraph 和真实验证。",
-          ],
         },
       ],
     },
