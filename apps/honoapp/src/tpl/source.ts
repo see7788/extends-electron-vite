@@ -132,7 +132,7 @@ const global: GlobalSource = {
       {
         title: "技术分流",
         items: [
-          "代码库检索、源码读取、调用关系、调用路径和影响范围，按当前会话实际暴露的具体 MCP 工具接口说明选择和使用。",
+          "源码符号、调用关系、调用路径和影响范围分析使用当前会话实际暴露的 CodeGraph MCP，具体输入、结果、索引范围和恢复方式以该 MCP 接口说明为准。",
           `通用代码入口、正向业务链、命名、对象生产者、对象边界、复用和运行时配置使用 ${nodes.codeStyle}。`,
           `Class、constructor、成员可见性、实例状态、组合、继承、抽象类、基类和对象生命周期在 ${nodes.codeStyle} 已确定对象边界与能力准入后使用 ${nodes.codeClassStyle}。`,
           `React 组件、hooks、路由、TSX、UI 临时态和样式在 ${nodes.codeStyle} 已确定对象边界后使用 ${nodes.codeReactStyle}。`,
