@@ -61,6 +61,7 @@ export default function Tpl() {
         onClick={() => void (async () => {
           if (source === undefined) throw new Error("Template source is not loaded");
           await sourceUpdate(workspacePath, source);
+          await outputFilesStatus(workspacePath);
           await outputMaterialize(workspacePath);
           await outputFilesStatus(workspacePath);
         })().catch(errorShow)}

@@ -1,5 +1,7 @@
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
+import { TextDecoder } from "node:util";
 import sourceDefinition from "./source.ts";
 
 type Source = typeof sourceDefinition.global | typeof sourceDefinition.project;
@@ -7,6 +9,26 @@ type GlobalSource = typeof sourceDefinition.global;
 
 type OutputState = {
   files: Record<string, string>;
+};
+
+type ManagedState = {
+  files: Record<string, {
+    kind: "agentsMd" | "configToml" | "file";
+    sha256: string;
+  }>;
+  sourceRevision: string;
+};
+
+type OutputPlan = {
+  blockers: string[];
+  create: string[];
+  delete: string[];
+  dirty: string[];
+  existing: string[];
+  planRevision: string;
+  sourceRevision: string;
+  unchanged: string[];
+  update: string[];
 };
 
 const contentNormalized = (content: string) => content.replace(/\r\n/g, "\n");
@@ -24,50 +46,43 @@ const ownership = {
 } as const;
 
 export default class CodexOutput {
+  private static readonly activePaths = new Set<string>();
   private readonly path: string;
   private readonly source: Source;
 
   constructor(input: { path: string; source: Source }) {
-    this.path = input.path;
+    this.path = resolve(input.path);
     this.source = sourceDefinition.schema.parse(input.source);
   }
 
   filesStatus() {
-    const files = this.filesRender();
-    const state = this.source.scope === "global" ? this.legacyStateRead() : undefined;
-    return {
-      existing: Object.keys(files).filter(filePath => existsSync(this.targetPath(filePath))),
-      dirty: Object.entries(files)
-        .filter(([filePath, content]) => {
-          const path = this.targetPath(filePath);
-          if (!existsSync(path)) return true;
-          const current = readFileSync(path, "utf8");
-          if (this.source.scope !== "global") return current !== content;
-          if (filePath === "AGENTS.md") {
-            return this.agentsMdMerge(current, content, state?.files[filePath]) !== current;
-          }
-          if (filePath === "config.toml") {
-            return this.configTomlMerge(current, content, this.source, state?.files[filePath]) !== current;
-          }
-          return contentNormalized(current) !== contentNormalized(content);
-        })
-        .map(([filePath]) => filePath),
-    };
+    return this.outputPlanRead().status;
   }
 
-  materialize() {
-    if (this.source.scope === "global") {
-      this.globalMaterialize(this.source);
-      return;
-    }
-    rmSync(this.targetPath("skills"), { recursive: true, force: true });
-    for (const [filePath, content] of Object.entries(this.filesRender())) {
-      this.targetWrite(filePath, content);
+  materialize(expectedPlanRevision: string) {
+    if (CodexOutput.activePaths.has(this.path)) throw new Error(`Codex materialization is already running: ${this.path}`);
+    CodexOutput.activePaths.add(this.path);
+    try {
+      const plan = this.outputPlanRead();
+      if (plan.status.planRevision !== expectedPlanRevision) {
+        throw new Error(`Codex materialization plan is stale: ${this.path}`);
+      }
+      if (plan.status.blockers.length) {
+        throw new Error(`Codex materialization is blocked:\n${plan.status.blockers.join("\n")}`);
+      }
+      this.outputApply(plan.writes, plan.status.delete, plan.manifest);
+    } finally {
+      CodexOutput.activePaths.delete(this.path);
     }
   }
 
   private targetPath(filePath: string) {
-    return join(this.path, filePath);
+    const path = resolve(this.path, filePath);
+    const pathRelative = relative(this.path, path);
+    if (pathRelative.startsWith("..") || isAbsolute(pathRelative)) {
+      throw new Error(`Codex output path escapes .codex: ${filePath}`);
+    }
+    return path;
   }
 
   private markdownSectionRender(section: Source["agentsMd"]["sections"][number]) {
@@ -184,18 +199,68 @@ export default class CodexOutput {
     };
   }
 
-  private targetWrite(filePath: string, content: string) {
+  private contentHash(content: string) {
+    return createHash("sha256").update(content).digest("hex");
+  }
+
+  private textRead(path: string) {
+    const bytes = readFileSync(path);
+    const content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    if (bytes.subarray(0, 3).equals(Buffer.from([0xef, 0xbb, 0xbf])) || content.includes("\uFFFD")) {
+      throw new Error(`Codex output must be UTF-8 without BOM: ${path}`);
+    }
+    return content;
+  }
+
+  private targetPreflight(filePath: string) {
     const path = this.targetPath(filePath);
-    const current = existsSync(path) ? readFileSync(path, "utf8") : undefined;
-    if (current === content) return;
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, content, "utf8");
+    const workspacePath = dirname(this.path);
+    const workspaceStats = lstatSync(workspacePath);
+    if (!workspaceStats.isDirectory() || workspaceStats.isSymbolicLink()) {
+      throw new Error(`Invalid Codex workspace: ${workspacePath}`);
+    }
+    const workspaceRealPath = realpathSync(workspacePath);
+    if (relative(resolve(workspacePath), workspaceRealPath) !== "") {
+      throw new Error(`Codex workspace resolves through another path: ${workspacePath}`);
+    }
+    if (existsSync(this.path)) {
+      const rootStats = lstatSync(this.path);
+      if (!rootStats.isDirectory() || rootStats.isSymbolicLink()) {
+        throw new Error(`Invalid Codex output root: ${this.path}`);
+      }
+      const rootRelative = relative(workspaceRealPath, realpathSync(this.path));
+      if (rootRelative.startsWith("..") || isAbsolute(rootRelative)) {
+        throw new Error(`Codex output root escapes workspace: ${this.path}`);
+      }
+    }
+    let parentPath = dirname(path);
+    while (parentPath.length >= this.path.length && parentPath !== dirname(parentPath)) {
+      if (existsSync(parentPath)) {
+        const stats = lstatSync(parentPath);
+        if (!stats.isDirectory() || stats.isSymbolicLink()) {
+          throw new Error(`Invalid Codex output directory: ${parentPath}`);
+        }
+        if (existsSync(this.path)) {
+          const parentRelative = relative(realpathSync(this.path), realpathSync(parentPath));
+          if (parentRelative.startsWith("..") || isAbsolute(parentRelative)) {
+            throw new Error(`Codex output directory escapes .codex: ${parentPath}`);
+          }
+        }
+      }
+      if (parentPath === this.path) break;
+      parentPath = dirname(parentPath);
+    }
+    if (existsSync(path)) {
+      const stats = lstatSync(path);
+      if (!stats.isFile() || stats.isSymbolicLink()) throw new Error(`Invalid Codex output file: ${path}`);
+    }
+    return path;
   }
 
   private legacyStateRead() {
     const path = this.targetPath(".extends-codex-output.json");
     if (!existsSync(path)) return undefined;
-    const state = JSON.parse(readFileSync(path, "utf8"));
+    const state = JSON.parse(this.textRead(path));
     if (!state || typeof state !== "object" || !state.files || typeof state.files !== "object") {
       throw new Error(`Invalid extends-codex output state in ${path}`);
     }
@@ -203,6 +268,27 @@ export default class CodexOutput {
       throw new Error(`Invalid extends-codex output state files in ${path}`);
     }
     return state as OutputState;
+  }
+
+  private managedStateRead() {
+    const path = this.targetPath(".extends-codex-managed.json");
+    if (!existsSync(path)) return undefined;
+    const state = JSON.parse(this.textRead(path)) as ManagedState;
+    if (
+      !state
+      || typeof state !== "object"
+      || typeof state.sourceRevision !== "string"
+      || !state.files
+      || typeof state.files !== "object"
+      || Object.values(state.files).some(file =>
+        !file
+        || !["agentsMd", "configToml", "file"].includes(file.kind)
+        || !/^[a-f0-9]{64}$/.test(file.sha256)
+      )
+    ) {
+      throw new Error(`Invalid extends-codex managed state in ${path}`);
+    }
+    return state;
   }
 
   private managedContentReplace(current: string, previous: string, next: string, filePath: string) {
@@ -308,172 +394,247 @@ export default class CodexOutput {
     return remaining.join(newline);
   }
 
-  private ownedFilePreflight(filePath: string, next: string, previous?: string) {
-    const path = this.targetPath(filePath);
-    if (!existsSync(path)) return;
-    const current = readFileSync(path, "utf8");
-    if (contentNormalized(current) === contentNormalized(next)) return;
-    if (this.ownedFileMarked(filePath, current)) return;
-    if (previous !== undefined) {
-      if (contentNormalized(current) !== contentNormalized(previous)) {
-        throw new Error(`Global Codex file changed outside its source: ${path}`);
-      }
-      return;
+  private markedContentRead(input: { content: string; end: string; filePath: string; start: string }) {
+    const startIndex = input.content.indexOf(input.start);
+    const endIndex = input.content.indexOf(input.end);
+    if (startIndex === -1 && endIndex === -1) return undefined;
+    if (
+      startIndex === -1
+      || endIndex < startIndex
+      || input.content.indexOf(input.start, startIndex + input.start.length) !== -1
+      || input.content.indexOf(input.end, endIndex + input.end.length) !== -1
+    ) {
+      throw new Error(`Invalid extends-codex ownership block in ${this.targetPath(input.filePath)}`);
     }
-    throw new Error(`Global Codex file is owned by another source: ${path}`);
+    return input.content.slice(startIndex, endIndex + input.end.length);
   }
 
-  private ownedFileMarked(filePath: string, content: string) {
-    if (filePath.startsWith("skills/")) return content.includes(ownership.skill);
-    return filePath.startsWith("agents/")
-      && (content.startsWith(`${ownership.agent}\n`) || content.startsWith(`${ownership.agent}\r\n`));
+  private managedContentRead(filePath: string, content: string) {
+    if (this.source.scope !== "global") return content;
+    if (filePath === "AGENTS.md") {
+      return this.markedContentRead({
+        content,
+        end: ownership.agentsMd.end,
+        filePath,
+        start: ownership.agentsMd.start,
+      });
+    }
+    if (filePath === "config.toml") {
+      return this.markedContentRead({
+        content,
+        end: ownership.configToml.end,
+        filePath,
+        start: ownership.configToml.start,
+      });
+    }
+    return content;
   }
 
-  private retiredFilePreflight(filePath: string, previous?: string) {
-    const path = this.targetPath(filePath);
-    let fileStats;
-    try {
-      fileStats = lstatSync(path);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
-      throw error;
-    }
-    const rootStats = lstatSync(this.path);
-    if (!rootStats.isDirectory() || rootStats.isSymbolicLink()) {
-      throw new Error(`Invalid global Codex output root: ${this.path}`);
-    }
-    const rootPath = realpathSync(this.path);
-    const directory = filePath.startsWith("skills/") ? "skills" : "agents";
-    const managedPath = this.targetPath(directory);
-    const managedStats = lstatSync(managedPath);
-    if (!managedStats.isDirectory() || managedStats.isSymbolicLink()) {
-      throw new Error(`Invalid global Codex managed directory: ${managedPath}`);
-    }
-    const managedRealPath = realpathSync(managedPath);
-    const managedRelative = relative(rootPath, managedRealPath);
-    if (managedRelative.startsWith("..") || isAbsolute(managedRelative)) {
-      throw new Error(`Global Codex managed directory escapes output root: ${managedPath}`);
-    }
-    const parentPath = directory === "skills" ? this.targetPath(filePath.split("/").slice(0, 2).join("/")) : managedPath;
-    const parentStats = lstatSync(parentPath);
-    if (!parentStats.isDirectory() || parentStats.isSymbolicLink()) {
-      throw new Error(`Invalid global Codex managed parent directory: ${parentPath}`);
-    }
-    const parentRealPath = realpathSync(parentPath);
-    const parentRelative = relative(managedRealPath, parentRealPath);
-    if (parentRelative.startsWith("..") || isAbsolute(parentRelative)) {
-      throw new Error(`Global Codex managed parent directory escapes managed directory: ${parentPath}`);
-    }
-    if (!fileStats.isFile() || fileStats.isSymbolicLink()) {
-      throw new Error(`Invalid global Codex retired file: ${path}`);
-    }
-    const fileRealPath = realpathSync(path);
-    const fileRelative = relative(parentRealPath, fileRealPath);
-    if (fileRelative.startsWith("..") || isAbsolute(fileRelative)) {
-      throw new Error(`Global Codex retired file escapes managed directory: ${path}`);
-    }
-    const current = readFileSync(path, "utf8");
-    if (!this.ownedFileMarked(filePath, current) && (
-      previous === undefined
-      || contentNormalized(current) !== contentNormalized(previous)
-    )) {
-      throw new Error(`Global Codex file changed outside its source: ${path}`);
-    }
-    return true;
-  }
-
-  private managedFilesRead() {
-    const files: string[] = [];
-    const skillsPath = this.targetPath("skills");
-    if (existsSync(skillsPath)) {
-      const stats = lstatSync(skillsPath);
-      if (!stats.isDirectory() || stats.isSymbolicLink()) {
-        throw new Error(`Invalid global Codex managed directory: ${skillsPath}`);
-      }
-      for (const entry of readdirSync(skillsPath, { withFileTypes: true })) {
-        if (!entry.isDirectory() || entry.isSymbolicLink() || entry.name === "." || entry.name === "..") continue;
-        const filePath = `skills/${entry.name}/SKILL.md`;
-        const path = this.targetPath(filePath);
-        if (!existsSync(path)) continue;
-        const fileStats = lstatSync(path);
-        if (!fileStats.isFile() || fileStats.isSymbolicLink()) continue;
-        if (this.ownedFileMarked(filePath, readFileSync(path, "utf8"))) files.push(filePath);
-      }
-    }
-    const agentsPath = this.targetPath("agents");
-    if (existsSync(agentsPath)) {
-      const stats = lstatSync(agentsPath);
-      if (!stats.isDirectory() || stats.isSymbolicLink()) {
-        throw new Error(`Invalid global Codex managed directory: ${agentsPath}`);
-      }
-      for (const entry of readdirSync(agentsPath, { withFileTypes: true })) {
-        if (!entry.isFile() || entry.isSymbolicLink() || !entry.name.endsWith(".toml")) continue;
-        const filePath = `agents/${entry.name}`;
-        if (this.ownedFileMarked(filePath, readFileSync(this.targetPath(filePath), "utf8"))) files.push(filePath);
-      }
-    }
-    return files;
-  }
-
-  private globalMaterialize(source: GlobalSource) {
+  private outputPlanRead(): {
+    manifest: string;
+    status: OutputPlan;
+    writes: Record<string, string>;
+  } {
     const files = this.filesRender();
-    const legacyStatePath = this.targetPath(".extends-codex-output.json");
     const legacyState = this.legacyStateRead();
+    const managedState = this.managedStateRead();
     const legacyAgentsStatePath = this.targetPath(".extends-codex-agents.json");
     const legacyAgentsState = existsSync(legacyAgentsStatePath)
-      ? JSON.parse(readFileSync(legacyAgentsStatePath, "utf8"))
+      ? JSON.parse(this.textRead(legacyAgentsStatePath))
       : undefined;
     if (legacyAgentsState !== undefined && typeof legacyAgentsState?.agentsContent !== "string") {
       throw new Error(`Invalid legacy extends-codex agents state in ${legacyAgentsStatePath}`);
     }
 
-    const agentsCurrent = existsSync(this.targetPath("AGENTS.md")) ? readFileSync(this.targetPath("AGENTS.md"), "utf8") : "";
-    const agentsNext = this.agentsMdMerge(
-      agentsCurrent,
-      files["AGENTS.md"],
-      legacyState?.files["AGENTS.md"] ?? legacyAgentsState?.agentsContent,
-    );
-    const configCurrent = existsSync(this.targetPath("config.toml")) ? readFileSync(this.targetPath("config.toml"), "utf8") : "";
-    const configNext = this.configTomlMerge(configCurrent, files["config.toml"], source, legacyState?.files["config.toml"]);
+    const blockers: string[] = [];
+    const create: string[] = [];
+    const existing: string[] = [];
+    const unchanged: string[] = [];
+    const update: string[] = [];
+    const deletes: string[] = [];
+    const writes: Record<string, string> = {};
+    const observed: Record<string, string | null> = {};
+    const sourceRevision = this.contentHash(JSON.stringify(this.source));
+    const manifest: ManagedState = { files: {}, sourceRevision };
 
-    for (const [filePath, content] of Object.entries(files)) {
-      if (filePath === "AGENTS.md" || filePath === "config.toml") continue;
-      this.ownedFilePreflight(filePath, content, legacyState?.files[filePath]);
+    for (const [filePath, rendered] of Object.entries(files)) {
+      try {
+        const path = this.targetPreflight(filePath);
+        const current = existsSync(path) ? this.textRead(path) : undefined;
+        if (current !== undefined) existing.push(filePath);
+        const next = this.source.scope !== "global" || current === undefined
+          ? rendered
+          : filePath === "AGENTS.md"
+            ? this.agentsMdMerge(
+              current,
+              rendered,
+              legacyState?.files[filePath] ?? legacyAgentsState?.agentsContent,
+            )
+            : filePath === "config.toml"
+              ? this.configTomlMerge(current, rendered, this.source, legacyState?.files[filePath])
+              : rendered;
+        const currentManaged = current === undefined ? undefined : this.managedContentRead(filePath, current);
+        const nextManaged = this.managedContentRead(filePath, next);
+        const expected = managedState?.files[filePath];
+        const previous = legacyState?.files[filePath];
+        observed[filePath] = current === undefined ? null : this.contentHash(current);
+        if (
+          current !== undefined
+          && contentNormalized(current) !== contentNormalized(next)
+          && (
+            expected !== undefined
+              ? currentManaged === undefined || this.contentHash(currentManaged) !== expected.sha256
+              : previous !== undefined
+                ? contentNormalized(current) !== contentNormalized(previous)
+                : this.source.scope === "global"
+                  && (filePath === "AGENTS.md" || filePath === "config.toml")
+                  && currentManaged === undefined
+                  ? false
+                : currentManaged !== undefined && nextManaged !== undefined
+                  ? this.contentHash(currentManaged) !== this.contentHash(nextManaged)
+                  : true
+          )
+        ) {
+          blockers.push(`Codex output changed outside its source: ${path}`);
+        }
+        if (current === undefined) {
+          create.push(filePath);
+          writes[filePath] = next;
+        } else if (contentNormalized(current) === contentNormalized(next)) {
+          unchanged.push(filePath);
+        } else {
+          update.push(filePath);
+          writes[filePath] = next;
+        }
+        const managed = current !== undefined && contentNormalized(current) === contentNormalized(next)
+          ? this.managedContentRead(filePath, current)
+          : nextManaged;
+        if (managed === undefined) throw new Error(`Missing extends-codex ownership block: ${path}`);
+        manifest.files[filePath] = {
+          kind: this.source.scope === "global" && filePath === "AGENTS.md"
+            ? "agentsMd"
+            : this.source.scope === "global" && filePath === "config.toml"
+              ? "configToml"
+              : "file",
+          sha256: this.contentHash(managed),
+        };
+      } catch (error) {
+        blockers.push(error instanceof Error ? error.message : String(error));
+      }
     }
-    const filesRetired = new Map<string, string | undefined>();
-    for (const [filePath, previous] of Object.entries(legacyState?.files ?? {})) {
+
+    for (const [filePath, expected] of Object.entries(managedState?.files ?? {})) {
       if (Object.hasOwn(files, filePath)) continue;
-      const match = /^(skills\/([^/\\]+)\/SKILL\.md|agents\/([^/\\]+)\.toml)$/.exec(filePath);
-      const name = match?.[2] ?? match?.[3];
-      if (!match || name === "." || name === "..") continue;
-      const directory = match[2] ? "skills" : "agents";
-      const managedPath = resolve(this.targetPath(directory));
-      const path = resolve(this.targetPath(filePath));
-      const managedRelative = relative(managedPath, path);
-      if (!managedRelative.startsWith("..") && !isAbsolute(managedRelative)) {
-        filesRetired.set(filePath, previous);
+      try {
+        const path = this.targetPreflight(filePath);
+        if (!existsSync(path)) continue;
+        const current = this.textRead(path);
+        const managed = this.managedContentRead(filePath, current);
+        if (managed === undefined || this.contentHash(managed) !== expected.sha256) {
+          blockers.push(`Retired Codex output changed outside its source: ${path}`);
+          continue;
+        }
+        observed[filePath] = this.contentHash(current);
+        deletes.push(filePath);
+      } catch (error) {
+        blockers.push(error instanceof Error ? error.message : String(error));
       }
-    }
-    for (const filePath of this.managedFilesRead()) {
-      if (!Object.hasOwn(files, filePath) && !filesRetired.has(filePath)) {
-        filesRetired.set(filePath, undefined);
-      }
-    }
-    for (const [filePath, previous] of filesRetired) {
-      this.retiredFilePreflight(filePath, previous);
     }
 
-    this.targetWrite("AGENTS.md", agentsNext);
-    this.targetWrite("config.toml", configNext);
-    for (const [filePath, content] of Object.entries(files)) {
-      if (filePath === "AGENTS.md" || filePath === "config.toml") continue;
-      this.targetWrite(filePath, content);
+    const dirty = [...create, ...update, ...deletes];
+    const planRevision = this.contentHash(JSON.stringify({
+      blockers,
+      create,
+      delete: deletes,
+      observed,
+      sourceRevision,
+      update,
+      writes: Object.fromEntries(Object.entries(writes).map(([filePath, content]) => [
+        filePath,
+        this.contentHash(content),
+      ])),
+    }));
+    return {
+      manifest: `${JSON.stringify(manifest, undefined, 2)}\n`,
+      status: {
+        blockers,
+        create,
+        delete: deletes,
+        dirty,
+        existing,
+        planRevision,
+        sourceRevision,
+        unchanged,
+        update,
+      },
+      writes,
+    };
+  }
+
+  private outputApply(writes: Record<string, string>, deletes: string[], manifest: string) {
+    const writeEntries = Object.entries({
+      ...writes,
+      ".extends-codex-managed.json": manifest,
+    });
+    const deleteEntries = [
+      ...deletes,
+      ...[".extends-codex-output.json", ".extends-codex-agents.json"]
+        .filter(filePath => existsSync(this.targetPath(filePath))),
+    ];
+    const staged: Array<{ backup?: string; installed: boolean; path: string; temporary: string }> = [];
+    const removed: Array<{ backup: string; path: string }> = [];
+    let committed = false;
+    try {
+      mkdirSync(this.path, { recursive: true });
+      for (const [filePath, content] of writeEntries) {
+        const path = this.targetPreflight(filePath);
+        mkdirSync(dirname(path), { recursive: true });
+        const temporary = resolve(dirname(path), `.${basename(path)}.${process.pid}.${randomUUID()}.tmp`);
+        const handle = openSync(temporary, "wx");
+        try {
+          writeFileSync(handle, content, "utf8");
+        } finally {
+          closeSync(handle);
+        }
+        staged.push({ installed: false, path, temporary });
+      }
+      for (const entry of staged) {
+        if (existsSync(entry.path)) {
+          entry.backup = resolve(dirname(entry.path), `.${basename(entry.path)}.${process.pid}.${randomUUID()}.bak`);
+          renameSync(entry.path, entry.backup);
+        }
+        renameSync(entry.temporary, entry.path);
+        entry.installed = true;
+      }
+      for (const filePath of deleteEntries) {
+        const path = this.targetPreflight(filePath);
+        if (!existsSync(path)) continue;
+        const backup = resolve(dirname(path), `.${basename(path)}.${process.pid}.${randomUUID()}.bak`);
+        renameSync(path, backup);
+        removed.push({ backup, path });
+      }
+      committed = true;
+      for (const entry of staged) {
+        if (entry.backup && existsSync(entry.backup)) unlinkSync(entry.backup);
+      }
+      for (const entry of removed) {
+        if (existsSync(entry.backup)) unlinkSync(entry.backup);
+      }
+    } catch (error) {
+      if (committed) throw error;
+      for (const entry of [...removed].reverse()) {
+        if (!existsSync(entry.path) && existsSync(entry.backup)) renameSync(entry.backup, entry.path);
+      }
+      for (const entry of [...staged].reverse()) {
+        if (entry.installed && existsSync(entry.path)) unlinkSync(entry.path);
+        if (entry.backup && existsSync(entry.backup)) renameSync(entry.backup, entry.path);
+        if (existsSync(entry.temporary)) unlinkSync(entry.temporary);
+      }
+      throw error;
+    } finally {
+      for (const entry of staged) {
+        if (existsSync(entry.temporary)) unlinkSync(entry.temporary);
+      }
     }
-    for (const [filePath, previous] of filesRetired) {
-      const path = this.targetPath(filePath);
-      if (this.retiredFilePreflight(filePath, previous)) unlinkSync(path);
-    }
-    if (existsSync(legacyStatePath)) unlinkSync(legacyStatePath);
-    if (existsSync(legacyAgentsStatePath)) unlinkSync(legacyAgentsStatePath);
   }
 }
