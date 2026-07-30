@@ -126,6 +126,7 @@ const global: GlobalSource = {
         items: [
           `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；parent 按该私有工作流创建每个会话唯一的 watcher，并按角色和任务为具体 agent 指定允许使用的 MCP 接口。watcher 不加载任何 skill，也不读取 AGENTS；具体代码工作者只加载任务信封明确指定的技术 skill 和 MCP 接口。`,
           "todo-mcp 是多个 VS Code 窗口共同连接的唯一全局 MCP Server，配置列名为 todo-mcp，唯一 URL 为 http://127.0.0.1:3005/todo-mcp；不保留旧 /mcp，也不为 watcher 等具体集成建立子 MCP endpoint。具体工具以当前会话实际暴露的 name 与 description 为准；watcher 只是其中一组工具，不是独立 server。agentsMd 只负责角色与技术 skill 分流，parent 私有工作流、具体 MCP 接口契约和各技术 skill 分别维护自己的具体约束。",
+          "todo-mcp 不存在、未连接或调用失败时，AI 不得启动、重启、修复或替代该服务，也不得暴露维护命令；其他 agent 只向 parent 报告，parent 立即向方先生如实汇报错误事实与影响并等待恢复。",
           "watcher 是会话级只读提醒 agent，不属于任务节点；parent 以 watcher.definition.GET 返回的完整提示词创建它，watcher 只调用 watcher.lifecycle.POST 和 watcher.report.POST，并把每份报告的返回原文通过一次 agent-to-parent 消息同步给 parent；它不理解全局要求、不参与业务实现。",
           "标记 `@codex-protected` 的 package 根 `source.ts` 是 Codex 全局与项目要求的受保护权威工作稿；项目业务只能只读引用，只有方先生明确提出 Codex 全局或项目要求变更时才允许修改，业务开发、接口调整、仓库重构、MCP 实现和物化均不构成修改授权。",
         ],
