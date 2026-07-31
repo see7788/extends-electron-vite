@@ -861,7 +861,7 @@ const global: GlobalSource = {
             "parent 暂存时只使用任务明确列出的文件，提交前核对 staged 文件、diff、编码与验证证据；禁止 `git add .`、`git add -A` 或夹带方先生和其他任务改动。每个提交记录到对应任务节点。",
             "恢复、回滚、checkout、restore、整文件覆盖、文件移动或重命名会改变内容或历史可达性时，parent 必须先保全当前哈希、脏 diff、Timeline/Git 候选与恢复路径，向方先生展示候选时间戳和预计差异；没有方先生确认不得执行。",
             "提交或 push 失败时任务保持未完成，记录失败原因与本地提交标识；parent 按既定工作流把已验收检查点及其中文 tag 推送到远端并核验远端提交。GitHub HTTPS 在浏览器网络正常时出现 connection reset 或 timeout，不得原样重试；分别检查 Git `http.proxy`、`HTTP_PROXY`/`HTTPS_PROXY`、WinHTTP 和当前用户 Internet Settings，验证代理端口并使用命令级代理执行 `ls-remote`。只有命令级代理验证成功后，才对本次 Git 命令使用 `git -c http.proxy=<proxy-url> ...`；没有方先生授权不得写入全局或仓库代理配置。",
-            "`git push --follow-tags` 只自动推送 annotated tag；新 tag 必须使用 `git tag -a` 创建。已存在的 lightweight tag 必须显式推送 `refs/tags/<tag>`，不得把分支 push 成功当作 tag 已上传；最后用 `git ls-remote origin refs/heads/master refs/tags/<tag>` 核验两者都指向预期提交。",
+            "`git push --follow-tags` 只自动推送 annotated tag；新 tag 必须使用 `git tag -a` 创建。已存在的 lightweight tag 必须显式推送 `refs/tags/<tag>`，不得把分支 push 成功当作 tag 已上传；annotated tag 本身指向 tag object，必须用 peeled ref `refs/tags/<tag>^{}` 核验其提交。PowerShell 中包含 `^{}` 的 ref 参数必须整体加引号，禁止让它被解析成 ScriptBlock。",
           ],
           code: {
             language: "powershell",
@@ -877,7 +877,7 @@ const global: GlobalSource = {
               "git rev-parse --verify HEAD",
               "git tag -a \"<中文-tag>\" HEAD -m \"<中文-tag>\"",
               "git push origin master --follow-tags",
-              "git ls-remote origin refs/heads/master refs/tags/<中文-tag>",
+              "git ls-remote origin \"refs/heads/master\" \"refs/tags/<中文-tag>\" \"refs/tags/<中文-tag>^{}\"",
             ].join("\n"),
           },
         },
