@@ -454,6 +454,9 @@ importers:
       extends-antd:
         specifier: workspace:*
         version: link:../../../extends-antd
+      extends-ssh:
+        specifier: workspace:*
+        version: link:../../../extends-ssh
       extends-zustand:
         specifier: workspace:*
         version: link:../../../extends-zustand
