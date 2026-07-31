@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, realpathSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { TextDecoder } from "node:util";
 import sourceDefinition from "./source.ts";
@@ -9,14 +9,6 @@ type GlobalSource = typeof sourceDefinition.global;
 
 type OutputState = {
   files: Record<string, string>;
-};
-
-type ManagedState = {
-  files: Record<string, {
-    kind: "agentsMd" | "configToml" | "file";
-    sha256: string;
-  }>;
-  sourceRevision: string;
 };
 
 type OutputPlan = {
@@ -70,7 +62,7 @@ export default class CodexOutput {
       if (plan.status.blockers.length) {
         throw new Error(`Codex materialization is blocked:\n${plan.status.blockers.join("\n")}`);
       }
-      this.outputApply(plan.writes, plan.status.delete, plan.manifest);
+      this.outputApply(plan.writes, plan.status.delete);
     } finally {
       CodexOutput.activePaths.delete(this.path);
     }
@@ -270,27 +262,6 @@ export default class CodexOutput {
     return state as OutputState;
   }
 
-  private managedStateRead() {
-    const path = this.targetPath(".extends-codex-managed.json");
-    if (!existsSync(path)) return undefined;
-    const state = JSON.parse(this.textRead(path)) as ManagedState;
-    if (
-      !state
-      || typeof state !== "object"
-      || typeof state.sourceRevision !== "string"
-      || !state.files
-      || typeof state.files !== "object"
-      || Object.values(state.files).some(file =>
-        !file
-        || !["agentsMd", "configToml", "file"].includes(file.kind)
-        || !/^[a-f0-9]{64}$/.test(file.sha256)
-      )
-    ) {
-      throw new Error(`Invalid extends-codex managed state in ${path}`);
-    }
-    return state;
-  }
-
   private managedContentReplace(current: string, previous: string, next: string, filePath: string) {
     const index = current.indexOf(previous);
     if (index === -1 || current.indexOf(previous, index + previous.length) !== -1) {
@@ -409,7 +380,7 @@ export default class CodexOutput {
     return input.content.slice(startIndex, endIndex + input.end.length);
   }
 
-  private managedContentRead(filePath: string, content: string) {
+  private ownedContentRead(filePath: string, content: string) {
     if (this.source.scope !== "global") return content;
     if (filePath === "AGENTS.md") {
       return this.markedContentRead({
@@ -430,14 +401,54 @@ export default class CodexOutput {
     return content;
   }
 
+  private outputFileOwned(filePath: string, content: string) {
+    if (this.source.scope !== "global") return true;
+    if (filePath === "AGENTS.md" || filePath === "config.toml") {
+      return this.ownedContentRead(filePath, content) !== undefined;
+    }
+    if (filePath.startsWith("skills/")) return content.includes(ownership.skill);
+    return filePath.startsWith("agents/")
+      && (content.startsWith(`${ownership.agent}\n`) || content.startsWith(`${ownership.agent}\r\n`));
+  }
+
+  private outputFilesRead() {
+    const files: string[] = [];
+    const skillsPath = this.targetPath("skills");
+    if (existsSync(skillsPath)) {
+      const stats = lstatSync(skillsPath);
+      if (!stats.isDirectory() || stats.isSymbolicLink()) {
+        throw new Error(`Invalid Codex output directory: ${skillsPath}`);
+      }
+      for (const entry of readdirSync(skillsPath, { withFileTypes: true })) {
+        if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+        const filePath = `skills/${entry.name}/SKILL.md`;
+        const path = this.targetPreflight(filePath);
+        if (!existsSync(path)) continue;
+        if (this.outputFileOwned(filePath, this.textRead(path))) files.push(filePath);
+      }
+    }
+    if (this.source.scope !== "global") return files;
+    const agentsPath = this.targetPath("agents");
+    if (!existsSync(agentsPath)) return files;
+    const stats = lstatSync(agentsPath);
+    if (!stats.isDirectory() || stats.isSymbolicLink()) {
+      throw new Error(`Invalid Codex output directory: ${agentsPath}`);
+    }
+    for (const entry of readdirSync(agentsPath, { withFileTypes: true })) {
+      if (!entry.isFile() || entry.isSymbolicLink() || !entry.name.endsWith(".toml")) continue;
+      const filePath = `agents/${entry.name}`;
+      const path = this.targetPreflight(filePath);
+      if (this.outputFileOwned(filePath, this.textRead(path))) files.push(filePath);
+    }
+    return files;
+  }
+
   private outputPlanRead(): {
-    manifest: string;
     status: OutputPlan;
     writes: Record<string, string>;
   } {
     const files = this.filesRender();
     const legacyState = this.legacyStateRead();
-    const managedState = this.managedStateRead();
     const legacyAgentsStatePath = this.targetPath(".extends-codex-agents.json");
     const legacyAgentsState = existsSync(legacyAgentsStatePath)
       ? JSON.parse(this.textRead(legacyAgentsStatePath))
@@ -455,7 +466,6 @@ export default class CodexOutput {
     const writes: Record<string, string> = {};
     const observed: Record<string, string | null> = {};
     const sourceRevision = this.contentHash(JSON.stringify(this.source));
-    const manifest: ManagedState = { files: {}, sourceRevision };
 
     for (const [filePath, rendered] of Object.entries(files)) {
       try {
@@ -473,29 +483,20 @@ export default class CodexOutput {
             : filePath === "config.toml"
               ? this.configTomlMerge(current, rendered, this.source, legacyState?.files[filePath])
               : rendered;
-        const currentManaged = current === undefined ? undefined : this.managedContentRead(filePath, current);
-        const nextManaged = this.managedContentRead(filePath, next);
-        const expected = managedState?.files[filePath];
         const previous = legacyState?.files[filePath];
         observed[filePath] = current === undefined ? null : this.contentHash(current);
+        const currentOwned = current === undefined ? false : this.outputFileOwned(filePath, current);
         if (
           current !== undefined
           && contentNormalized(current) !== contentNormalized(next)
-          && (
-            expected !== undefined
-              ? currentManaged === undefined || this.contentHash(currentManaged) !== expected.sha256
-              : previous !== undefined
-                ? contentNormalized(current) !== contentNormalized(previous)
-                : this.source.scope === "global"
-                  && (filePath === "AGENTS.md" || filePath === "config.toml")
-                  && currentManaged === undefined
-                  ? false
-                : currentManaged !== undefined && nextManaged !== undefined
-                  ? this.contentHash(currentManaged) !== this.contentHash(nextManaged)
-                  : true
-          )
+          && (previous !== undefined
+            ? contentNormalized(current) !== contentNormalized(previous) && !currentOwned
+            : this.source.scope === "global"
+              && filePath !== "AGENTS.md"
+              && filePath !== "config.toml"
+              && !currentOwned)
         ) {
-          blockers.push(`Codex output changed outside its source: ${path}`);
+          blockers.push(`Codex output is owned by another source: ${path}`);
         }
         if (current === undefined) {
           create.push(filePath);
@@ -506,31 +507,28 @@ export default class CodexOutput {
           update.push(filePath);
           writes[filePath] = next;
         }
-        const managed = current !== undefined && contentNormalized(current) === contentNormalized(next)
-          ? this.managedContentRead(filePath, current)
-          : nextManaged;
-        if (managed === undefined) throw new Error(`Missing extends-codex ownership block: ${path}`);
-        manifest.files[filePath] = {
-          kind: this.source.scope === "global" && filePath === "AGENTS.md"
-            ? "agentsMd"
-            : this.source.scope === "global" && filePath === "config.toml"
-              ? "configToml"
-              : "file",
-          sha256: this.contentHash(managed),
-        };
       } catch (error) {
         blockers.push(error instanceof Error ? error.message : String(error));
       }
     }
 
-    for (const [filePath, expected] of Object.entries(managedState?.files ?? {})) {
+    const retiredFiles = new Set(this.outputFilesRead());
+    for (const filePath of Object.keys(legacyState?.files ?? {})) {
+      if (/^(skills\/[^/\\]+\/SKILL\.md|agents\/[^/\\]+\.toml)$/.test(filePath)) {
+        retiredFiles.add(filePath);
+      }
+    }
+    for (const filePath of retiredFiles) {
       if (Object.hasOwn(files, filePath)) continue;
       try {
         const path = this.targetPreflight(filePath);
         if (!existsSync(path)) continue;
         const current = this.textRead(path);
-        const managed = this.managedContentRead(filePath, current);
-        if (managed === undefined || this.contentHash(managed) !== expected.sha256) {
+        const previous = legacyState?.files[filePath];
+        if (
+          !this.outputFileOwned(filePath, current)
+          && (previous === undefined || contentNormalized(current) !== contentNormalized(previous))
+        ) {
           blockers.push(`Retired Codex output changed outside its source: ${path}`);
           continue;
         }
@@ -555,7 +553,6 @@ export default class CodexOutput {
       ])),
     }));
     return {
-      manifest: `${JSON.stringify(manifest, undefined, 2)}\n`,
       status: {
         blockers,
         create,
@@ -571,11 +568,8 @@ export default class CodexOutput {
     };
   }
 
-  private outputApply(writes: Record<string, string>, deletes: string[], manifest: string) {
-    const writeEntries = Object.entries({
-      ...writes,
-      ".extends-codex-managed.json": manifest,
-    });
+  private outputApply(writes: Record<string, string>, deletes: string[]) {
+    const writeEntries = Object.entries(writes);
     const deleteEntries = [
       ...deletes,
       ...[".extends-codex-output.json", ".extends-codex-agents.json"]
