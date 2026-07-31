@@ -208,6 +208,7 @@ const global: GlobalSource = {
             "每份缺失 data 在 README tree 和类型中同步定义同一套 `data + dataAction + owner`，并写明直接消费者、dataAction 的完整后置结果及真实验证方式；任一项缺失时该切片设计未完整，禁止创建实现载体和 export。",
             "dataAction 所需输入仍有 data 未成立时，对每份缺失 data 原样重复第 3、4 步；递归层数不设上限，下一级生产者只认识自己的直接消费者，不越级理解入口业务。",
             "只选择当前一句话目的必需的最短闭合链，从递归最深处逐套实现并验证；当前链不调用的 dataAction 可以明确保持未实现，不阻止已有 data、action 和入口继续运行。",
+            "每次写入前逐项审查本批次拟新增的文件、Class、方法、helper 和 export，明确它服务的最终 result、所属 `data + dataAction + owner` 以及直接消费者；任一项无法同时指出时，在写入前从批次删除。一次可以修改任意行数或多个文件，但所有改动必须位于同一条已闭合结果链，生成速度、批量写入和并行处理都不降低出生准入。",
             "入口消费者只按业务顺序读取已经成立的 data、调用已经就绪的 dataAction 并构造 result；不得补生产数据、解释生产状态、跨层查询、增加 wrapper、adapter、helper、默认值或套娃 producer。",
             "以生产者真实结果逐项填满完整 result，执行边界外验收后从唯一出口 return；随后反向审计本轮新增文件、Class、方法、helper 和 export，无法沿 result 消费链到达的结构没有出生资格，必须删除或内联。",
             "执行中出现大量缺值判断、标志组合、兜底分支、重复参数、无主 helper 或无真实消费者的 export 时，立即停止堆代码并回到第 1 步；这些现象默认证明目的、result 或生产切片尚未精确，而不是需要更多技术层。",
