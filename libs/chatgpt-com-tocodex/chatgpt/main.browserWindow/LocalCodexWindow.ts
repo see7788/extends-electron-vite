@@ -18,7 +18,7 @@ import {
   type McpToolCall,
   type McpToolExecution
 } from './LocalCodexMcp'
-import { localCodexChatGptChannels } from '../preload/protocol'
+import { localCodexChatGptChannels } from '../local-codex-chatgpt/protocol'
 import type { LocalCodexPageSnapshot } from '../main.webContents/protocol'
 
 const CHATGPT_URL = 'https://chatgpt.com/'

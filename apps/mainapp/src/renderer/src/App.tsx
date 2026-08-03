@@ -1,22 +1,14 @@
-// import { RouterProvider, createHashRouter } from 'react-router-dom'
-// import { StrictMode } from 'react'
-// import { createRoot } from 'react-dom/client'
-// import TestRouter from './testrouter'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 
-// const appRouter = createHashRouter(
-//   [
-//     {
-//       path: 'testrouter',
-//       element: <TestRouter />,
-//     },
-//     {
-//       path: '*',
-//       element: <div>react not found</div>,
-//     },
-//   ]
-// )
-// createRoot(document.getElementById('root')!).render(
-//   <StrictMode>
-//     <RouterProvider router={appRouter} />
-//   </StrictMode>
-// )
+declare const WEB_NAME: string
+declare const API_PATH: string
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <main style={{ fontFamily: 'sans-serif', padding: 32 }}>
+      <h1>{WEB_NAME}</h1>
+      <p>API: {API_PATH}</p>
+    </main>
+  </StrictMode>
+)

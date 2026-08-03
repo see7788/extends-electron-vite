@@ -383,7 +383,9 @@ const global: GlobalSource = {
           title: "pnpm 公共库与传递依赖冲突",
           items: [
             "pnpm workspace 跨 package 调用：消费者在 package.json 以 `\"生产者包名\": \"workspace:*\"` 声明依赖；源码必须以生产者 `package.json.name` 为 import 根，并在包名后使用生产者真实公开的 `.ts` 子路径。禁止相对路径、绝对路径、路径别名、转发套壳、`file:` 和 `link:`，不得把它们作为临时方案。",
-            "同一 pnpm TypeScript package 内的跨文件 import 同样必须以当前 `package.json.name` 为根，并在包名后使用被导入源码真实公开的 `.ts` 子路径；禁止使用 `./`、`../`、绝对路径、路径别名、转发套壳、`file:`、`link:` 或补写 `.js` 后缀。",
+            "禁止跨 package 相对导入：相对 specifier 解析后的目标越过当前 package 根，或进入另一个具有 `package.json` 的 package，任务立即失败；必须改为目标 package 的真实包名与公开 `.ts` 或 `.tsx` 子路径，并在消费者声明对应 workspace 依赖。",
+            "禁止 package self-reference 回环：package 内部的包 specifier 根等于自身 `package.json.name` 时任务立即失败；其他 package 以该名称消费它不属于回环。",
+            "修改或验收 package 时必须定位最近的 package 根并读取其 `package.json.name`，解析源码中的静态 import、动态 import 和 require：相对目标越过 package 根，或包 specifier 根等于当前 package name，任一成立都不得完成任务。",
             "同一父目录下存在多个独立 pnpm 根项目并共同消费相邻公共库时，同一个公共库可能同时成为多个根 workspace 的成员。出现冲突先确定当前发生问题的消费项目根，不把公共库目录现有的 node_modules 当作当前项目的可靠依赖环境。",
             "当前 pnpm workspace 内的包依赖必须使用包名加 `workspace:*`（或方先生明确的 workspace 版本范围）；禁止使用 `file:`、`link:`、相对路径、绝对路径或直接源码相对 import 伪装包依赖。目标包在相邻目录但未被 `pnpm-workspace.yaml` 纳入时，parent 报告 `Workspace Membership Required`、影响和推荐方案；只有方先生明确将其纳入当前 workspace 后，才修改 workspace 清单并使用 `workspace:*`。",
             "修改 package.json 的本地包依赖后，必须在消费项目根执行 `pnpm install`，再以 TypeScript 或实际构建确认解析路径；安装成功不能替代验证。最终检查本轮 import 与 package.json：每个跨 package import 必须以准确包名为根，每个本地 workspace 依赖必须使用 `workspace:*`；发现相对路径、绝对路径、`file:`、`link:`、路径别名或转发套壳时，任务不得判定完成。",

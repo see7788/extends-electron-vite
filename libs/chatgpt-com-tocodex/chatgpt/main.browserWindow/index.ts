@@ -1,5 +1,5 @@
 import { clipboard, ipcMain, type WebContents } from 'electron'
-import rendererLoad from 'electron.vite.config/rendererReactPlugin/load'
+import rendererLoad from 'electron-vite-config-lib/rendererReactPlugin/electron'
 import LoginState from 'extends-electron/loginState'
 import PQueue from 'p-queue'
 import { localCodexRuntimeFiles } from '../../userConfig'

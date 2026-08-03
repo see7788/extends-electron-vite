@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import Mcp from "mcp-server/index.ts";
-import todocli from "mcpCreate/index.ts";
+import todocli from "mcpcreate-lib/index.ts";
 import pkg from "../package.json";
+import nodeServiceRouter from "windows-named-pipe/index.tsx";
 import emailRouter from "./email";
 import fileRouter from "./file";
 import { ssePushRouter, sseRouter } from "./sse";
@@ -17,7 +18,8 @@ const router = new Hono()
   .route("/", sseRouter)
   .route("/", ssePushRouter)
   .route("/", emailRouter)
-  .route("/", fileRouter);
+  .route("/", fileRouter)
+  .route("/", nodeServiceRouter);
 
 export type Router = typeof router;
 

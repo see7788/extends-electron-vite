@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import rendererHonoUrl from "electron.vite.config/rendererHonoReactPlugin/url";
+import { honoUrl } from "electron-vite-config-lib/rendererHonoReactPlugin/hono";
 
 export default class MainBrowser {
   private window: BrowserWindow | undefined;
@@ -25,6 +25,6 @@ export default class MainBrowser {
     window.on("closed", () => {
       if (this.window === window) this.window = undefined;
     });
-    void window.loadURL(rendererHonoUrl("admin-web"));
+    void window.loadURL(honoUrl("admin-web"));
   }
 }

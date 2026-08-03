@@ -5,7 +5,7 @@ import Hyperspeed from "extends-react/src/Hyperspeed";
 import { useNavigate } from "react-router-dom";
 import type { DataNode } from "antd/es/tree";
 import useUserWebStore from "../store";
-import type { TopicRoute } from "htmlpreload/types";
+import type { TopicRoute } from "html-preload-lib/types";
 import type { TreeNode } from "./store";
 
 type SpeechRecognitionLike = {
@@ -281,4 +281,3 @@ export default function User({ userRoute }: UserRouteProps) {
     </ConfigProvider>
   );
 }
-

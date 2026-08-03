@@ -5,7 +5,7 @@
   "dependencies": {
     "extends-zustand": "workspace:*",
     "@ant-design/icons": "5.3.7",
-    "htmlpreload": "workspace:*",
+    "html-preload-lib": "workspace:*",
     "antd": "5.25.4",
     "extends-react": "workspace:*",
     "hono": "4.10.7",
@@ -20,5 +20,10 @@
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.0",
     "typescript": "5.8.3"
+  },
+  "dependenciesMeta": {
+    "html-preload-lib": {
+      "injected": true
+    }
   }
 }

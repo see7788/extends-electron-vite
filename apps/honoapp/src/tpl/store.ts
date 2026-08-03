@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TextDecoder } from "node:util";
 import immerStateCreator from "extends-zustand/immerStateCreator";
-import { Node, Project, SyntaxKind } from "ts-morph";
+import { IndentationText, Node, Project, SyntaxKind } from "ts-morph";
 import CodexOutput from "./output.ts";
 import source from "./source.ts";
 
@@ -74,19 +74,128 @@ const createTpl = immerStateCreator<TplStore>((set, get) => {
       "};",
     ].join("\n");
   };
-  const sourceInitializerRead = (sourceValue: Source) => {
-    const { nodes: sourceNodes, ...sourceData } = sourceValue;
-    const sourceLines = JSON.stringify(sourceData, undefined, 2).split("\n");
-    sourceLines[sourceLines.length - 2] += ",";
-    return [
-      "{",
-      ...sourceLines.slice(1, -1),
-      "  nodes,",
-      "}",
-    ].join("\n");
+  const sourceValueText = (value: unknown) => JSON.stringify(value, undefined, 2);
+  const sourcePropertyNamesRead = (
+    property: Node,
+    currentSource: Source,
+    nextSource: Source,
+  ): { current: string; next: string } | undefined => {
+    if (Node.isShorthandPropertyAssignment(property)) {
+      const name = property.getName();
+      return { current: name, next: name };
+    }
+    if (!Node.isPropertyAssignment(property)) return undefined;
+    const nameNode = property.getNameNode();
+    if (Node.isComputedPropertyName(nameNode)) {
+      const match = /^nodes\.([A-Za-z_$][\w$]*)$/.exec(nameNode.getExpression().getText());
+      if (!match) return undefined;
+      const current = currentSource.nodes[match[1]];
+      const next = nextSource.nodes[match[1]];
+      if (current === undefined || next === undefined) return undefined;
+      return { current: String(current), next: String(next) };
+    }
+    const name = Node.isStringLiteral(nameNode) || Node.isNoSubstitutionTemplateLiteral(nameNode)
+      ? nameNode.getLiteralValue()
+      : Node.isIdentifier(nameNode) || Node.isNumericLiteral(nameNode)
+        ? nameNode.getText()
+        : undefined;
+    return name === undefined ? undefined : { current: name, next: name };
+  };
+  const sourceNodeUpdate = (
+    node: Node,
+    currentValue: unknown,
+    nextValue: unknown,
+    currentSource: Source,
+    nextSource: Source,
+  ): void => {
+    if (sourceSerializedRead(currentValue) === sourceSerializedRead(nextValue)) return;
+    if (Array.isArray(currentValue) && Array.isArray(nextValue) && Node.isArrayLiteralExpression(node)) {
+      let prefixLength = 0;
+      while (
+        prefixLength < currentValue.length
+        && prefixLength < nextValue.length
+        && sourceSerializedRead(currentValue[prefixLength]) === sourceSerializedRead(nextValue[prefixLength])
+      ) prefixLength += 1;
+      let suffixLength = 0;
+      while (
+        suffixLength < currentValue.length - prefixLength
+        && suffixLength < nextValue.length - prefixLength
+        && sourceSerializedRead(currentValue[currentValue.length - suffixLength - 1])
+          === sourceSerializedRead(nextValue[nextValue.length - suffixLength - 1])
+      ) suffixLength += 1;
+      const currentMiddleLength = currentValue.length - prefixLength - suffixLength;
+      const nextMiddleLength = nextValue.length - prefixLength - suffixLength;
+      const sharedLength = Math.min(currentMiddleLength, nextMiddleLength);
+      const elements = node.getElements();
+      for (let index = 0; index < sharedLength; index += 1) {
+        sourceNodeUpdate(
+          elements[prefixLength + index],
+          currentValue[prefixLength + index],
+          nextValue[prefixLength + index],
+          currentSource,
+          nextSource,
+        );
+      }
+      for (let index = currentMiddleLength - 1; index >= sharedLength; index -= 1) {
+        node.removeElement(prefixLength + index);
+      }
+      if (nextMiddleLength > sharedLength) {
+        node.insertElements(
+          prefixLength + sharedLength,
+          nextValue.slice(prefixLength + sharedLength, prefixLength + nextMiddleLength).map(sourceValueText),
+        );
+      }
+      return;
+    }
+    if (
+      currentValue && typeof currentValue === "object" && !Array.isArray(currentValue)
+      && nextValue && typeof nextValue === "object" && !Array.isArray(nextValue)
+      && Node.isObjectLiteralExpression(node)
+    ) {
+      const currentRecord = currentValue as Record<string, unknown>;
+      const nextRecord = nextValue as Record<string, unknown>;
+      const nextNames = new Set<string>();
+      for (const property of node.getProperties()) {
+        const names = sourcePropertyNamesRead(property, currentSource, nextSource);
+        if (!names) throw new Error(`Unsupported canonical template property: ${property.getText()}`);
+        if (!Object.hasOwn(nextRecord, names.next)) {
+          property.remove();
+          continue;
+        }
+        nextNames.add(names.next);
+        if (Node.isShorthandPropertyAssignment(property)) {
+          if (names.current !== "nodes") {
+            throw new Error(`Unsupported canonical shorthand property: ${property.getText()}`);
+          }
+          continue;
+        }
+        if (!Node.isPropertyAssignment(property)) {
+          throw new Error(`Unsupported canonical template property: ${property.getText()}`);
+        }
+        if (!Object.hasOwn(currentRecord, names.current)) {
+          throw new Error(`Canonical template property is missing from current source: ${names.current}`);
+        }
+        sourceNodeUpdate(
+          property.getInitializerOrThrow(),
+          currentRecord[names.current],
+          nextRecord[names.next],
+          currentSource,
+          nextSource,
+        );
+      }
+      for (const [name, value] of Object.entries(nextRecord)) {
+        if (nextNames.has(name)) continue;
+        node.addPropertyAssignment({ name: JSON.stringify(name), initializer: sourceValueText(value) });
+      }
+      return;
+    }
+    node.replaceWithText(sourceValueText(nextValue));
   };
   const sourceValidatedRead = (workspacePath: string, sourceContent: string) => {
-    const sourceFile = new Project({ skipAddingFilesFromTsConfig: true }).createSourceFile("tpl.ts", sourceContent);
+    const sourceFile = new Project({
+      manipulationSettings: { indentationText: IndentationText.TwoSpaces },
+      skipAddingFilesFromTsConfig: true,
+    }).createSourceFile("tpl.ts", sourceContent);
     let declaredNodes: unknown;
     const sourceValueRead = (node: Node): unknown => {
       if (Node.isAsExpression(node) || Node.isParenthesizedExpression(node)) {
@@ -232,9 +341,25 @@ const createTpl = immerStateCreator<TplStore>((set, get) => {
           ) {
             throw new Error(`Template source must be UTF-8 without BOM and use LF: ${sourcePath}`);
           }
-          const sourceFile = new Project({ skipAddingFilesFromTsConfig: true })
+          const sourceFile = new Project({
+            manipulationSettings: { indentationText: IndentationText.TwoSpaces },
+            skipAddingFilesFromTsConfig: true,
+          })
             .createSourceFile(sourcePath, current, { overwrite: true });
-          sourceFile.getVariableDeclarationOrThrow(scope).setInitializer(sourceInitializerRead(sourceValue));
+          sourceNodeUpdate(
+            sourceFile.getVariableDeclarationOrThrow("nodes").getInitializerOrThrow(),
+            currentSource.nodes,
+            sourceValue.nodes,
+            currentSource,
+            sourceValue,
+          );
+          sourceNodeUpdate(
+            sourceFile.getVariableDeclarationOrThrow(scope).getInitializerOrThrow(),
+            currentSource,
+            sourceValue,
+            currentSource,
+            sourceValue,
+          );
           const next = sourceFile.getFullText();
           const temporary = resolve(dirname(sourcePath), `.source.ts.${process.pid}.${randomUUID()}.tmp`);
           const backup = resolve(dirname(sourcePath), `.source.ts.${process.pid}.${randomUUID()}.bak`);

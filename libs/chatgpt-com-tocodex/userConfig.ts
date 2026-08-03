@@ -1,9 +1,13 @@
-import { dirname, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { UserConfig } from 'electron-vite'
-import preloadPath from 'electron.vite.config/preloadCreate/path'
+import preloadPath from 'electron-vite-config-lib/preloadCreate/electron'
 
 const packageDirectory = dirname(fileURLToPath(import.meta.url))
+const cwdPath = (...path: string[]) => relative(
+  process.cwd(),
+  resolve(packageDirectory, ...path)
+)
 
 export const localCodexRuntimeFiles = {
   chatGptPreload: preloadPath('local-codex-chatgpt'),
@@ -11,14 +15,14 @@ export const localCodexRuntimeFiles = {
   setupRenderer: 'local-codex-setup'
 } as const
 
-export const localCodexPreloadEntries = {
-  'local-codex-chatgpt': resolve(packageDirectory, 'chatgpt', 'preload', 'index.ts'),
-  'local-codex-setup': resolve(packageDirectory, 'chatgpt', 'main.browserWindow', 'setup', 'preload.ts')
-}
+export const localCodexPreloadPkg: [path: string][] = [
+  [cwdPath('chatgpt', 'local-codex-chatgpt')],
+  [cwdPath('chatgpt', 'main.browserWindow', 'setup', 'local-codex-setup')]
+]
 
-export const localCodexRendererEntries = {
-  'local-codex-setup': resolve(packageDirectory, 'chatgpt', 'main.browserWindow', 'setup', 'renderer', 'index.html')
-}
+export const localCodexRendererPkg: [path: string][] = [
+  [cwdPath('chatgpt', 'main.browserWindow', 'setup', 'renderer')]
+]
 
 const localCodexUserConfig = {
   main: {

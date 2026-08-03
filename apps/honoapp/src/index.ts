@@ -1,8 +1,11 @@
 #!/usr/bin/env tsx
-import store from "./store";
-import honoServer from "vite.config/honoServer";
+import { honoServer } from "vite-config-lib/hono";
+import pkg from "../package.json" with { type: "json" };
 import app from "./routers"
-const { hostname, port } = store.getState().runtimeActions;
-honoServer({ fetch: app.fetch, hostname, port }, (info) => {
-  console.log(`http://${hostname}:${String(info.port)}`);
-});
+
+process.env.HONOREACT_HOST ??= pkg.config.honoHost;
+process.env.HONOREACT_PORT ??= String(pkg.config.honoPort);
+process.env.HONOREACT_ORIGIN ??= `http://${pkg.config.honoHost}:${String(pkg.config.honoPort)}`;
+
+honoServer(app)
+console.log(`${process.env.HONOREACT_ORIGIN}/todo-mcp`);

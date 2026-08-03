@@ -32,13 +32,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 }) : target, mod));
 var __require = /* #__PURE__ */ (() => createRequire(import.meta.url))();
 //#endregion
-//#region ../../libs/electron.vite.config/rendererReactPlugin/load.ts
+//#region ../../libs/electron.vite.config/rendererReactPlugin/electron.ts
 async function rendererLoad({ webContents, name }) {
 	if (app$1.isPackaged) return await webContents.loadFile(join(app$1.getAppPath(), "out", "renderer", name, "index.html"));
-	else {
-		const rendererUrl = process.env.ELECTRON_RENDERER_URL;
-		return await webContents.loadURL(new URL(`${name}/`, `${rendererUrl}/`).toString());
-	}
+	return await webContents.loadURL(new URL(`${name}/`, `${process.env.ELECTRON_RENDERER_URL}/`).toString());
 }
 //#endregion
 //#region ../../libs/extends-electron/loginState.ts
@@ -1113,20 +1110,21 @@ var PQueue = class extends import_eventemitter3.default {
 	}
 };
 //#endregion
-//#region ../../libs/electron.vite.config/preloadCreate/path.ts
+//#region ../../libs/electron.vite.config/preloadCreate/electron.ts
 function preloadPath(name) {
 	return join("app" in electron$1 && electron$1.app ? electron$1.app.getAppPath() : process.cwd(), "out", "preload", `${name}.cjs`);
 }
 //#endregion
 //#region ../../libs/chatgpt-com-tocodex/userConfig.ts
 var packageDirectory = dirname(fileURLToPath(import.meta.url));
+var cwdPath = (...path) => relative(process.cwd(), resolve(packageDirectory, ...path));
 var localCodexRuntimeFiles = {
 	chatGptPreload: preloadPath("local-codex-chatgpt"),
 	setupPreload: preloadPath("local-codex-setup"),
 	setupRenderer: "local-codex-setup"
 };
-resolve(packageDirectory, "chatgpt", "preload", "index.ts"), resolve(packageDirectory, "chatgpt", "main.browserWindow", "setup", "preload.ts");
-resolve(packageDirectory, "chatgpt", "main.browserWindow", "setup", "renderer", "index.html");
+cwdPath("chatgpt", "local-codex-chatgpt"), cwdPath("chatgpt", "main.browserWindow", "setup", "local-codex-setup");
+cwdPath("chatgpt", "main.browserWindow", "setup", "renderer");
 //#endregion
 //#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/protocol.ts
 var localCodexSetupChannels = {
@@ -7666,7 +7664,7 @@ function superRefine(fn, params) {
 	return /* @__PURE__ */ _superRefine(fn, params);
 }
 //#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/preload/protocol.ts
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/local-codex-chatgpt/protocol.ts
 var import_main = /* @__PURE__ */ __toESM(require_main(), 1);
 var localCodexChatGptChannels = { pageEvent: "local-codex-page-event" };
 //#endregion
@@ -7767,7 +7765,7 @@ var LocalCodexWindow$1 = class {
 			autoHideMenuBar: false,
 			title: "Local Codex 设置",
 			webPreferences: {
-				preload: localCodexRuntimeFiles.setupPreload,
+				preload: join(app$1.getAppPath(), "out", "preload", localCodexRuntimeFiles.setupPreload),
 				contextIsolation: true,
 				sandbox: true,
 				nodeIntegration: false,
@@ -7777,7 +7775,7 @@ var LocalCodexWindow$1 = class {
 		this.window = window;
 		const chatGptView = new WebContentsView({ webPreferences: {
 			partition: "persist:local-codex-chatgpt",
-			preload: localCodexRuntimeFiles.chatGptPreload,
+			preload: join(app$1.getAppPath(), "out", "preload", localCodexRuntimeFiles.chatGptPreload),
 			contextIsolation: true,
 			sandbox: true,
 			nodeIntegration: false,

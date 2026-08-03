@@ -1,4 +1,4 @@
-import type { McpTool, McpToolCallResult } from "htmlpreload/types";
+import type { McpTool, McpToolCallResult } from "html-preload-lib/types";
 
 export type ElectronUserBridge = {
   mcpToolsList: () => Promise<McpTool[]>;

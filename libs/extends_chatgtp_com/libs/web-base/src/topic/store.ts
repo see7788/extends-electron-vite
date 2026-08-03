@@ -5,7 +5,7 @@ import type {
   TopicNoticeListener,
   TopicRoute,
   TopicWebIpcChannel,
-} from "htmlpreload/types";
+} from "html-preload-lib/types";
 
 type TreeAttachment = {
   type: "image";

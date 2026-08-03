@@ -1,146 +1,201 @@
-# electron.vite.config
+# electron-vite-config-lib
 
-为 electron-vite 统一生产多项目 preload、普通 React renderer 和 Hono React renderer 的开发、构建及业务消费入口。
+为 electron-vite 6.0.0-beta.1 统一配置多项目 preload、普通 React renderer 和 Hono React renderer。
 
-## 目标公开契约
+## 使用接口
 
-下面的 tree 是已经协商、尚待源码实施的公开契约。任意数量的 React 项目都共用同一个 Vite 开发服务。Hono React 固定使用 `[honoPort, devPort]`；普通 React renderer 固定使用一个 `devPort: number`，项目数量不会改变端口数量。
+下面的 tree 是源码需要对齐的公开接口。
 
 ```text
-extends-electron-vite.electron.vite.config/
+electron.vite.config/
 ├── rendererHonoReactPlugin/
-│   ├── vitePlugin.ts                        # 生产 Hono React renderer 的 Vite 插件
+│   ├── plugin.ts                              # electron.vite.config.ts 使用
 │   │   └── default(
 │   │         options: {
 │   │           honoHost: string;
-│   │           honoPort: readonly [honoPort: number, devPort: number];
-│   │           webDefine?: Record<string, unknown>;
+│   │           honoPort: [
+│   │             mainPort: number,            # 页面和接口统一使用；开发由 renderer Vite 监听，生产由 Hono 监听
+│   │             otherPort: number,           # 仅供开发时 Electron main 内部运行 Hono
+│   │           ];
 │   │         },
-│   │         ...reactRoots: string[]
-│   │       ): Plugin
-│   ├── server.ts                            # 生产并启动正式 Hono 服务
-│   │   └── default(hono: Hono): ReturnType<typeof serve>
-│   ├── honoHandler.ts                       # 生产 Hono renderer 托管处理器
-│   │   └── default: Handler
-│   └── url.ts                               # 生产 Electron main 使用的 renderer 地址
-│       └── default<Name extends string>(name: Name): string
+│   │         ...reactPkg: [
+│   │           path: string,                  # cwd 相对路径；package.name 作为页面路径和 out/renderer 目录名
+│   │           define?: Record<string, unknown>, # 只在当前 React 项目中生效
+│   │         ][]
+│   │       ): {
+│   │         main: Plugin;                    # 向 Electron main 生产 Hono 运行值
+│   │         renderer: Plugin;                # 使用一个 renderer Vite 运行全部 React 项目
+│   │       }
+│   └── hono.ts                                # Electron main 项目使用
+│       ├── honoServer(hono: Hono): ReturnType<typeof serve> # 使用插件生产的端口启动 Hono
+│       └── honoUrl(name: package.name): string # 返回 mainPort/package.name/ 完整地址
 ├── rendererReactPlugin/
-│   ├── vitePlugin.ts                        # 生产普通 React renderer 的 Vite 插件
+│   ├── plugin.ts                              # 普通 React renderer 配置使用
 │   │   └── default(
 │   │         options: {
-│   │           devPort: number;
-│   │           webDefine?: UserConfig["define"];
+│   │           otherPort: number,             # 插件内部使用
 │   │         },
-│   │         ...reactRoots: string[]
-│   │       ): Plugin
-│   └── load.ts                              # 生产窗口加载能力
-│       └── default({ webContents, name }: { webContents: WebContents; name: string }): Promise<void>
+│   │         ...reactPkg: [
+│   │           path: string,                  # cwd 相对路径；package.name 作为页面路径和 out/renderer 目录名
+│   │           define?: Record<string, unknown>, # 只在当前 React 项目中生效
+│   │         ][]
+│   │       ): Plugin                          # 使用一个 renderer Vite 运行全部 React 项目
+│   └── electron.ts
+│       └── default(
+│             { webContents, name }: { webContents: WebContents; name: string }
+│           ): Promise<void>                   # 开发 loadURL，生产 loadFile
 └── preloadCreate/
-    ├── vite.ts                              # 生产 electron-vite preload 配置
-    │   └── default(
-    │         options: {
-    │           externalizeDeps: NonNullable<PreloadViteConfig["build"]>["externalizeDeps"];
-    │           preloadDefine?: PreloadViteConfig["define"];
-    │         },
-    │         ...preloadRoots: string[]
-    │       ): PreloadViteConfig
-    ├── inlinePlugin.ts                      # 包内消费的 preload 资源内联插件
-    │   └── default(): Plugin
-    └── path.ts                              # 生产 Electron main 使用的 preload 路径
-        └── default<Name extends string>(name: Name): string
+    ├── vite/
+    │   ├── index.ts                           # electron-vite preload 完整配置
+    │   │   └── default(
+    │   │         options: {
+    │   │           externalizeDeps: NonNullable<PreloadViteConfig["build"]>["externalizeDeps"];
+    │   │         },
+    │   │         ...reactPkg: [
+    │   │           path: string,               # cwd 相对目录；固定入口 index.tsx，目录名作为 out/preload 文件名
+    │   │           define?: Record<string, unknown>, # 只在当前 preload 项目中生效
+    │   │         ][]
+    │   │       ): PreloadViteConfig
+    │   └── inlinePlugin.ts                    # index.ts 内部使用
+    └── electron.ts
+        └── default<Name extends string>(name: Name): string # 返回 out/preload/name.cjs 完整路径
 ```
 
-## 核心使用
+## Hono React renderer
 
 ```ts
-// preload
+// electron.vite.config.ts
+import react from "@vitejs/plugin-react";
 import { defineConfig, type UserConfig } from "electron-vite";
-import preloadCreate from "electron.vite.config/preloadCreate";
-import preloadPath from "electron.vite.config/preloadCreate/path";
+import rendererHonoReact from "electron-vite-config-lib/rendererHonoReactPlugin/plugin";
+
+const honoReact = rendererHonoReact(
+  {
+    honoHost: "127.0.0.1",
+    honoPort: [8788, 8789],
+  },
+  [
+    "../admin-web",
+    {
+      __WEB_NAME__: JSON.stringify("admin-web"),
+      __API_PATH__: JSON.stringify("/admin-web/api"),
+    },
+  ],
+  [
+    "../user-web",
+    {
+      __WEB_NAME__: JSON.stringify("user-web"),
+      __API_PATH__: JSON.stringify("/user-web/api"),
+    },
+  ],
+);
 
 export default defineConfig({
-  preload: preloadCreate(
-    {
-      externalizeDeps: false,
-      preloadDefine: {
-        __APP_NAME__: JSON.stringify("mainapp"),
-      },
-    },
-    "../login-preload",
-    "../settings-preload",
-  ),
+  main: {
+    plugins: [honoReact.main],
+  },
+  renderer: {
+    plugins: [react(), honoReact.renderer],
+  },
 } satisfies UserConfig);
-
-const webPreferences = {
-  preload: preloadPath("login-preload"),
-};
 ```
 
 ```ts
-// 普通 React renderer
-import type { BrowserWindow } from "electron";
+// Electron main
+import { app, BrowserWindow } from "electron";
+import { Hono } from "hono";
+import {
+  honoServer,
+  honoUrl,
+} from "electron-vite-config-lib/rendererHonoReactPlugin/hono";
+
+const routers = new Hono()
+  .get("/health", context => context.json({ ok: true }));
+
+let server: ReturnType<typeof honoServer> | undefined;
+
+app.whenReady().then(() => {
+  server = honoServer(routers);
+  server.once("listening", () => {
+    const window = new BrowserWindow();
+    void window.loadURL(honoUrl("admin-web"));
+  });
+});
+
+app.on("before-quit", () => {
+  server?.close();
+});
+```
+
+## 普通 React renderer
+
+```ts
+// electron.vite.config.ts
+import react from "@vitejs/plugin-react";
 import { defineConfig, type UserConfig } from "electron-vite";
-import rendererReactVitePlugin from "electron.vite.config/rendererReactPlugin/vitePlugin";
-import rendererLoad from "electron.vite.config/rendererReactPlugin/load";
+import rendererReact from "electron-vite-config-lib/rendererReactPlugin/plugin";
 
 export default defineConfig({
   renderer: {
     plugins: [
-      rendererReactVitePlugin(
+      react(),
+      rendererReact(
         {
-          devPort: 5173,
-          webDefine: {
-            __APP_NAME__: JSON.stringify("mainapp"),
-          },
+          otherPort: 5173,
         },
-        "../admin-web",
-        "../user-web",
+        [
+          "../admin-web",
+          {
+            __WEB_NAME__: JSON.stringify("admin-web"),
+          },
+        ],
+        ["../user-web"],
       ),
     ],
   },
 } satisfies UserConfig);
+```
 
-export const adminLoad = (window: BrowserWindow) => rendererLoad({
+```ts
+// Electron main
+import { BrowserWindow } from "electron";
+import rendererLoad from "electron-vite-config-lib/rendererReactPlugin/electron";
+
+const window = new BrowserWindow();
+await rendererLoad({
   webContents: window.webContents,
   name: "admin-web",
 });
 ```
 
-```ts
-// Hono React renderer
-import type { BrowserWindow } from "electron";
-import { defineConfig, type UserConfig } from "electron-vite";
-import { Hono } from "hono";
-import honoHandler from "electron.vite.config/rendererHonoReactPlugin/honoHandler";
-import honoServer from "electron.vite.config/rendererHonoReactPlugin/server";
-import rendererHonoUrl from "electron.vite.config/rendererHonoReactPlugin/url";
-import rendererHonoReactVitePlugin from "electron.vite.config/rendererHonoReactPlugin/vitePlugin";
+## Preload
 
-const rendererHonoPlugin = rendererHonoReactVitePlugin(
-  {
-    honoHost: "127.0.0.1",
-    honoPort: [8788, 5173],
-    webDefine: {
-      __APP_NAME__: JSON.stringify("mainapp"),
-    },
-  },
-  "../admin-web",
-  "../user-web",
-);
+```ts
+// electron.vite.config.ts
+import { defineConfig, type UserConfig } from "electron-vite";
+import preloadCreate from "electron-vite-config-lib/preloadCreate/vite/index";
 
 export default defineConfig({
-  renderer: {
-    plugins: [rendererHonoPlugin],
-  },
+  preload: preloadCreate(
+    {
+      externalizeDeps: false,
+    },
+    [
+      "src/preload/login",
+      {
+        __PRELOAD_NAME__: JSON.stringify("login"),
+      },
+    ],
+    ["src/preload/settings"],
+  ),
 } satisfies UserConfig);
+```
 
-const app = new Hono()
-  .get("/api/health", context => context.json({ ok: true }))
-  .all("/:name/*", honoHandler);
+```ts
+// Electron main
+import preloadPath from "electron-vite-config-lib/preloadCreate/electron";
 
-honoServer(app);
-
-export const adminLoad = (window: BrowserWindow) => (
-  window.loadURL(rendererHonoUrl("admin-web"))
-);
+const webPreferences = {
+  preload: preloadPath("login"),
+};
 ```

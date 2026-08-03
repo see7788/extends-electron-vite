@@ -5,12 +5,11 @@ import { createStore, type StateCreator } from "zustand/vanilla";
 import { createJSONStorage, persist, subscribeWithSelector, type StateStorage } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 import adminPackage from "../package.json";
-import createRuntimeConfigStore, { type RuntimeConfigStore } from "./runtimeConfig/store";
 import createChatgptBrowserStore, { CHATGPT_PARTITION, type ChatgptBrowserState, type ChatgptBrowserStore } from "./chatgptBrowser/store";
 import createConnectionStore, { type ConnectionStore } from "./connection/store";
 import createTopicStore, { type TopicStore } from "./topic/store";
 
-type AdminMainStore = RuntimeConfigStore & ChatgptBrowserStore & ConnectionStore & TopicStore;
+type AdminMainStore = ChatgptBrowserStore & ConnectionStore & TopicStore;
 
 type AdminMainPersistedStore = {
   chatgptBrowser: {
@@ -32,7 +31,6 @@ type AdminMainPersistedStore = {
 enableMapSet();
 
 const adminMainStoreCreate: StateCreator<AdminMainStore, [["zustand/immer", never]], [], AdminMainStore> = (set, get, api) => ({
-  ...createRuntimeConfigStore<AdminMainStore>(set, get, api),
   ...createChatgptBrowserStore<AdminMainStore>(set, get, api),
   ...createTopicStore<AdminMainStore>(set, get, api),
   ...createConnectionStore<AdminMainStore>(set, get, api),

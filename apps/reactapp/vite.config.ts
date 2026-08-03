@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import ubuntu from "extends-ssh/src/Ubuntu.ts";
+import ubuntu from "extends-ssh/Ubuntu/index.ts";
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -8,7 +8,6 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    ubuntu.vite_plugin_tunnel(),
-    ubuntu.vite_plugin_static(),
+    ubuntu.vite.react(),
   ],
 });
