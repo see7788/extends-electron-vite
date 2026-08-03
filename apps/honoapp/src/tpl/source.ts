@@ -538,6 +538,8 @@ const global: GlobalSource = {
           title: "切片定义",
           items: [
             "Zustand 主仓库的交叉类型是项目类型编程的事实源；业务数据、协议数据和 action 通过直接切片共同进入同一个 `TStore`，切片从 `set`、`get`、`api` 读取完整主仓库类型并消费兄弟切片，禁止用 factory 泛型、初始化参数或仓库外私有副本提前截断类型推导。",
+            "前端、后端、worker、窗口或进程维护同一业务对象，且 data 结构与 action 语义一致时，只允许存在一个正式 `StateCreator`；各运行侧主仓库直接消费同一切片，只把持久化、订阅和连接等运行侧生命周期留在各自主仓库。禁止建立前端版、后端版、网络版、代理版或其他平行切片。",
+            "切片存在 schema 或 validator 时，由同一切片 owner 在切片定义文件统一维护运行时验证器、由验证器推导的 data 与 action 输入类型以及 `StateCreator`；边界消费者直接使用该正式验证器和推导类型。禁止另建平行 `types.ts`、手写重复数据类型或在 route、协议和消费者中重新定义输入结构。",
             "Zustand 切片必须是 `StateCreator` 本身：入口常量先显式声明为 `zustand.StateCreator<TStore, Mutators, [], TSlice>`，运行时直接接收 `set`、`get`、`api` 并返回切片数据，默认导出语句只能是 `export default slice;` 这种已声明入口标识符。严禁 `export default function`、`export default (...) => ...`、`export default create*()`、`export default immerStateCreator(...)` 或任何调用表达式直接占据默认导出。可复用库也不得把入口改成泛型调用签名；实现切片使用可被具体消费者 Store 收窄的最小 Store 类型，对外业务类型通过公开切片类型表达。",
             "严禁 `(...config) => StateCreator`、`() => StateCreator`、`<TStore>(set, get, api) => sliceData`、`(...config) => ((set, get, api) => sliceData)` 及等价的 Class、`*Init`、`create*`、factory、高阶包装、参数注入、改名转发或断言结构。只要入口常量没有直接标注 `zustand.StateCreator<...>`、消费者必须先调用一次才能取得切片，或者默认导出返回值仍是 `StateCreator`，就不是切片。",
             "实现或验收 Zustand 时必须全文定位 `StateCreator`、`immerStateCreator`、`*Slice`、`*SliceInit`、`create*Slice` 和切片默认导出，并逐项追到赋值源与消费点；唯一合格消费形态是把导入值直接作为 `(set, get, api) => sliceData` 使用，不得出现 `slice(options)(set, get, api)`、`const slice = sliceInit(options)` 或先构造完整 store 再转交消费者。发现任一项时任务立即失败且不得继续实现消费者。",
@@ -633,6 +635,13 @@ const global: GlobalSource = {
           items: [
             "host、port、URL、配置字段或类型结构相同，只说明寻址或数据形状相似，不证明两个网络服务协议兼容。替换或接入已有服务前必须核对真实服务实现、连接路径与传输方式、握手过程、消息类型、客户端协议及生命周期语义。",
             "网络配置名称必须表达真实协议或职责，不得借用另一个库、产品或不兼容协议的服务名称制造可替换假象。协议和生产者确定后，由生产者直接公开最终 URL、协议字符串或可直接传入客户端的配置对象；真实存在运行期协议选择时，由同一生产者穷尽处理每种协议并产生最终配置。未知协议、协议身份或生产者尚未确认时进入全局错误与决策规则，不以同名配置直接接线。禁止公开 `secure`、`tls` 等中间判断值，让消费者重新推导 `ws/wss`、`http/https` 或 `stun/stuns`；只有下游 API 原样消费该布尔值时才能公开。",
+          ],
+        },
+        {
+          title: "仓库 Action 的协议投影",
+          items: [
+            "同一 store action 投影到 Hono、MCP、SSE、WebSocket、IPC 或其他协议时，仓库键路径、路由路径、工具名、事件名和输入 schema 只按协议语法转换，保持对象层级、字母、顺序和末端 action 名一致；禁止 `add → nodeAdd`、`set → update` 等改名、转发和翻译层。",
+            "跨运行侧同步同一仓库时，接收端首次连接只接收一次完整 data 进行初始化；后续只传递与正式 action 输入同形的增量，并由接收端调用同一个共享 action 重放。除既定契约明确采用快照同步外，禁止每次 mutation 重新传输并覆盖完整 data。",
           ],
         },
         {
