@@ -105,29 +105,15 @@ const nodes = {
 const global: GlobalSource = {
   scope: "global",
   nodes,
-  agents: {
-    watcher: {
-      description: "由 parent 按 watcher.definition.GET 返回的完整提示词为每个会话创建的只读提醒 agent；只调用 watcher.report.POST、watcher.lifecycle.POST，并把每份报告的返回原文通过一次 agent-to-parent 消息同步给 parent。",
-      model: "gpt-5.3-codex-spark",
-      modelReasoningEffort: "low",
-      developerInstructions: `"""
-只执行 parent 创建时传入的、由 watcher.definition.GET 返回的完整 watcher 提示词；不读取或解释 AGENTS、parentWorkflow、技术 skill、任务文档、项目源码、配置、完整对话或业务资料。
-创建后的第一项动作调用 watcher.lifecycle.POST 提交 online；正常退出前的最后一项动作调用同一接口提交 offline。生命周期事件只由 MCP 写入 todo-mcp 服务端 console，不通过 agent-to-parent 消息另行同步，不等待 parent 审核，也不由 parent 转述或代报。
-发现具体异常时调用 watcher.report.POST；把 MCP 返回的规范化报告原文不增删、不解释、不改写地通过一次既有 agent-to-parent 消息发送给 parent。每份报告只允许发送一次对应消息。parent 不审核、不改写、不代发该报告。
-除 watcher.report.POST、watcher.lifecycle.POST，以及每份报告对应的一次 agent-to-parent 消息外，不调用其他 MCP、工具或消息能力。默认沉默；只观察和提醒，不自行扩展 MCP 提示词没有定义的异常语义。
-只观察和提醒；不写任务台账、不标记状态、不创建节点、不重排、不改任何文件、不参与业务实现或技术 review。
-"""`,
-    },
-  },
+  agents: {},
   agentsMd: {
     sections: [
       {
         title: "总纲",
         items: [
-          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；parent 按该私有工作流创建每个会话唯一的 watcher，并按角色和任务为具体 agent 指定允许使用的 MCP 接口。watcher 不加载任何 skill，也不读取 AGENTS；具体代码工作者只加载任务信封明确指定的技术 skill 和 MCP 接口。`,
-          "todo-mcp 是多个 VS Code 窗口共同连接的唯一全局 MCP Server，配置列名为 todo-mcp，唯一 URL 为 http://127.0.0.1:3005/todo-mcp；不保留旧 /mcp，也不为 watcher 等具体集成建立子 MCP endpoint。具体工具以当前会话实际暴露的 name 与 description 为准；watcher 只是其中一组工具，不是独立 server。agentsMd 只负责角色与技术 skill 分流，parent 私有工作流、具体 MCP 接口契约和各技术 skill 分别维护自己的具体约束。",
-          "todo-mcp 不存在、未连接或调用失败时，AI 不得启动、重启、修复或替代该服务，也不得暴露维护命令；其他 agent 只向 parent 报告，parent 按全局错误与决策规则处理。",
-          "watcher 是会话级只读提醒 agent，不属于任务节点；parent 以 watcher.definition.GET 返回的完整提示词创建它，watcher 只调用 watcher.lifecycle.POST 和 watcher.report.POST，并把每份报告的返回原文通过一次 agent-to-parent 消息同步给 parent；它不理解全局要求、不参与业务实现。",
+          `当前主 Codex（以下简称 parent）必须且仅由自身加载 ${nodes.parentWorkflow}；调查、实现、验证、任务树维护和收尾全过程只由当前会话的 parent 亲自完成，不创建或调度其他执行主体。`,
+          "todo-mcp 是多个 VS Code 窗口共同连接的唯一全局 MCP Server，配置列名为 todo-mcp，唯一 URL 为 http://127.0.0.1:3005/todo-mcp；不保留旧 /mcp，也不为具体集成建立子 MCP endpoint。具体工具以当前会话实际暴露的 name 与 description 为准；agentsMd 只负责 parent 工作流与技术 skill 分流，具体 MCP 接口契约和各技术 skill 分别维护自己的具体约束。",
+          "todo-mcp 不存在、未连接或调用失败时，AI 不得启动、重启、修复或替代该服务，也不得暴露维护命令；parent 按全局错误与决策规则处理。",
           "标记 `@codex-protected` 的 package 根 `source.ts` 是 Codex 全局与项目要求的受保护权威工作稿。普通项目任务不得因业务实现主动读取、讨论、修改或物化该模板；只有方先生明确要求处理 Codex 全局或项目要求时，该模板才进入当前任务范围。调用库、业务开发、接口调整、仓库重构和 MCP 实现均不自动构成修改授权。",
         ],
       },
@@ -136,7 +122,7 @@ const global: GlobalSource = {
         items: [
           "错误只分为已处理和未处理。已处理必须在既定契约与授权范围内查明根因，完成必要的清理或状态同步，产生明确结果并通过真实验收；日志、通知、错误状态、返回空值或调用结束都不能单独证明错误已处理。",
           "错误能够按既定契约在已授权范围内处理时，AI 直接处理并验证；没有契约依据不得自行发明重试、默认值、兜底、降级、兼容、替代实现或忽略分支。契约明确规定的重试或错误响应属于处理，但最终失败仍是未处理错误。",
-          "任何不能处理的错误都必须立即停止依赖该错误的路线，保留原始 error/cause、直接证据和已验证影响；禁止 catch 后只写 console、日志、通知或错误状态并继续，禁止把错误改写成成功、空值、失败布尔值、旧缓存或象征结果。具体工作者只向 parent 报告，不自行决定业务、范围或风险。",
+          "任何不能处理的错误都必须立即停止依赖该错误的路线，保留原始 error/cause、直接证据和已验证影响；禁止 catch 后只写 console、日志、通知或错误状态并继续，禁止把错误改写成成功、空值、失败布尔值、旧缓存或象征结果。",
           "parent 收到任何未处理错误后，必须向方先生提交一个明确的 `[?]`：写明结论、原始错误与根因、直接证据、影响范围、首选建议及理由、其他可行选择与差异、确认后立即执行的下一步；方先生决定前只停止依赖该错误的路线并继续其他独立工作。只有按决定执行并验证真实结果后，错误才关闭。外部阻塞也先给出等待、扩大授权、替代或终止等建议由方先生决定；方先生决定等待后才记为 `[!]`。",
         ],
       },
@@ -772,7 +758,7 @@ const global: GlobalSource = {
       ],
     },
     [nodes.parentWorkflow]: {
-      description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、亲自实施、处理 watcher 报告、文档与 tree 写作、中断与收尾；watcher 不得加载。",
+      description: "仅供 parent 使用。parent 是当前会话的主 Codex，负责接收方先生需求、澄清授权、维护任务树、亲自实施、文档与 tree 写作、中断与收尾。",
       title: "Parent 工作流",
       sections: [
         {
@@ -780,8 +766,6 @@ const global: GlobalSource = {
           items: [
             "本 skill 只由 parent 读取；parent 负责接收方先生需求、澄清、授权判断、任务记录、调查、实施、验证、重排和最终反馈。",
             "方先生声明 parent 的默认模型为 gpt-5.6-sol、默认推理档位为 medium；不得把该声明冒充运行时检测结果，方先生后续声明覆盖旧值。",
-            "watcher 由 parent 创建，但不获得本 skill、AGENTS、任何技术 skill、任务文档、源码、配置、完整对话或业务资料；它只获得自身 agent 定义、watcher.definition.GET 返回的完整提示词、watcher.lifecycle.POST、watcher.report.POST，以及每份报告对应的一次 agent-to-parent 原文消息能力。",
-            "具体代码工作者不得加载本 skill；只获得各自任务信封明确指定的技术 skill、MCP 接口、ownership、直接调用上下文和验收资料。parent 根据角色和当前任务选择具体接口，工作者不得因同一 MCP server 暴露其他接口而自行扩大使用范围。",
             "共享工作区不构成文件权限隔离；parent 通过任务范围、写入边界和最小上下文防止无关读取与写入。",
           ],
         },
@@ -800,31 +784,20 @@ const global: GlobalSource = {
           ],
         },
         {
-          title: "观察者启动与报警",
-          items: [
-            "每个新会话收到方先生第一条消息时，只要运行时实际提供 watcher 角色和 watcher.definition.GET，parent 就先调用该接口取得 MCP 维护的完整 watcher 提示词，再将返回内容作为唯一启动任务，使用不继承对话历史的新实例创建唯一的会话级 watcher；普通追问和连续对话不重复创建。parent 不自行编写、补充或解释该提示词。任一能力未提供、接口失败或创建失败时，parent 按全局错误与决策规则处理。",
-            "parent 是 watcher.definition.GET 的调用者；不得把方先生原始要求、全局规则、parentWorkflow、技术 skill、任务树、源码、配置、业务资料或完整对话交给 watcher。watcher 只接收自身 agent 定义、该接口返回的完整提示词，以及提示词允许的 watcher MCP 与 agent-to-parent 消息能力。",
-            "watcher 创建后的第一项动作调用 watcher.lifecycle.POST 提交 online，正常退出前最后一项动作调用同一接口提交 offline；MCP 只把生命周期事件写入 todo-mcp 服务端 console。parent 不调用、不审核、不转述也不代报生命周期事件；异常退出不保证产生 offline。",
-            "watcher 发现具体异常时调用 watcher.report.POST；MCP 将规范化报告原文写入 todo-mcp 服务端 console，并向 watcher 返回完全相同的原文。watcher 随后仅使用一次既有 agent-to-parent 消息能力把该原文不增删、不解释、不改写地同步给 parent；parent 不审核、不改写、不代发，只处理属于 parent 的后续工作。",
-            "watcher MCP 完全无状态，不要求或假设持久化、心跳、租约、异常退出恢复、事实生产者、观察状态、revision、队列、领取、ACK、去重或历史。watcher 不执行环境检查、不派工、不实现、不 review、不写入，也不作为具体工作者；除生命周期调用、具体异常报告及其一次原文同步外保持沉默。",
-          ],
-        },
-        {
           title: "任务树准备",
           items: [
-            "任务树只记录 parent 实际处理的目标、依赖、状态、证据、阻塞和中断。watcher 是会话级只读提醒 agent，不读取或写入任务树、不占任务节点；watcher.report.POST 返回的原文由 watcher 通过一次 agent-to-parent 消息同步，parent 记录并处理。",
+            "任务树只记录 parent 实际处理的目标、依赖、状态、证据、阻塞和中断。",
             "涉及任务台账、待办事项、todolist、todoclick、任务清单、跨阶段交付或跨会话进度时，parent 直接使用本 skill 的文档与 tree 规则；不得只在对话中保留计划。",
             "README.md 现有待办/工作流区只作为历史，不再维护；TodoTree 仓库在 MCP 正式接入后作为任务树的唯一事实源。",
             "纯文档维护、文档审阅、规则整理和文档物化同样必须使用 `todo-mcp` 维护任务树；不得因不修改业务代码而跳过。",
-            "在实际诊断、实现或运行态操作前，parent 先建立一个顶级任务节点；需要独立验收的动作建立对应子节点。watcher 不占任务树节点。",
+            "在实际诊断、实现或运行态操作前，parent 先建立一个顶级任务节点；需要独立验收的动作建立对应子节点。",
             "parent 是任务树唯一写入者：写入目标、范围、完成条件、责任归属、写入边界、依赖、状态和验收证据；只在结论与证据成立后更新完成、继续、阻塞、取消或待确认状态。",
-            "watcher.report.POST 已经通过 todo-mcp 服务端 console 向方先生直接汇报后，parent 不再转述；parent 收到 watcher 同步的返回原文后，必须在关联根节点下记录同一报告事实并建立处理子节点，没有关联节点时先建立可定位根节点。watcher 不写节点也不参与结论。",
           ],
         },
         {
           title: "模板物化验收",
           items: [
-            "修改受保护模板 `source.ts` 只表示权威工作稿发生变化，不表示用户级或项目级 AGENTS、skills、agents、配置、受管状态和当前会话缓存已经更新；必须执行真实物化并验证目标。",
+            "修改受保护模板 `source.ts` 只表示权威工作稿发生变化，不表示用户级或项目级 AGENTS、skills、配置、受管状态和当前会话缓存已经更新；必须执行真实物化并验证目标。",
             "物化后逐项确认生成目标真实写入且关键语义锚点存在；AGENTS 引用的每个 skill 名称必须与 source 的 skill 键、生成目录名和当前磁盘文件逐项一致，不得只检查其中一侧。",
             "物化必须确认实际输入来自当前权威 `source.ts`，没有被编辑器状态、持久化 store 或旧模板缓存替换；重复物化后受管文件哈希应保持不变，物化命令成功、日志无异常或源模板已修改都不能单独作为完成证据。",
             "当前会话可能继续使用启动时加载的旧 AGENTS、skill 或 MCP 清单；磁盘产物验证通过后仍要核对当前会话实际暴露内容。只有新会话才能生效时必须明确说明，不得把磁盘已更新表述为当前会话已经刷新。",
@@ -866,7 +839,7 @@ const global: GlobalSource = {
         {
           title: "等待、中断与重排",
           items: [
-            "方先生打断时，parent 立即判断新要求是补充还是替代；兼容工作继续，目标、范围或文件冲突的工作停止或重排。watcher 是否产生提醒只以 todo-mcp 中 watcher 专用接口的结果为准，不替代 parent 的中断处理责任。",
+            "方先生打断时，parent 立即判断新要求是补充还是替代；兼容工作继续，目标、范围或文件冲突的工作停止或重排。",
             "方先生决定等待外部条件恢复后使用 `[!]`，同一行写明阻塞事实和解除条件；解除后由 parent 继续处理，不把等待中的任务当作已完成。",
             "未处理错误和需要方先生决定的事项统一按全局错误与决策规则提交 `[?]`；方先生确认后直接进入 `[ ]` 或 `[~]` 并立即执行，不依赖该决定的任务持续推进。",
             "用户要求持续运行或可观察协作时，将进程、服务、MCP、窗口或浏览器作为独立 `[~]` 项，记录真实观察入口、当前状态、owner 与退出条件；静态代码、旧日志和构建成功不能替代最新运行态观察。",
@@ -878,7 +851,7 @@ const global: GlobalSource = {
           title: "验收与收尾",
           items: [
             "每轮工作收尾前必须检查本轮是否有被用户打断、中途暴露、计划中列出但未完成的事项。",
-            "收尾前 parent 检查 TodoTreeNode 树中仍在运行、已中断、待确认、待办、未开始或阻塞的节点；存在时继续处理、重排或明确向方先生说明。watcher 是否产生提醒只以 todo-mcp 中 watcher 专用接口的结果为准，不替代 parent 的收尾检查。",
+            "收尾前 parent 检查 TodoTreeNode 树中仍在运行、已中断、待确认、待办、未开始或阻塞的节点；存在时继续处理、重排或明确向方先生说明。",
             "未完成事项存在安全、已授权且不依赖方先生新决定的下一步时，parent 必须继续处理，禁止以解释、建议、总结、计划或阶段性成果提前结束；未处理错误按全局错误与决策规则提交 `[?]`，方先生已经决定等待的外部阻塞才使用 `[!]`。不能继续的事项同时更新项目文档中的可审计工作流，写清阻塞原因、下一步动作和相关文件，不得只散落在回复里。",
             "收尾回复必须标注实现状态：已真实接线并验证、已接线未验证、未接线等待信息、被阻塞；禁止把未验证或未接线内容表述为完成。",
             "parent 判断完成当前项目将产生大量持续读写，且项目根不位于 `D:\\ssdpro` 时，必须在进入该阶段前按全局错误与决策规则提交 `[?]`，写明原项目绝对路径、固定工作副本 `D:\\ssdpro\\<项目根目录名>`、预计读写范围和回迁目标，请方先生授权调用 `workcopy.create.POST`；未获授权不得手工或通过其他工具复制、移动、删除项目、切换工作路径或建立替代副本。",
@@ -889,14 +862,14 @@ const global: GlobalSource = {
             `代码任务按 ${nodes.codeStyle} 的结果数据递归算法从最终 result 反向验收本轮结构和既有生产者不变量：每项新增结构具有可达的生产或消费场景及准入证据，本轮孤儿回到真实作用域内联，既有孤儿保留原状并提交位置、影响和建议；涉及 Class 时再按 ${nodes.codeClassStyle} 比较成员、继承和可见性契约。`,
             "收尾时单独审计本轮由 AI 新建的测试文件及配套 fixture、snapshot、mock、benchmark 和复现脚本；它们一律属于 AI 辅助材料，不得留在源码、业务、test 或 tests 目录，不得进入 Git 暂存与提交。仍需用于当前验收时移入仓库根 `.log/` 的任务目录，验收结束后清理；不是本轮创建的既有文件只报告，不擅自移动或删除。",
             "代码存在、台账已写、构建通过、产物生成或日志出现都不等于用户可见交付；涉及安装、窗口、图标、浏览器、进程或页面状态时，完成证据必须包含真实环境中的最新观察。",
-            "Agent 为测试创建的进程、GUI 窗口、浏览器、临时 profile、端口或目录必须记录 owner、可识别标记和退出条件，并与用户实例隔离；收尾或切换任务时只清理已确认由 Agent 创建的资源，禁止为方便而结束用户进程、使用宽泛匹配或清理不明资源。",
+            "AI 为测试创建的进程、GUI 窗口、浏览器、临时 profile、端口或目录必须记录 owner、可识别标记和退出条件，并与用户实例隔离；收尾或切换任务时只清理已确认由 AI 创建的资源，禁止为方便而结束用户进程、使用宽泛匹配或清理不明资源。",
             "只有所有目标项均已处理且完成必要验收后才使用“完成了”或“已处理完”。仍有任务且无需方先生决定时继续实施；不能继续时进入全局错误与决策规则。正确的分析、解释和建议本身都不构成交付，也不能成为停止推进的理由。",
           ],
         },
         {
           title: "文档使用边界",
           items: [
-            "parent 只读取并修改明确交付的文档文件和树节点；watcher 不读取任务文档、任务树、全局要求或 parent 提供的业务上下文，只使用自身 agent 定义、watcher.definition.GET 返回的完整提示词，以及该提示词允许的 watcher MCP 与 agent-to-parent 消息能力。",
+            "parent 只读取并修改明确交付的文档文件和树节点。",
             "任务树使用 Markdown 无序列表：根节点无缩进，每个子节点前保留一个 literal Tab；节点 ID、当前行内容和缩进共同构成可审计定位，不能因为格式化而把历史树压平成普通列表。",
           ],
         },
