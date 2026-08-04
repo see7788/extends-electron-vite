@@ -6,7 +6,7 @@ type SetupRendererStore = ReturnType<typeof setupStore>
 
 const useSetupRendererStore = create<SetupRendererStore>()(
   immer((...storeArguments) => ({
-    ...setupStore(...storeArguments)
+    ...setupStore<SetupRendererStore>(...storeArguments)
   }))
 )
 

@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import adminPackage from "../../package.json";
 
 const connectionJwtCookieName = "zntd-connection-jwt";
@@ -68,7 +68,9 @@ function connectionWithRuntime(connection: Connection | undefined): (Connection 
   return { ...connection, ...(connectionRuntimes[connection.connectionId] || {}) };
 }
 
-export default immerStateCreator<ConnectionStore>((set, get) => ({
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<ConnectionStore, T>>
+): ConnectionStore => ({
   connection: {
     byId: {},
   },
@@ -212,4 +214,6 @@ export default immerStateCreator<ConnectionStore>((set, get) => ({
       },
     },
   },
-}));
+});
+
+export default store;

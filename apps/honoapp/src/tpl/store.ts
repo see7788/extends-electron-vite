@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TextDecoder } from "node:util";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { IndentationText, Node, Project, SyntaxKind } from "ts-morph";
 import CodexOutput from "./output.ts";
 import source from "./source.ts";
@@ -25,7 +25,9 @@ export type TplStore = {
   };
 };
 
-const createTpl = immerStateCreator<TplStore>((set, get) => {
+const createTpl = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<TplStore, T>>
+): TplStore => {
   const sourceCurrent = new Map<"global" | "project", Source>();
   const sourcePath = fileURLToPath(new URL("./source.ts", import.meta.url));
   const workspacePathGlobal = realpathSync(homedir());
@@ -387,6 +389,6 @@ const createTpl = immerStateCreator<TplStore>((set, get) => {
       },
     },
   };
-});
+};
 
 export default createTpl;

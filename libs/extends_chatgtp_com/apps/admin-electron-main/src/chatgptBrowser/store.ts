@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 import LoginState from "extends-electron/main/loginState";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { randomUUID } from "node:crypto";
 
 const chatgptUrl = "https://chatgpt.com/";
@@ -1073,7 +1073,9 @@ function fileDownloadUrlRead(input: { conversationId: string; windowId?: number;
   } });
 }
 
-export default immerStateCreator<ChatgptBrowserStore>((set, get) => {
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<ChatgptBrowserStore, T>>
+): ChatgptBrowserStore => {
   chatgptBrowserStateRead = () => get().chatgptBrowser;
   chatgptBrowserStateSet = (chatgptBrowser) => {
     set((store) => {
@@ -1115,4 +1117,6 @@ export default immerStateCreator<ChatgptBrowserStore>((set, get) => {
       conversationDelete,
     },
   };
-});
+};
+
+export default store;

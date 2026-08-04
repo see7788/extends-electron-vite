@@ -1,4 +1,4 @@
-import immerStateCreator from 'extends-zustand/immerStateCreator'
+import type { ImmerStateCreator } from 'extends-zustand/immerStateCreator'
 import type { LocalCodexWindowBounds } from '../LocalCodexWindow'
 
 type WindowStore = {
@@ -14,7 +14,9 @@ type WindowStore = {
   }
 }
 
-export default immerStateCreator<WindowStore>((set) => ({
+const store = <T extends object = {}>(
+  ...[set]: Parameters<ImmerStateCreator<WindowStore, T>>
+): WindowStore => ({
   window: {
     bounds: { height: 860, width: 1280 },
     isMaximized: false,
@@ -37,4 +39,6 @@ export default immerStateCreator<WindowStore>((set) => ({
       })
     }
   }
-}))
+})
+
+export default store

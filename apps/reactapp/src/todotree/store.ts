@@ -1,4 +1,4 @@
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 
 type TodoTreeNode = {
   id: string;
@@ -42,11 +42,14 @@ const nodeFieldSet = <Field extends keyof Pick<TodoTreeNode, "title" | "status" 
     node[field] = fieldValue;
   }
 };
-export default immerStateCreator<TodoTreeStore>((set) => ({
-  todotree: {
-    nodesById: {},
-  },
-  todotreeActions: {
+export default function <T extends object = {}>(
+  ...[set]: Parameters<ImmerStateCreator<TodoTreeStore, T>>
+): TodoTreeStore {
+  return {
+    todotree: {
+      nodesById: {},
+    },
+    todotreeActions: {
     nodeStatusLabelByStatus: {
       1: "待确认",
       2: "待办",
@@ -134,6 +137,6 @@ export default immerStateCreator<TodoTreeStore>((set) => ({
         });
       });
     },
-  },
-}));
-
+    },
+  };
+}

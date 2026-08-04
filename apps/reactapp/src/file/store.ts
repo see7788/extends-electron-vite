@@ -1,5 +1,5 @@
 import { hc, type InferResponseType } from "hono/client";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import type { Key } from "react";
 import type FileRouter from "honoapp/src/file";
 
@@ -41,7 +41,11 @@ const entriesLoad = async (path?: string) => {
   return response.ok ? response.json() : [];
 };
 
-const createStore = immerStateCreator<{ file: FileState; fileActions: FileActions }>((set) => {
+type Store = { file: FileState; fileActions: FileActions };
+
+const createStore = <T extends object = {}>(
+  ...[set]: Parameters<ImmerStateCreator<Store, T>>
+): Store => {
   const file: FileState = {
     loadedKeys: [],
     opened: false,
@@ -69,6 +73,6 @@ const createStore = immerStateCreator<{ file: FileState; fileActions: FileAction
     },
   };
   return { file, fileActions };
-});
+};
 
 export default createStore;

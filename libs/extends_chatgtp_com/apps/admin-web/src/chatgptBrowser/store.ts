@@ -1,5 +1,5 @@
 import type { AdminWebApi } from "admin-electron-main/admin-web";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { hc } from "hono/client";
 
 type ChatgptBrowserState = {
@@ -38,7 +38,9 @@ export type ChatgptBrowserStore = {
   };
 };
 
-export default immerStateCreator<ChatgptBrowserStore>((set, get) => {
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<ChatgptBrowserStore, T>>
+): ChatgptBrowserStore => {
   const adminWebBasePath = `/${window.location.pathname.split("/").filter(Boolean)[0] || "admin-web"}`;
   const apiClient = hc<AdminWebApi>(window.location.origin)["admin-web"].api.chatgptBrowser;
 
@@ -217,4 +219,6 @@ export default immerStateCreator<ChatgptBrowserStore>((set, get) => {
       },
     },
   };
-});
+};
+
+export default store;

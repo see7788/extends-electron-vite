@@ -1,5 +1,5 @@
 import type { AdminWebApi } from "admin-electron-main/admin-web";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { hc } from "hono/client";
 import topicShare from "../public/topicShare";
 
@@ -38,7 +38,9 @@ export type TopicStore = {
   };
 };
 
-export default immerStateCreator<TopicStore>((set, get) => {
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<TopicStore, T>>
+): TopicStore => {
   const adminWebBasePath = `/${window.location.pathname.split("/").filter(Boolean)[0] || "admin-web"}`;
   const apiClient = hc<AdminWebApi>(window.location.origin)["admin-web"].api.topic;
 
@@ -164,4 +166,6 @@ export default immerStateCreator<TopicStore>((set, get) => {
       },
     },
   };
-});
+};
+
+export default store;

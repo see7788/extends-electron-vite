@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import Register from "mcp-server/public.ts";
 import { z } from "zod";
 import store from "../store";
-
+import pkg from "../../package.json"
 const workspacePathSchema = z.object({
   workspacePath: z.string().min(1).refine(
     workspacePath => existsSync(workspacePath) && statSync(workspacePath).isDirectory(),
@@ -15,7 +15,7 @@ const sourceSchema = workspacePathSchema.extend({
   source: z.string().min(1),
 });
 
-const mcp = new Register().register(
+const mcp = new Register({ namespace:pkg.name }).register(
   "/tpl/source",
   new Hono().onError((error, context) => context.text(error.message, 500)).get("/", zValidator("query", workspacePathSchema), (context) => {
     return context.json(store.getState().tplActions.sourceRead(context.req.valid("query").workspacePath));

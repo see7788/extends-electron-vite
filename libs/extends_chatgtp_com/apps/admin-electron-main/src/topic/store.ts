@@ -1,4 +1,4 @@
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 
 type TopicNode = {
   id: string;
@@ -60,7 +60,9 @@ function nodeCountRead(nodes: TopicNode[]): number {
   return nodes.reduce((count, node) => count + 1 + nodeCountRead(node.children), 0);
 }
 
-export default immerStateCreator<TopicStore>((set, get) => ({
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<TopicStore, T>>
+): TopicStore => ({
   topic: {
     byId: {},
   },
@@ -128,4 +130,6 @@ export default immerStateCreator<TopicStore>((set, get) => ({
       });
     },
   },
-}));
+});
+
+export default store;

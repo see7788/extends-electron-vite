@@ -16,8 +16,8 @@ const userStoreIpcContext: TopicStoreIpcContext = {
 let userWebIpcChannel: TopicWebIpcChannel | undefined;
 
 const useUserWebStore = create<WebBaseTopicStore>()(
-  immer((set, get) => {
-    const state = createTopicStore(userStoreIpcContext)(set, get);
+  immer((set, get, api) => {
+    const state = createTopicStore(userStoreIpcContext)<WebBaseTopicStore>(set, get, api);
     return {
       ...state,
       userActions: {

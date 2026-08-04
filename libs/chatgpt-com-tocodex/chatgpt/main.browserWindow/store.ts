@@ -11,7 +11,7 @@ export default function localCodexStoreCreate(): StoreApi<LocalCodexStore> {
     cwdPersist({
       cwd: app.getPath('userData'),
       initializer: immer((...storeArguments) => ({
-        ...windowStore(...storeArguments)
+        ...windowStore<LocalCodexStore>(...storeArguments)
       })),
       name: 'chatgpt-com-tocodex:v2'
     })

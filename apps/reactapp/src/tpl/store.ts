@@ -1,5 +1,5 @@
 import { hc } from "hono/client";
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import type { Router } from "honoapp/src/routers";
 
 const client = hc<Router>(location.origin);
@@ -23,7 +23,9 @@ type TplActions = {
   };
 };
 
-const createTpl = immerStateCreator<TplState & TplActions>((set) => {
+const createTpl = <T extends object = {}>(
+  ...[set]: Parameters<ImmerStateCreator<TplState & TplActions, T>>
+): TplState & TplActions => {
   return {
     tpl: {},
     tplActions: {
@@ -78,6 +80,6 @@ const createTpl = immerStateCreator<TplState & TplActions>((set) => {
       },
     },
   };
-});
+};
 
 export default createTpl;

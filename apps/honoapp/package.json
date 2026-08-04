@@ -3,11 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "config": {
-    "honoHost": "127.0.0.1",
-    "honoPort": 3005,
-    "honoOtherPort": 3111
-  },
   "exports": {
     "./*": "./*.ts"
   },
@@ -26,7 +21,7 @@
     "windows-named-pipe": "workspace:*",
     "extends-zustand": "workspace:*",
     "extends-ssh": "workspace:*",
-    "hono": "^4.12.18",
+    "hono": "4.12.30",
     "imapflow": "^1.3.3",
     "immer": "10.2.0",
     "mailparser": "^3.9.8",
@@ -64,9 +59,6 @@
     "windows-named-pipe": {
       "injected": true
     }
-  },
-  "bin": {
-    "todo-mcp": "./bin/todo-mcp.js"
   },
   "files": [
     "bin/",

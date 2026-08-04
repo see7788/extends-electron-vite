@@ -1,4 +1,4 @@
-import immerStateCreator from 'extends-zustand/immerStateCreator'
+import type { ImmerStateCreator } from 'extends-zustand/immerStateCreator'
 import type {
   LocalCodexSetupAction,
   LocalCodexSetupState
@@ -29,7 +29,9 @@ const initialState: LocalCodexSetupState = {
   workspaceRoot: undefined
 }
 
-export default immerStateCreator<SetupStore>((set) => ({
+const store = <T extends object = {}>(
+  ...[set]: Parameters<ImmerStateCreator<SetupStore, T>>
+): SetupStore => ({
   setup: {
     actionError: undefined,
     highlightColor: '#52c41a',
@@ -70,4 +72,6 @@ export default immerStateCreator<SetupStore>((set) => ({
       })
     }
   }
-}))
+})
+
+export default store

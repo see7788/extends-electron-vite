@@ -1,4 +1,4 @@
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { hc } from "hono/client";
 // import type chatRouter from "honoapp/src/chat";
 import type { sseRouter } from "honoapp/src/sse";
@@ -14,7 +14,7 @@ type SseMessage_t = {
     stop?: boolean;
 };
 
-const createPush = immerStateCreator<{
+type PushStore = {
     sse: {
         maxId: string;
         targetId: string;
@@ -48,7 +48,11 @@ const createPush = immerStateCreator<{
         nodesLoop(nodeId: string, loopUp?: boolean): Node_t[]
         hookPushReceive: () => void
     }
-}>((set, get) => {
+};
+
+const createPush = <T extends object = {}>(
+    ...[set, get]: Parameters<ImmerStateCreator<PushStore, T>>
+): PushStore => {
     // const chatClient = hc<typeof chatRouter>(location.origin);
     return {
         sse: {
@@ -429,6 +433,6 @@ const createPush = immerStateCreator<{
             },
         },
     };
-});
+};
 
 export default createPush;

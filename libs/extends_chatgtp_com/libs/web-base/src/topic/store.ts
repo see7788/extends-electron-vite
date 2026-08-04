@@ -1,4 +1,4 @@
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import type {
   McpTool,
   TopicConnectionNotice,
@@ -92,7 +92,9 @@ export type TopicStore = {
 };
 
 export default (context: TopicStoreIpcContext) =>
-  immerStateCreator<TopicStore>((set, get) => {
+  <T extends object = {}>(
+    ...[set, get]: Parameters<ImmerStateCreator<TopicStore, T>>
+  ): TopicStore => {
     let eventClose: (() => void) | undefined;
 
     const topicIdFromHashRead = () => {
@@ -353,4 +355,4 @@ export default (context: TopicStoreIpcContext) =>
         },
       },
     };
-  });
+  };

@@ -1,4 +1,4 @@
-import immerStateCreator from "extends-zustand/immerStateCreator";
+import type { ImmerStateCreator } from "extends-zustand/immerStateCreator";
 import { hc } from "hono/client";
 import type { UserWebApi } from "admin-electron-main/user-web";
 import type { ElectronUserBridge, McpTool } from "user-electron-preload/types";
@@ -101,7 +101,9 @@ declare global {
   }
 }
 
-export default immerStateCreator<UserStore>((set, get) => {
+const store = <T extends object = {}>(
+  ...[set, get]: Parameters<ImmerStateCreator<UserStore, T>>
+): UserStore => {
   const userWebBaseName = window.location.pathname.split("/").filter(Boolean)[0] || "user-web";
   const userWebBasePath = `/${userWebBaseName}`;
   const apiClient = hc<UserWebApi>(window.location.origin)["user-web"].api;
@@ -367,4 +369,6 @@ export default immerStateCreator<UserStore>((set, get) => {
       },
     },
   };
-});
+};
+
+export default store;
