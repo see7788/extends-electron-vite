@@ -13,6 +13,6 @@ packages:
   - '../remote-runtimeobj/abstractBase'
   - '../remote-runtimeobj/vscode-plugin-proxy'
   - '../remote-runtimeobj/webrtcsignaling'
-  - '../extends-ssh'
+  - '../extends-ssh/ubuntu-lib'
   - '../extends-vite'
   - '../extends-zustand'

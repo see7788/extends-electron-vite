@@ -1,6 +1,6 @@
 // import honoReactVite from "vite-config-lib/vite";
 import honoReactVite from "vite-config-lib/plugin";
-import ubuntu from "extends-ssh/Ubuntu/index.ts";
+import ubuntu from "ubuntu-lib/index.ts";
 import { defineConfig } from "vite"
 export default defineConfig({
   server: {
