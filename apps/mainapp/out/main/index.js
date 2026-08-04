@@ -1120,11 +1120,10 @@ var packageDirectory = dirname(fileURLToPath(import.meta.url));
 var cwdPath = (...path) => relative(process.cwd(), resolve(packageDirectory, ...path));
 var localCodexRuntimeFiles = {
 	chatGptPreload: preloadPath("local-codex-chatgpt"),
-	setupPreload: preloadPath("local-codex-setup"),
-	setupRenderer: "local-codex-setup"
+	setupPreload: preloadPath("local-codex-setup-preload"),
+	setupRenderer: "local-codex-setup-renderer"
 };
-cwdPath("chatgpt", "local-codex-chatgpt"), cwdPath("chatgpt", "main.browserWindow", "setup", "local-codex-setup");
-cwdPath("chatgpt", "main.browserWindow", "setup", "renderer");
+cwdPath("chatgpt", "local-codex-chatgpt");
 //#endregion
 //#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/protocol.ts
 var localCodexSetupChannels = {
@@ -8997,13 +8996,8 @@ var createStoreImpl = (createState) => {
 };
 var createStore = ((createState) => createState ? createStoreImpl(createState) : createStoreImpl);
 //#endregion
-//#region ../../../extends-zustand/immerStateCreator.ts
-function immerStateCreator(creator) {
-	return creator;
-}
-//#endregion
 //#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/window/store.ts
-var store_default = immerStateCreator((set) => ({
+var store = (...[set]) => ({
 	window: {
 		bounds: {
 			height: 860,
@@ -9029,13 +9023,13 @@ var store_default = immerStateCreator((set) => ({
 			});
 		}
 	}
-}));
+});
 //#endregion
 //#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/store.ts
 function localCodexStoreCreate() {
 	return createStore()(cwdPersist({
 		cwd: app$1.getPath("userData"),
-		initializer: immer((...storeArguments) => ({ ...store_default(...storeArguments) })),
+		initializer: immer((...storeArguments) => ({ ...store(...storeArguments) })),
 		name: "chatgpt-com-tocodex:v2"
 	}));
 }
@@ -9212,7 +9206,11 @@ var LocalCodexWindow = class LocalCodexWindow extends LocalCodexWindow$1 {
 };
 //#endregion
 //#region src/main/index.ts
-app.whenReady().then(() => new LocalCodexWindow().ready).catch((error) => {
+var localCodexWindow;
+app.whenReady().then(async () => {
+	localCodexWindow = new LocalCodexWindow();
+	await localCodexWindow.ready;
+}).catch((error) => {
 	console.error(error);
 	app.quit();
 });

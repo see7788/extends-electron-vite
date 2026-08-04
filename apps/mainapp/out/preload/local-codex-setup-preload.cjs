@@ -6,7 +6,7 @@ var localCodexSetupChannels = {
 	setupStateGet: "local-codex-setup-state-get"
 };
 //#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup/index.tsx
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup-preload/index.tsx
 electron.contextBridge.exposeInMainWorld("localCodexSetup", {
 	action(action) {
 		return electron.ipcRenderer.invoke(localCodexSetupChannels.setupAction, action);

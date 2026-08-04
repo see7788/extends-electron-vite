@@ -2,7 +2,7 @@ import { CopyOutlined, FolderOpenOutlined, ImportOutlined, LoginOutlined, Reload
 import { Button, ConfigProvider, Input, Steps } from 'antd'
 import { useEffect, type ReactNode } from 'react'
 import Hyperspeed from 'extends-react/src/Hyperspeed'
-import type { LocalCodexSetupState } from '../../protocol'
+import type { LocalCodexSetupState } from 'chatgpt-com-tocodex/chatgpt/main.browserWindow/protocol.ts'
 import useSetupRendererStore from './store'
 
 function currentStepGet(state: LocalCodexSetupState): number {

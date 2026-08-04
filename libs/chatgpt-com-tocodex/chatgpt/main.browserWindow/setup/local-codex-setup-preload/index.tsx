@@ -4,7 +4,7 @@ import {
   type LocalCodexSetupAction,
   type LocalCodexSetupActionResult,
   type LocalCodexSetupState
-} from '../../protocol'
+} from 'chatgpt-com-tocodex/chatgpt/main.browserWindow/protocol.ts'
 
 export type LocalCodexSetupBridge = {
   action(action: LocalCodexSetupAction): Promise<LocalCodexSetupActionResult>

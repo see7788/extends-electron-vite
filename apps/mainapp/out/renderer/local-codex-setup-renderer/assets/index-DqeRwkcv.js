@@ -63791,7 +63791,7 @@ var Hyperspeed = ({ effectOptions = DEFAULT_EFFECT_OPTIONS }) => {
 	});
 };
 //#endregion
-//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_dda6a5001a11e55674bc78a70e878fc2/node_modules/zustand/esm/vanilla.mjs
+//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_f12a4aa840783db47fabd958af5669ae/node_modules/zustand/esm/vanilla.mjs
 var createStoreImpl = (createState) => {
 	let state;
 	const listeners = /* @__PURE__ */ new Set();
@@ -63820,7 +63820,7 @@ var createStoreImpl = (createState) => {
 };
 var createStore = ((createState) => createState ? createStoreImpl(createState) : createStoreImpl);
 //#endregion
-//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_dda6a5001a11e55674bc78a70e878fc2/node_modules/zustand/esm/react.mjs
+//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_f12a4aa840783db47fabd958af5669ae/node_modules/zustand/esm/react.mjs
 var identity = (arg) => arg;
 function useStore(api, selector = identity) {
 	const slice = import_react.useSyncExternalStore(api.subscribe, import_react.useCallback(() => selector(api.getState()), [api, selector]), import_react.useCallback(() => selector(api.getInitialState()), [api, selector]));
@@ -64364,7 +64364,7 @@ function currentImpl(value) {
 }
 var produce = new Immer2().produce;
 //#endregion
-//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_dda6a5001a11e55674bc78a70e878fc2/node_modules/zustand/esm/middleware/immer.mjs
+//#region ../../node_modules/.pnpm/zustand@5.0.13_@types+react_f12a4aa840783db47fabd958af5669ae/node_modules/zustand/esm/middleware/immer.mjs
 var immerImpl = (initializer) => (set, get, store) => {
 	store.setState = (updater, replace, ...args) => {
 		return set(typeof updater === "function" ? produce(updater) : updater, replace, ...args);
@@ -64373,12 +64373,7 @@ var immerImpl = (initializer) => (set, get, store) => {
 };
 var immer = immerImpl;
 //#endregion
-//#region ../../../extends-zustand/immerStateCreator.ts
-function immerStateCreator(creator) {
-	return creator;
-}
-//#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/setup/store.ts
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup-renderer/setup/store.ts
 var initialState = {
 	login: "checking",
 	message: "正在接收 Local Codex 状态…",
@@ -64389,7 +64384,7 @@ var initialState = {
 	workspaceReady: false,
 	workspaceRoot: void 0
 };
-var store_default = immerStateCreator((set) => ({
+var store = (...[set]) => ({
 	setup: {
 		actionError: void 0,
 		highlightColor: "#52c41a",
@@ -64430,12 +64425,12 @@ var store_default = immerStateCreator((set) => ({
 			});
 		}
 	}
-}));
+});
 //#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/store.ts
-var useSetupRendererStore = create()(immer((...storeArguments) => ({ ...store_default(...storeArguments) })));
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup-renderer/store.ts
+var useSetupRendererStore = create()(immer((...storeArguments) => ({ ...store(...storeArguments) })));
 //#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/SetupApp.tsx
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup-renderer/SetupApp.tsx
 function currentStepGet(state) {
 	if (state.phase === "ready") return 3;
 	if (!state.mcpReady) return 0;
@@ -64568,7 +64563,7 @@ var styles = {
 	}
 };
 //#endregion
-//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/index.tsx
+//#region ../../libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/local-codex-setup-renderer/index.tsx
 var root = document.getElementById("root");
 if (root === null) throw new Error("Local Codex setup renderer root is missing");
 (0, import_client.createRoot)(root).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(import_react.StrictMode, { children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(SetupApp, {}) }));

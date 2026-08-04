@@ -41,8 +41,8 @@ chatgpt-com-tocodex/
 │       ├── window/                            # 宿主窗口对象 owner
 │       │   └── store.ts                       # `{ window, windowActions }` 持久化窗口切片
 │       └── setup/                             # 宿主主 WebContents 的设置页 owner
-│           ├── preload.ts                     # 设置 bridge 的生产者及其 Window 类型
-│           └── renderer/                      # bridge 消费者
+│           ├── local-codex-setup-preload/     # 独立 workspace 包；设置 bridge 的生产者
+│           └── local-codex-setup-renderer/    # 独立 workspace 包；React bridge 消费者
 │               ├── index.html
 │               ├── index.tsx
 │               ├── SetupApp.tsx
@@ -61,13 +61,13 @@ chatgpt-com-tocodex/
 - 可修改并持久化：工作区路径、主窗口正常位置与尺寸、最大化状态、ChatGPT 登录态复制/粘贴。用户通过系统窗口框架移动、缩放、最大化或还原窗口；原生事件经 `windowActions` 写入库私有仓库。
 - 仅显示：登录状态、Local MCP 工具数、当前 ChatGPT 站点。
 - 不作为普通设置：ChatGPT 受信任域名、会话分区、工具单回合上限、工具清单与命令执行器、窗口最小尺寸、构建输入文件名。它们分别是页面适配器、安全会话、工具协议或 Electron-vite 构建 owner 的固定边界，不从持久化 store 或设置页改写。
-- `chatgpt/main.browserWindow/store.ts` 是库私有主仓库，使用 `extends-zustand/cwdPersist` 与 immer 组合 `window/store.ts`。它将 `window` 的工作区路径、正常 bounds 和最大化状态写入 `app.getPath("userData")/.zustand/chatgpt-com-tocodex%3Av2.json`；没有 `process.cwd()` 默认值，也不迁移旧平铺存储。`setup/renderer/store.ts` 则只组合本 renderer 的 `setup/store.ts`，其中的 `highlightColor` 是 antd `Steps` 的高亮色 owner，不把页面外观配置写回主进程。ChatGPT Cookie 位于 `persist:local-codex-chatgpt` 会话分区，登录态由主进程经系统剪贴板复制或粘贴，文本前缀固定为 `chatgpt-com-tocodex:v1:`。
+- `chatgpt/main.browserWindow/store.ts` 是库私有主仓库，使用 `extends-zustand/cwdPersist` 与 immer 组合 `window/store.ts`。它将 `window` 的工作区路径、正常 bounds 和最大化状态写入 `app.getPath("userData")/.zustand/chatgpt-com-tocodex%3Av2.json`；没有 `process.cwd()` 默认值，也不迁移旧平铺存储。`local-codex-setup-renderer/store.ts` 则只组合本 renderer 的 `setup/store.ts`，其中的 `highlightColor` 是 antd `Steps` 的高亮色 owner，不把页面外观配置写回主进程。ChatGPT Cookie 位于 `persist:local-codex-chatgpt` 会话分区，登录态由主进程经系统剪贴板复制或粘贴，文本前缀固定为 `chatgpt-com-tocodex:v1:`。
 - 根 `package.json` 的 `config.electronRemoteDebuggingPort` 是宿主启动前配置，开发脚本从它读取 Electron DevTools 端口；修改后重启根 `pnpm dev`。它不属于运行后的库设置页或持久化 store。
 - 发布配置：更新地址、`appId`、产品名和可执行文件名；当前仍有模板占位值，未配置时应明确禁用更新检查。
 
 ## Electron-vite 接入
 
-功能库只导出 `userConfig.ts` 配置片段；唯一的宿主 `electron.vite.config.ts` 使用 `mergeConfig` 合并它们，再调用一次 `defineConfig(...)`。宿主配置负责显式检查所有具名 preload、renderer 输入是否重名。
+主库导出 `userConfig.ts` 配置片段和 ChatGPT preload 项目；`local-codex-setup-preload`、`local-codex-setup-renderer` 分别通过自己的 `project.ts` 导出构建项目。宿主必须在 `package.json` 声明这三个 workspace 依赖，并在唯一的 `electron.vite.config.ts` 中显式传入项目、使用 `mergeConfig` 合并配置，再调用一次 `defineConfig(...)`。
 
 ```ts
 import { defineConfig, mergeConfig } from 'electron-vite'
@@ -81,10 +81,10 @@ export default defineConfig(
 当多个 pnpm 包提供 renderer HTML 时，宿主 renderer `root` 必须是本仓库共同根目录，并明确设置宿主 renderer 输出目录。当前构建固定输出：
 
 - `out/preload/local-codex-chatgpt.cjs`
-- `out/preload/local-codex-setup.cjs`
-- `out/renderer/libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/index.html`
+- `out/preload/local-codex-setup-preload.cjs`
+- `out/renderer/local-codex-setup-renderer/index.html`
 
-开发环境由 electron-vite 明确提供 `ELECTRON_RENDERER_URL`；宿主窗口的设置 WebContents 加载该 URL 下的 `libs/chatgpt-com-tocodex/chatgpt/main.browserWindow/setup/renderer/index.html`。生产环境加载上列 renderer 输出文件。缺少开发 URL 会明确失败，不猜测端口或回退路径。
+开发环境由 electron-vite 明确提供 `ELECTRON_RENDERER_URL`；宿主窗口的设置 WebContents 加载该 URL 下的 `local-codex-setup-renderer/`。生产环境加载上列 renderer 输出文件。缺少开发 URL 会明确失败，不猜测端口或回退路径。
 
 --------------------------
 

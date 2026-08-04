@@ -35,12 +35,9 @@
     "electron-vite": "6.0.0-beta.1",
     "electron-vite-config-lib": "workspace:*",
     "extends-vite": "workspace:*",
+    "local-codex-setup-preload": "workspace:*",
+    "local-codex-setup-renderer": "workspace:*",
     "typescript": "^5.9.3",
     "vite": "8.1.5"
-  },
-  "dependenciesMeta": {
-    "electron-vite-config-lib": {
-      "injected": true
-    }
   }
 }

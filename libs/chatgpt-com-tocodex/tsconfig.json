@@ -23,6 +23,8 @@
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "chatgpt/main.browserWindow/setup/local-codex-setup-preload",
+    "chatgpt/main.browserWindow/setup/local-codex-setup-renderer"
   ]
 }

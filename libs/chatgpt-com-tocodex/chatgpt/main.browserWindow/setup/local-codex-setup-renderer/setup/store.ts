@@ -2,7 +2,7 @@ import type { ImmerStateCreator } from 'extends-zustand/immerStateCreator'
 import type {
   LocalCodexSetupAction,
   LocalCodexSetupState
-} from '../../../protocol'
+} from 'chatgpt-com-tocodex/chatgpt/main.browserWindow/protocol.ts'
 
 type SetupStore = {
   setup: {

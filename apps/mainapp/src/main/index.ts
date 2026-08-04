@@ -1,8 +1,13 @@
-import { app} from 'electron/main'
+import { app } from 'electron/main'
 import { LocalCodexWindow } from 'chatgpt-com-tocodex'
 
+let localCodexWindow: LocalCodexWindow | undefined
+
 app.whenReady()
-  .then(() =>console.log("111111"))
+  .then(async () => {
+    localCodexWindow = new LocalCodexWindow()
+    await localCodexWindow.ready
+  })
   .catch((error: unknown) => {
     console.error(error)
     app.quit()

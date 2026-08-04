@@ -11,17 +11,12 @@ const cwdPath = (...path: string[]) => relative(
 
 export const localCodexRuntimeFiles = {
   chatGptPreload: preloadPath('local-codex-chatgpt'),
-  setupPreload: preloadPath('local-codex-setup'),
-  setupRenderer: 'local-codex-setup'
+  setupPreload: preloadPath('local-codex-setup-preload'),
+  setupRenderer: 'local-codex-setup-renderer'
 } as const
 
-export const localCodexPreloadPkg: [path: string][] = [
-  [cwdPath('chatgpt', 'local-codex-chatgpt')],
-  [cwdPath('chatgpt', 'main.browserWindow', 'setup', 'local-codex-setup')]
-]
-
-export const localCodexRendererPkg: [path: string][] = [
-  [cwdPath('chatgpt', 'main.browserWindow', 'setup', 'renderer')]
+export const localCodexChatGptPreloadProject: [path: string] = [
+  cwdPath('chatgpt', 'local-codex-chatgpt')
 ]
 
 const localCodexUserConfig = {
