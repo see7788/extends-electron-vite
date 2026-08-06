@@ -16,17 +16,15 @@
     "@hono/zod-validator": "^0.8.0",
     "@openai/codex-sdk": "^0.136.0",
     "esbuild": "^0.28.1",
-    "mcp-server": "workspace:*",
+    "mcp-server-lib": "workspace:*",
     "vite-config-lib": "workspace:*",
-    "windows-named-pipe": "workspace:*",
     "extends-zustand": "workspace:*",
     "ubuntu-lib": "workspace:*",
     "hono": "4.12.30",
     "imapflow": "^1.3.3",
     "immer": "10.2.0",
     "mailparser": "^3.9.8",
-    "mcpcreate-lib": "workspace:*",
-    "todocli-src-lib": "workspace:*",
+    "create-todo-src": "workspace:*",
     "openai": "^6.37.0",
     "ts-morph": "^28.0.0",
     "typescript": "5.9.3",
@@ -42,23 +40,6 @@
     "@types/vscode": "^1.120.0",
     "tsup": "^8.5.1",
     "vite": "^8.0.11"
-  },
-  "dependenciesMeta": {
-    "extends-zustand": {
-      "injected": true
-    },
-    "mcpcreate-lib": {
-      "injected": true
-    },
-    "todocli-src-lib": {
-      "injected": true
-    },
-    "vite-config-lib": {
-      "injected": true
-    },
-    "windows-named-pipe": {
-      "injected": true
-    }
   },
   "files": [
     "bin/",
