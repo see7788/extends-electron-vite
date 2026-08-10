@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 
 const entryNamePattern = /^[A-Za-z0-9._~-]+$/;
-
+export type reactPkg_t= [path: `../${string}`, define?: Record<string, unknown>]
 export const isEntryName = (name: string): boolean => (
   name !== "."
   && name !== ".."
@@ -19,7 +19,7 @@ const projectDefine = (define?: Record<string, unknown>) => Object.fromEntries(
 );
 
 export const packageProjects = (
-  ...reactPkg: [path: string, define?: Record<string, unknown>][]
+  ...reactPkg:reactPkg_t[]
 ) => {
   if (reactPkg.length === 0) throw new Error("At least one React project is required");
   if (reactPkg.some(([path]) => isAbsolute(path))) {

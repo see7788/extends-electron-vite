@@ -1,0 +1,92 @@
+{
+  "name": "vscode-plugin",
+  "version": "0.2.1",
+  "publisher": "see7788",
+  "displayName": "试试",
+  "description": "VS Code React 开发抽屉。",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/see7788/extends-electron-vite.git"
+  },
+  "icon": "src/media/icon.png",
+  "categories": [
+    "Other"
+  ],
+  "private": true,
+  "type": "module",
+  "main": "./dist/node.js",
+  "files": [
+    "dist/",
+    "LICENSE",
+    "src/media/icon.png",
+    "src/media/icon-activity.png"
+  ],
+  "engines": {
+    "vscode": "^1.120.0"
+  },
+  "extensionKind": ["ui"],
+  "contributes": {
+    "viewsContainers": {
+    "secondarySidebar": [
+        {
+          "id": "see7788-vscode-plugin",
+        "title": "试试",
+          "icon": "src/media/icon-activity.png"
+        }
+      ]
+    },
+    "views": {
+      "see7788-vscode-plugin": [
+        {
+          "id": "see7788.vscode-plugin.vscodeDrawer",
+          "name": "试试",
+          "type": "webview",
+          "visibility": "collapsed",
+          "icon": "src/media/icon-activity.png"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "see7788.vscode-plugin.open",
+        "title": "打开试试",
+        "category": "试试",
+        "icon": "$(zap)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "see7788.vscode-plugin.open",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "vite",
+    "build": "vite build",
+    "package:build": "pnpm run build && vsce package --no-dependencies --out dist/extends-codex.vsix",
+    "package:dev": "vite build --mode development && vsce package --no-dependencies --out dist/extends-codex-dev.vsix",
+    "install:dev": "pnpm run package:dev && code --install-extension dist/extends-codex-dev.vsix --force && pnpm run dev",
+    "install:build": "pnpm run package:build && code --install-extension dist/extends-codex.vsix --force"
+  },
+  "dependencies": {
+    "immer": "10.2.0",
+    "zustand": "5.0.13"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.40",
+    "@types/vscode": "1.120.0",
+    "@vscode/vsce": "3.6.2",
+    "typescript": "5.9.3",
+    "vite": "^8.0.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^5.1.1"
+  }
+}

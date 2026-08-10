@@ -1,5 +1,5 @@
 import type { Plugin } from "vite";
-import { packageProjects } from "../public.ts";
+import { packageProjects ,reactPkg_t} from "../public.ts";
 import renderer from "../renderer.ts";
 
 const httpOrigin = (host: string, port: number) => {
@@ -15,7 +15,7 @@ export default function rendererHonoReact(
     honoHost: string;
     honoPort: [mainPort: number, otherPort: number];
   },
-  ...reactPkg: [path: string, define?: Record<string, unknown>][]
+  ...reactPkg: reactPkg_t[]
 ): {
   main: Plugin;
   renderer: Plugin;

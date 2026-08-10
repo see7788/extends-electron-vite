@@ -2,7 +2,7 @@ import react from "@vitejs/plugin-react";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type UserConfig } from "electron-vite";
-import rendererHonoReact from "electron-vite-config-lib/rendererHonoReactPlugin/plugin";
+import { rendererHonoReact } from "electron-vite-config-lib/rendererReactPlugin/plugin";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const honoReact = rendererHonoReact(

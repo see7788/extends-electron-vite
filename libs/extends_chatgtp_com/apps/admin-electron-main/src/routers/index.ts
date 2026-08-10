@@ -1,5 +1,5 @@
 import { app as electronApp, BrowserWindow } from "electron";
-import { honoServer } from "electron-vite-config-lib/rendererHonoReactPlugin/hono";
+import { honoServer } from "electron-vite-config-lib/rendererReactPlugin/electron";
 import { join } from "node:path";
 import adminPackage from "../../package.json";
 import adminMainStore from "../store";

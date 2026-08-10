@@ -8,30 +8,9 @@
 
 ```text
 electron.vite.config/
-├── rendererHonoReactPlugin/
-│   ├── plugin.ts                              # electron.vite.config.ts 使用
-│   │   └── default(
-│   │         options: {
-│   │           honoHost: string;
-│   │           honoPort: [
-│   │             mainPort: number,            # 页面和接口统一使用；开发由 renderer Vite 监听，生产由 Hono 监听
-│   │             otherPort: number,           # 仅供开发时 Electron main 内部运行 Hono
-│   │           ];
-│   │         },
-│   │         ...reactPkg: [
-│   │           path: string,                  # cwd 相对路径；package.name 作为页面路径和 out/renderer 目录名
-│   │           define?: Record<string, unknown>, # 只在当前 React 项目中生效
-│   │         ][]
-│   │       ): {
-│   │         main: Plugin;                    # 向 Electron main 生产 Hono 运行值
-│   │         renderer: Plugin;                # 使用一个 renderer Vite 运行全部 React 项目
-│   │       }
-│   └── hono.ts                                # Electron main 项目使用
-│       ├── honoServer(hono: Hono): ReturnType<typeof serve> # 使用插件生产的端口启动 Hono
-│       └── honoUrl(name: package.name): string # 返回 mainPort/package.name/ 完整地址
 ├── rendererReactPlugin/
-│   ├── plugin.ts                              # 普通 React renderer 配置使用
-│   │   └── default(
+│   ├── plugin.ts                              # React renderer 配置使用
+│   │   ├── default(
 │   │         options: {
 │   │           otherPort: number,             # 插件内部使用
 │   │         },
@@ -40,10 +19,19 @@ electron.vite.config/
 │   │           define?: Record<string, unknown>, # 只在当前 React 项目中生效
 │   │         ][]
 │   │       ): Plugin                          # 使用一个 renderer Vite 运行全部 React 项目
+│   │   └── rendererHonoReact(
+│   │         options: {
+│   │           honoHost: string;
+│   │           honoPort: [mainPort: number, otherPort: number];
+│   │         },
+│   │         ...reactPkg
+│   │       ): { main: Plugin; renderer: Plugin }
 │   └── electron.ts
-│       └── default(
+│       ├── default(
 │             { webContents, name }: { webContents: WebContents; name: string }
 │           ): Promise<void>                   # 开发 loadURL，生产 loadFile
+│       ├── honoServer(hono: Hono): ReturnType<typeof serve>
+│       └── honoUrl(name: package.name): string
 └── preloadCreate/
     ├── vite/
     │   ├── index.ts                           # electron-vite preload 完整配置
@@ -67,7 +55,7 @@ electron.vite.config/
 // electron.vite.config.ts
 import react from "@vitejs/plugin-react";
 import { defineConfig, type UserConfig } from "electron-vite";
-import rendererHonoReact from "electron-vite-config-lib/rendererHonoReactPlugin/plugin";
+import { rendererHonoReact } from "electron-vite-config-lib/rendererReactPlugin/plugin";
 
 const honoReact = rendererHonoReact(
   {
@@ -107,7 +95,7 @@ import { Hono } from "hono";
 import {
   honoServer,
   honoUrl,
-} from "electron-vite-config-lib/rendererHonoReactPlugin/hono";
+} from "electron-vite-config-lib/rendererReactPlugin/electron";
 
 const routers = new Hono()
   .get("/health", context => context.json({ ok: true }));
