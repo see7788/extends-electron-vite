@@ -1,0 +1,27 @@
+{
+  "name": "electron-vite-config-lib",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./*": "./*.ts"
+  },
+  "peerDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "@hono/node-server": "^1.19.11",
+    "electron": "^39.2.6",
+    "electron-vite": "6.0.0-beta.1",
+    "hono": "^4.12.18",
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.1",
+    "@hono/node-server": "^1.19.11",
+    "@types/node": "^26.0.1",
+    "electron": "^39.2.6",
+    "electron-vite": "6.0.0-beta.1",
+    "hono": "^4.12.18",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.11"
+  }
+}

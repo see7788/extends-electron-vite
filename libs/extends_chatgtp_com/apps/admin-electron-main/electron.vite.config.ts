@@ -2,21 +2,15 @@ import react from "@vitejs/plugin-react";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type UserConfig } from "electron-vite";
-import { rendererHonoReact } from "electron-vite-config-lib/rendererReactPlugin/plugin";
+import mainPlugin from "electron-vite-config-lib/mainPlugin/plugin";
+import rendererPlugin from "electron-vite-config-lib/rendererReactPlugin/plugin";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
-const honoReact = rendererHonoReact(
-  {
-    honoHost: "127.0.0.1",
-    honoPort: [8788, 8789],
-  },
-  ["../admin-web"],
-  ["../user-web"],
-);
+const ports = [8788, 8789] as const;
 
 const hostUserConfig = {
   main: {
-    plugins: [honoReact.main],
+    plugins: [mainPlugin({ ports })],
     resolve: {
       preserveSymlinks: true,
     },
@@ -35,7 +29,13 @@ const hostUserConfig = {
     },
   },
   renderer: {
-    plugins: [react(), honoReact.renderer],
+    plugins: [
+      react(),
+      rendererPlugin({
+        ports,
+        paths: ["../admin-web/index.tsx", "../user-web/index.tsx"],
+      }),
+    ],
   },
 } satisfies UserConfig;
 

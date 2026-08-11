@@ -1,8 +1,10 @@
 import { dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { path_t } from 'electron-vite-config-lib/public'
 
-const localCodexSetupPreloadProject: [path: string] = [
-  relative(process.cwd(), dirname(fileURLToPath(import.meta.url)))
-]
+const path = relative(process.cwd(), dirname(fileURLToPath(import.meta.url)))
+const localCodexSetupPreloadProject = (
+  path.startsWith('.') ? path : `./${path}`
+) as path_t
 
 export default localCodexSetupPreloadProject

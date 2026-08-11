@@ -1,5 +1,5 @@
 import { BrowserWindow } from "electron";
-import { honoUrl } from "electron-vite-config-lib/rendererReactPlugin/electron";
+import { honoUrl } from "electron-vite-config-lib/mainPlugin/hono";
 
 export default class MainBrowser {
   private window: BrowserWindow | undefined;

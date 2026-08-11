@@ -15,7 +15,7 @@ var __copyProps = (to, from, except, desc) => {
 	}
 	return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
 	value: mod,
 	enumerable: true
 }) : target, mod));
@@ -32,22 +32,25 @@ let zustand_middleware = require("zustand/middleware");
 let zustand_middleware_immer = require("zustand/middleware/immer");
 let extends_electron_main_loginState = require("extends-electron/main/loginState");
 extends_electron_main_loginState = __toESM(extends_electron_main_loginState, 1);
-let extends_zustand_immerStateCreator = require("extends-zustand/immerStateCreator");
-extends_zustand_immerStateCreator = __toESM(extends_zustand_immerStateCreator, 1);
 let node_crypto = require("node:crypto");
 let hono_cors = require("hono/cors");
 let hono_streaming = require("hono/streaming");
 let hono_validator = require("hono/validator");
 let hono_cookie = require("hono/cookie");
-//#region node_modules/electron.vite.config/rendererHonoReactPlugin/hono.ts
-var projects = "admin-web,user-web".split(",");
+//#region node_modules/electron-vite-config-lib/mainPlugin/hono.ts
+var port = 8788;
+if (!Number.isInteger(port) || false) throw new Error("process.env.HONO_PORT is invalid");
+var origin = `http://127.0.0.1:${String(port)}`;
+var rendererUrl = process.env.ELECTRON_RENDERER_URL;
+var entryNamePattern = /^[A-Za-z0-9._~-]+$/;
 var staticApp = new hono.Hono().use("*", (0, _hono_node_server_serve_static.serveStatic)({ root: electron.app.getAppPath() }));
 var honoServer = (hono$1) => (0, _hono_node_server.serve)({
 	fetch: async (request) => {
 		const response = await hono$1.fetch(request);
+		if (rendererUrl || response.status !== 404) return response;
 		const url = new URL(request.url);
 		const name = url.pathname.split("/")[1];
-		if (response.status !== 404 || !name || !projects.includes(name)) return response;
+		if (!name || !entryNamePattern.test(name)) return response;
 		url.pathname = `/out/renderer${url.pathname}`;
 		const staticResponse = await staticApp.fetch(new Request(url, request));
 		if (staticResponse.status !== 404 || request.method !== "GET" || !request.headers.get("accept")?.includes("text/html")) return staticResponse;
@@ -55,9 +58,12 @@ var honoServer = (hono$1) => (0, _hono_node_server.serve)({
 		return staticApp.fetch(new Request(url, request));
 	},
 	hostname: "127.0.0.1",
-	port: 8788
+	port
 });
-var honoUrl = (name) => new URL(`/${name}/`, "http://127.0.0.1:8788").toString();
+var honoUrl = (name) => {
+	if (!entryNamePattern.test(name)) throw new Error(`Invalid renderer name: ${name}`);
+	return new URL(`/${name}/`, rendererUrl || origin).toString();
+};
 var package_default = {
 	name: "admin-electron-main",
 	version: "0.1.0",
@@ -82,8 +88,9 @@ var package_default = {
 	devDependencies: {
 		"@vitejs/plugin-react": "5.2.0",
 		"@types/node": "22.18.6",
-		"electron.vite.config": "workspace:*",
+		"electron-vite-config-lib": "workspace:*",
 		"electron-vite": "6.0.0-beta.1",
+		"extends-vite": "workspace:*",
 		"typescript": "5.8.3",
 		"vite": "8.1.5"
 	}
@@ -962,7 +969,7 @@ function fileDownloadUrlRead(input) {
 		}
 	});
 }
-var store_default$2 = (0, extends_zustand_immerStateCreator.default)((set, get) => {
+var store$2 = (...[set, get]) => {
 	chatgptBrowserStateRead = () => get().chatgptBrowser;
 	chatgptBrowserStateSet = (chatgptBrowser) => {
 		set((store) => {
@@ -1001,7 +1008,7 @@ var store_default$2 = (0, extends_zustand_immerStateCreator.default)((set, get) 
 			conversationDelete
 		}
 	};
-});
+};
 //#endregion
 //#region src/connection/store.ts
 var connectionJwtCookieName = "zntd-connection-jwt";
@@ -1018,7 +1025,7 @@ function connectionWithRuntime(connection) {
 		...connectionRuntimes[connection.connectionId] || {}
 	};
 }
-var store_default$1 = (0, extends_zustand_immerStateCreator.default)((set, get) => ({
+var store$1 = (...[set, get]) => ({
 	connection: { byId: {} },
 	connectionActions: {
 		identity: {
@@ -1153,13 +1160,13 @@ var store_default$1 = (0, extends_zustand_immerStateCreator.default)((set, get) 
 			}
 		}
 	}
-}));
+});
 //#endregion
 //#region src/topic/store.ts
 function nodeCountRead(nodes) {
 	return nodes.reduce((count, node) => count + 1 + nodeCountRead(node.children), 0);
 }
-var store_default = (0, extends_zustand_immerStateCreator.default)((set, get) => ({
+var store = (...[set, get]) => ({
 	topic: { byId: {} },
 	topicActions: {
 		has(topicId) {
@@ -1225,14 +1232,14 @@ var store_default = (0, extends_zustand_immerStateCreator.default)((set, get) =>
 			});
 		}
 	}
-}));
+});
 //#endregion
 //#region src/store.ts
 (0, immer.enableMapSet)();
 var adminMainStoreCreate = (set, get, api) => ({
-	...store_default$2(set, get, api),
-	...store_default(set, get, api),
-	...store_default$1(set, get, api)
+	...store$2(set, get, api),
+	...store(set, get, api),
+	...store$1(set, get, api)
 });
 var filePath = (0, node_path.join)(process.cwd(), ".zustand", `${package_default.name}.json`);
 var storage = {
@@ -1629,7 +1636,7 @@ var user_web_ipc_default$1 = new hono.Hono().basePath("/user-web/api/connection"
 	(0, hono_cookie.setCookie)(ctx, store.connectionActions.identity.connectionJwtCookieNameRead(), store.connectionActions.identity.connectionJwtIssue(connection.connectionId), {
 		path: "/",
 		sameSite: "Lax",
-		maxAge: 3600 * 24 * 365
+		maxAge: 31536e3
 	});
 	return ctx.json({ connectionId: connection.connectionId });
 }).post("/identity/offline", (ctx) => {
