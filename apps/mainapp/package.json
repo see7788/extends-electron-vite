@@ -6,6 +6,9 @@
   "type": "module",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
+  "config": {
+    "electronUpdateGuid": "c58d200b-4af3-51cc-9204-f361c4d09dae"
+  },
   "scripts": {
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
