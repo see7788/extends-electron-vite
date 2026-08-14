@@ -102,10 +102,11 @@ const releaseIdentityRead = (): ReleaseIdentity => {
   if (typeof pkg.version !== "string" || !pkg.version.trim()) {
     throw new Error("package.json#version 必须是非空字符串。");
   }
+  if (typeof pkg.description !== "string" || !pkg.description.trim()) {
+    throw new Error("package.json#description 必须是非空字符串。");
+  }
   const name = pkg.name.trim();
-  const notes = typeof pkg.description === "string" && pkg.description.trim()
-    ? pkg.description.trim()
-    : `${name} ${pkg.version.trim()}`;
+  const notes = pkg.description.trim();
   // tag 使用当前子项目名，避免 pnpm 多包仓库中的相同版本号相互冲突。
   const tagName = name.replace(/^@/, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
   const version = pkg.version.trim();
