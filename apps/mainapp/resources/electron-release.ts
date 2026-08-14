@@ -17,6 +17,7 @@ type PackageJson = {
 } & Record<string, unknown>;
 
 type ReleaseIdentity = {
+  notes: string;
   tag: string;
   tagPrefix: string;
   title: string;
@@ -102,11 +103,15 @@ const releaseIdentityRead = (): ReleaseIdentity => {
     throw new Error("package.json#version 必须是非空字符串。");
   }
   const name = pkg.name.trim();
+  const notes = typeof pkg.description === "string" && pkg.description.trim()
+    ? pkg.description.trim()
+    : `${name} ${pkg.version.trim()}`;
   // tag 使用当前子项目名，避免 pnpm 多包仓库中的相同版本号相互冲突。
   const tagName = name.replace(/^@/, "").replace(/[^a-zA-Z0-9._-]+/g, "-");
   const version = pkg.version.trim();
   const tagPrefix = `${tagName}-v`;
   return {
+    notes,
     tag: `${tagPrefix}${version}`,
     tagPrefix,
     title: `${name} ${version}`,
@@ -184,6 +189,7 @@ const stageClear = () => rmSync(stageRoot, { force: true, recursive: true });
 const releasePrepare = (
   tag: string,
   title: string,
+  notes: string,
   repository: Repository,
   env: NodeJS.ProcessEnv,
 ) => {
@@ -200,9 +206,11 @@ const releasePrepare = (
     // 先建立唯一草稿，避免 electron-builder 并行上传资产时创建重复草稿。
     run(
       "gh",
-      ["release", "create", tag, "--repo", slug, "--draft", "--title", title, "--notes", ""],
+      ["release", "create", tag, "--repo", slug, "--draft", "--title", title, "--notes", notes],
       env,
     );
+  } else {
+    run("gh", ["release", "edit", tag, "--repo", slug, "--title", title, "--notes", notes], env);
   }
 };
 
@@ -225,7 +233,7 @@ const main = () => {
   run("pnpm", ["build"], env);
   const runtimeDependencies = runtimeDependenciesRead();
   stagePrepare(runtimeDependencies);
-  releasePrepare(release.tag, release.title, repository, env);
+  releasePrepare(release.tag, release.title, release.notes, repository, env);
   try {
     run("pnpm", [
       "exec",
