@@ -106,7 +106,7 @@ const deviceIdRead = () => {
 
 const progressClear = () => windowGet()?.setProgressBar(-1);
 
-export const electronNotify = (text: string): void => {
+const notify = (text: string): void => {
   const show = () => {
     if (!Notification.isSupported()) {
       console.info(text);
@@ -120,7 +120,7 @@ export const electronNotify = (text: string): void => {
 
 const updateInstall = (version: string) => {
   progressClear();
-  electronNotify(`新版本 ${version} 已下载完成，3 秒后自动重启安装`);
+  notify(`新版本 ${version} 已下载完成，3 秒后自动重启安装`);
   setTimeout(() => autoUpdater.quitAndInstall(false, true), installDelay);
 };
 
@@ -135,7 +135,7 @@ const updateStart = () => {
     console.error("Electron update failed", error);
   });
   autoUpdater.on("update-available", info => {
-    electronNotify(`发现新版本 ${info.version}，正在下载更新`);
+    notify(`发现新版本 ${info.version}，正在下载更新`);
   });
   autoUpdater.on("update-not-available", progressClear);
   autoUpdater.on("download-progress", progress => {
@@ -175,7 +175,7 @@ const ready = async (): Promise<ElectronUpdateReady> => {
     executablePath: process.execPath,
     initialUrl: urlRead(process.argv),
     isPackaged: app.isPackaged,
-    notify: electronNotify,
+    notify,
     platform: process.platform,
     userId: persistedIdRead(".user-id"),
     userDataPath: app.getPath("userData"),
