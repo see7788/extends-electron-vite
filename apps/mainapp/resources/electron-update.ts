@@ -6,7 +6,7 @@ import { app, BrowserWindow, dialog, Notification } from "electron";
 import electronUpdater from "electron-updater";
 
 const { autoUpdater } = electronUpdater;
-const installDelay = 3_000;
+const updateCheckInterval = 5 * 60_000;
 
 export type ElectronUpdateReady = Readonly<{
   appName: string;
@@ -24,6 +24,8 @@ export type ElectronUpdateReady = Readonly<{
 
 let readyPromise: Promise<ElectronUpdateReady> | undefined;
 let updateStarted = false;
+let updateChecking = false;
+let updateCheckTimer: NodeJS.Timeout | undefined;
 let fatalErrorReported = false;
 
 const errorTextRead = (error: unknown) => error instanceof Error
@@ -129,10 +131,32 @@ const notify = (text: string): void => {
   else void app.whenReady().then(show);
 };
 
-const updateInstall = (version: string) => {
+const updateDownloaded = (version: string) => {
+  if (updateCheckTimer) clearInterval(updateCheckTimer);
   progressClear();
-  notify(`新版本 ${version} 已下载完成，3 秒后自动重启安装`);
-  setTimeout(() => autoUpdater.quitAndInstall(false, true), installDelay);
+  notify(`新版本 ${version} 已下载完成，退出软件后自动安装`);
+};
+
+const updateCheck = () => {
+  if (updateChecking) return;
+  updateChecking = true;
+  void autoUpdater.checkForUpdates().catch(error => {
+    updateChecking = false;
+    progressClear();
+    console.error("Electron update check failed", error);
+  });
+};
+
+const updateCheckTimerStart = () => {
+  if (updateCheckTimer) return;
+  updateCheckTimer = setInterval(updateCheck, updateCheckInterval);
+  updateCheckTimer.unref();
+};
+
+const updateCheckTimerStop = () => {
+  if (!updateCheckTimer) return;
+  clearInterval(updateCheckTimer);
+  updateCheckTimer = undefined;
 };
 
 const updateStart = () => {
@@ -142,21 +166,26 @@ const updateStart = () => {
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.disableWebInstaller = true;
   autoUpdater.on("error", error => {
+    updateChecking = false;
+    updateCheckTimerStart();
     progressClear();
     console.error("Electron update failed", error);
   });
   autoUpdater.on("update-available", info => {
+    updateChecking = false;
+    updateCheckTimerStop();
     notify(`发现新版本 ${info.version}，正在下载更新`);
   });
-  autoUpdater.on("update-not-available", progressClear);
+  autoUpdater.on("update-not-available", () => {
+    updateChecking = false;
+    progressClear();
+  });
   autoUpdater.on("download-progress", progress => {
     windowGet()?.setProgressBar(Math.max(0, Math.min(1, progress.percent / 100)));
   });
-  autoUpdater.once("update-downloaded", info => updateInstall(info.version));
-  void autoUpdater.checkForUpdates().catch(error => {
-    progressClear();
-    console.error("Electron update check failed", error);
-  });
+  autoUpdater.once("update-downloaded", info => updateDownloaded(info.version));
+  updateCheckTimerStart();
+  updateCheck();
 };
 
 const ready = async (): Promise<ElectronUpdateReady> => {
