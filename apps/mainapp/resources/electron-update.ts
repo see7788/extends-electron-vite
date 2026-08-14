@@ -16,6 +16,7 @@ export type ElectronUpdateReady = Readonly<{
   executablePath: string;
   initialUrl?: string;
   isPackaged: boolean;
+  notify(text: string): void;
   platform: NodeJS.Platform;
   userId: string;
   userDataPath: string;
@@ -105,14 +106,21 @@ const deviceIdRead = () => {
 
 const progressClear = () => windowGet()?.setProgressBar(-1);
 
-const notify = (body: string) => {
-  if (!Notification.isSupported()) return;
-  new Notification({ title: app.name, body }).show();
+export const electronNotify = (text: string): void => {
+  const show = () => {
+    if (!Notification.isSupported()) {
+      console.info(text);
+      return;
+    }
+    new Notification({ title: app.name, body: text }).show();
+  };
+  if (app.isReady()) show();
+  else void app.whenReady().then(show);
 };
 
 const updateInstall = (version: string) => {
   progressClear();
-  notify(`新版本 ${version} 已下载完成，3 秒后自动重启安装`);
+  electronNotify(`新版本 ${version} 已下载完成，3 秒后自动重启安装`);
   setTimeout(() => autoUpdater.quitAndInstall(false, true), installDelay);
 };
 
@@ -127,7 +135,7 @@ const updateStart = () => {
     console.error("Electron update failed", error);
   });
   autoUpdater.on("update-available", info => {
-    notify(`发现新版本 ${info.version}，正在下载更新`);
+    electronNotify(`发现新版本 ${info.version}，正在下载更新`);
   });
   autoUpdater.on("update-not-available", progressClear);
   autoUpdater.on("download-progress", progress => {
@@ -167,6 +175,7 @@ const ready = async (): Promise<ElectronUpdateReady> => {
     executablePath: process.execPath,
     initialUrl: urlRead(process.argv),
     isPackaged: app.isPackaged,
+    notify: electronNotify,
     platform: process.platform,
     userId: persistedIdRead(".user-id"),
     userDataPath: app.getPath("userData"),
