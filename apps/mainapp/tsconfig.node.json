@@ -10,5 +10,5 @@
     "composite": true,
     "types": ["electron-vite/node"]
   },
-  "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*"]
+  "include": ["electron.vite.config.*", "resources/electron-update.ts", "resources/electron-release.ts", "src/main/**/*", "src/preload/**/*"]
 }

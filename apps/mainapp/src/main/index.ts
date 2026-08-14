@@ -1,12 +1,14 @@
-import { app } from 'electron/main'
-import { LocalCodexWindow } from 'chatgpt-com-tocodex'
+import { app, BrowserWindow } from 'electron/main'
+import electronUpdate from '../../resources/electron-update'
 
-let localCodexWindow: LocalCodexWindow | undefined
+let localCodexWindow: BrowserWindow | undefined
 
-app.whenReady()
-  .then(async () => {
-    localCodexWindow = new LocalCodexWindow()
-    await localCodexWindow.ready
+electronUpdate()
+  .then(async ({ initialUrl }) => {
+    localCodexWindow = new BrowserWindow()
+    await localCodexWindow.loadURL(
+      initialUrl ?? "data:text/html;charset=utf-8,<h1>Electron test</h1>",
+    );
   })
   .catch((error: unknown) => {
     console.error(error)

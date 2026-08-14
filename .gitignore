@@ -4,6 +4,7 @@ dist
 .DS_Store
 .eslintcache
 *.log*
+*.tsbuildinfo
 out/**
 node_modules/
 .pnpm-store/**
@@ -13,3 +14,4 @@ node_modules/
 **/**.bak
 .dist/**
 .zustand/**
+**/.dist/

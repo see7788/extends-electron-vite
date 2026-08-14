@@ -1,8 +1,8 @@
 {
   "name": "mainapp",
-  "version": "1.0.1",
+  "version": "1.0.8",
   "description": "An Electron application with React and TypeScript",
-  "main": "./out/main/index.js",
+  "main": "./.dist/out/main/index.js",
   "type": "module",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
@@ -14,30 +14,32 @@
     "dev": "electron-vite dev --watch",
     "build": "npm run typecheck && electron-vite build",
     "postinstall": "electron-builder install-app-deps",
-    "build:unpack": "npm run build && electron-builder --dir",
-    "build:win": "npm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:unpack": "pnpm build && electron-builder --config resources/electron-builder.yml --dir",
+    "build:win": "pnpm build && electron-builder --config resources/electron-builder.yml --win",
+    "build:mac": "pnpm build && electron-builder --config resources/electron-builder.yml --mac",
+    "build:linux": "pnpm build && electron-builder --config resources/electron-builder.yml --linux",
+    "release": "tsx resources/electron-release.ts"
   },
   "dependencies": {
     "chatgpt-com-tocodex": "workspace:*",
-    "electron-updater": "^6.3.9",
+    "electron-updater": "^6.8.9",
     "extends-hono": "workspace:*",
     "honoapp": "workspace:*",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@types/node": "^22.19.1",
+    "@types/node": "^22.20.1",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "^39.2.6",
-    "electron-builder": "^26.0.12",
+    "electron-builder": "^26.15.3",
     "electron-vite": "6.0.0-beta.1",
     "electron-vite-config-lib": "workspace:*",
     "extends-vite": "workspace:*",
     "local-codex-setup-preload": "workspace:*",
     "local-codex-setup-renderer": "workspace:*",
     "typescript": "^5.9.3",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "tsx": "^4.20.6"
   }
 }
