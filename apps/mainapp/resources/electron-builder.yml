@@ -1,4 +1,4 @@
-appId: 'mainapp'
+appId: 'com.electron.mainapp'
 asar: true
 directories:
   buildResources: 'resources'
@@ -39,7 +39,6 @@ win:
     - nsis
 nsis:
   artifactName: '${productName}-${version}-windows-${arch}-setup.${ext}'
-  guid: 'c58d200b-4af3-51cc-9204-f361c4d09dae'
   include: 'resources/electron-installer.nsh'
   oneClick: true
   perMachine: false
