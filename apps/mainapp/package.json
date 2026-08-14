@@ -1,6 +1,6 @@
 {
   "name": "mainapp",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "An Electron application with React and TypeScript",
   "main": "./.dist/out/main/index.js",
   "type": "module",
