@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { createRequire } from "node:module";
 import { basename, dirname, join } from "node:path";
-import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { execFileSync, spawnSync, type SpawnSyncReturns } from "node:child_process";
 
 type PackageJson = {
   name?: unknown;
@@ -57,6 +57,18 @@ const run = (command: string, args: string[], env: NodeJS.ProcessEnv) => {
   if (result.status !== 0) {
     throw new Error(`${command} 执行失败，退出码：${result.status ?? "未知"}`);
   }
+};
+
+const repositoryRead = () => {
+  const repository = execFileSync(
+    "gh",
+    ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
+    { cwd, encoding: "utf8", windowsHide: true },
+  ).trim();
+  if (!/^[^/]+\/[^/]+$/.test(repository)) {
+    throw new Error("无法取得当前 GitHub 仓库名称。");
+  }
+  return repository;
 };
 
 const versionNextRead = (version: string) => {
@@ -159,6 +171,7 @@ const stageClear = () => rmSync(stageRoot, { force: true, recursive: true });
 
 const releasePublish = (
   release: ReleaseIdentity,
+  repository: string,
   outputPath: string,
   env: NodeJS.ProcessEnv,
 ) => {
@@ -167,7 +180,18 @@ const releasePublish = (
     .map(entry => join(outputPath, entry.name));
   run(
     "gh",
-    ["release", "create", release.tag, ...assets, "--title", release.title, "--notes", release.notes],
+    [
+      "release",
+      "create",
+      release.tag,
+      ...assets,
+      "--repo",
+      repository,
+      "--title",
+      release.title,
+      "--notes",
+      release.notes,
+    ],
     env,
   );
 };
@@ -175,6 +199,8 @@ const releasePublish = (
 const main = () => {
   // gh 与 electron-builder 是第三方命令，其底层构建日志可能仍然显示英文。
   const release = releaseIdentityRead();
+  const repository = repositoryRead();
+  const [owner, repo] = repository.split("/");
   const env = process.env;
   const outputPath = join(cwd, ".dist", "release", release.version);
 
@@ -192,11 +218,13 @@ const main = () => {
       "--publish",
       "never",
       `--config.directories.output=${outputPath}`,
+      `--config.publish.owner=${owner}`,
+      `--config.publish.repo=${repo}`,
     ], env);
   } finally {
     stageClear();
   }
-  releasePublish(release, outputPath, env);
+  releasePublish(release, repository, outputPath, env);
 };
 
 try {

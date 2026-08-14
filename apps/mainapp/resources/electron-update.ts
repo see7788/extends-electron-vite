@@ -41,6 +41,14 @@ const fatalErrorReport = (error: unknown) => {
 
 process.on("uncaughtException", fatalErrorReport);
 process.on("unhandledRejection", fatalErrorReport);
+app.on("browser-window-created", (_event, window) => {
+  const titleApply = () => window.setTitle(app.name);
+  titleApply();
+  window.on("page-title-updated", event => {
+    event.preventDefault();
+    titleApply();
+  });
+});
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
