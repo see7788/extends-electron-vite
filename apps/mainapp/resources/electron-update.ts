@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { app, BrowserWindow, Notification } from "electron";
+import { app, BrowserWindow, dialog, Notification } from "electron";
 import electronUpdater from "electron-updater";
 
 const { autoUpdater } = electronUpdater;
@@ -23,6 +23,26 @@ export type ElectronUpdateReady = Readonly<{
 
 let readyPromise: Promise<ElectronUpdateReady> | undefined;
 let updateStarted = false;
+let fatalErrorReported = false;
+
+const errorTextRead = (error: unknown) => error instanceof Error
+  ? error.stack ?? error.message
+  : String(error);
+
+const fatalErrorReport = (error: unknown) => {
+  if (fatalErrorReported) return;
+  fatalErrorReported = true;
+  const message = errorTextRead(error);
+  console.error(message);
+  dialog.showErrorBox(`${app.name} 主进程错误`, message);
+  app.exit(1);
+};
+
+process.on("uncaughtException", fatalErrorReport);
+process.on("unhandledRejection", fatalErrorReport);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
 
 const windowGet = () => BrowserWindow.getAllWindows().find(window => !window.isDestroyed());
 
