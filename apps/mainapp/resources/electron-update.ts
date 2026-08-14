@@ -96,7 +96,7 @@ const fatalErrorReport = (error: unknown) => {
 process.on("uncaughtException", fatalErrorReport);
 process.on("unhandledRejection", fatalErrorReport);
 app.on("browser-window-created", (_event, window) => {
-  const titleApply = () => window.setTitle(app.name);
+  const titleApply = () => window.setTitle(`${app.name} ${app.getVersion()}`);
   titleApply();
   window.on("page-title-updated", event => {
     event.preventDefault();

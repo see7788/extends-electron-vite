@@ -44,7 +44,7 @@ nsis:
   perMachine: false
   deleteAppDataOnUninstall: false
   runAfterFinish: true
-  shortcutName: '${productName}'
+  shortcutName: '${productName} ${version}'
   uninstallDisplayName: '${productName}'
   createDesktopShortcut: always
 mac:
