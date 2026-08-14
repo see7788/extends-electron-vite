@@ -172,11 +172,12 @@ const stageClear = () => rmSync(stageRoot, { force: true, recursive: true });
 const releasePublish = (
   release: ReleaseIdentity,
   repository: string,
+  target: string,
   outputPath: string,
   env: NodeJS.ProcessEnv,
 ) => {
   const assets = readdirSync(outputPath, { withFileTypes: true })
-    .filter(entry => entry.isFile())
+    .filter(entry => entry.isFile() && !entry.name.startsWith("builder-"))
     .map(entry => join(outputPath, entry.name));
   run(
     "gh",
@@ -187,13 +188,27 @@ const releasePublish = (
       ...assets,
       "--repo",
       repository,
+      "--target",
+      target,
       "--title",
       release.title,
       "--notes",
       release.notes,
+      "--latest",
     ],
     env,
   );
+};
+
+const releaseCommit = (release: ReleaseIdentity, env: NodeJS.ProcessEnv) => {
+  run("git", ["add", "--", "package.json"], env);
+  run("git", ["commit", "-m", `release: ${release.tag}`, "--", "package.json"], env);
+  run("git", ["push", "origin", "HEAD"], env);
+  return execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd,
+    encoding: "utf8",
+    windowsHide: true,
+  }).trim();
 };
 
 const main = () => {
@@ -224,7 +239,8 @@ const main = () => {
   } finally {
     stageClear();
   }
-  releasePublish(release, repository, outputPath, env);
+  const target = releaseCommit(release, env);
+  releasePublish(release, repository, target, outputPath, env);
 };
 
 try {
