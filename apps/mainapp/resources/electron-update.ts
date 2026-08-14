@@ -112,7 +112,10 @@ const notify = (text: string): void => {
       console.info(text);
       return;
     }
-    new Notification({ title: app.name, body: text }).show();
+    const icon = app.isPackaged
+      ? join(process.resourcesPath, "icon-activity.png")
+      : join(app.getAppPath(), "resources", "icon-activity.png");
+    new Notification({ title: app.name, body: text, icon }).show();
   };
   if (app.isReady()) show();
   else void app.whenReady().then(show);
