@@ -74,6 +74,8 @@ let readyPromise: Promise<ElectronUpdateReady> | undefined;
 let updateStarted = false;
 let updateChecking = false;
 let updateCheckTimer: NodeJS.Timeout | undefined;
+let updateInstallReady = false;
+let updateInstallStarted = false;
 let updateStatus: UpdateStatus | undefined;
 let updateWindow: BrowserWindow | undefined;
 let fatalErrorReported = false;
@@ -232,6 +234,14 @@ const updateWindowClose = () => {
   updateWindow = undefined;
 };
 
+app.on("before-quit", event => {
+  if (process.platform !== "win32" || !updateInstallReady || updateInstallStarted) return;
+  event.preventDefault();
+  updateInstallStarted = true;
+  updateWindowClose();
+  autoUpdater.quitAndInstall(false, false);
+});
+
 const progressClear = () => windowGet()?.setProgressBar(-1);
 
 const notify = (text: string): void => {
@@ -251,6 +261,7 @@ const notify = (text: string): void => {
 
 const updateDownloaded = (version: string) => {
   if (updateCheckTimer) clearInterval(updateCheckTimer);
+  updateInstallReady = true;
   progressClear();
   updateWindowShow({
     complete: true,
@@ -286,10 +297,12 @@ const updateStart = () => {
   if (updateStarted) return;
   updateStarted = true;
   autoUpdater.autoDownload = true;
-  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.autoInstallOnAppQuit = process.platform !== "win32";
+  autoUpdater.autoRunAppAfterInstall = false;
   autoUpdater.disableWebInstaller = true;
   autoUpdater.on("error", error => {
     updateChecking = false;
+    updateInstallReady = false;
     updateCheckTimerStart();
     updateWindowClose();
     progressClear();
@@ -297,6 +310,7 @@ const updateStart = () => {
   });
   autoUpdater.on("update-available", info => {
     updateChecking = false;
+    updateInstallReady = false;
     updateCheckTimerStop();
     updateWindowShow({
       complete: false,
