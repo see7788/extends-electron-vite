@@ -57,17 +57,10 @@ const updateWindowHtml = `<!doctype html>
 </html>`;
 
 export type ElectronUpdateReady = Readonly<{
-  appName: string;
-  appVersion: string;
-  arch: string;
   deviceId: string;
-  executablePath: string;
   initialUrl?: string;
-  isPackaged: boolean;
   notify(text: string): void;
-  platform: NodeJS.Platform;
   userId: string;
-  userDataPath: string;
 }>;
 
 let readyPromise: Promise<ElectronUpdateReady> | undefined;
@@ -358,17 +351,10 @@ const ready = async (): Promise<ElectronUpdateReady> => {
   }
 
   return {
-    appName: app.name,
-    appVersion: app.getVersion(),
-    arch: process.arch,
     deviceId: deviceIdRead(),
-    executablePath: process.execPath,
     initialUrl: urlRead(process.argv),
-    isPackaged: app.isPackaged,
     notify,
-    platform: process.platform,
     userId: persistedIdRead(".user-id"),
-    userDataPath: app.getPath("userData"),
   };
 };
 
