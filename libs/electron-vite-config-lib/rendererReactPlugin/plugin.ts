@@ -3,9 +3,11 @@ import {
   defineRead,
   packageProjects,
   portsRead,
+  renderer,
   type rendererPlugin_t,
-} from "../public.ts";
-import renderer from "../renderer.ts";
+} from "../public";
+
+export type rendererEntryPath_t = rendererPlugin_t["paths"][number];
 
 export default function rendererPlugin({
   ports,

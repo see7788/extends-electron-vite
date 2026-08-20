@@ -7,6 +7,6 @@ void electronUpdate()
   .then(async ({ initialUrl }) => {
     localCodexWindow = new BrowserWindow()
     await localCodexWindow.loadURL(
-      initialUrl ?? "data:text/html;charset=utf-8,<h1>Electron test</h1>",
+      initialUrl ?? "data:text/html;charset=utf-8,<h1>Electron81.21 test</h1>",
     );
   })

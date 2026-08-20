@@ -2,6 +2,8 @@
 
 为同一个 Electron 应用统一配置 main、多个 React renderer 和多个 preload 入口。
 
+接入时使用目标项目现有的包管理器声明 `electron-vite-config-lib` 和实际用到的 peer dependencies；不要假定目标项目使用 pnpm。以下公开入口是完整黑盒契约，调用方不复制其内部实现。
+
 ```text
 electron-vite-config-lib/
 ├─ mainPlugin/
@@ -14,8 +16,7 @@ electron-vite-config-lib/
 │  ├─ electron.ts     # 取得 out/preload/<name>.cjs
 │  └─ vite/
 │     └─ index.ts     # 按 package.json.name 输出多个 preload 的完整配置
-├─ public.ts          # ports、paths、define 公共契约
-└─ renderer.ts        # rendererPlugin 的内部实现
+└─ public.ts          # 共享契约、校验与 renderer 的 Vite 实现
 ```
 
 ## Hono + React
@@ -71,6 +72,8 @@ app.whenReady().then(() => {
 
 开发时，renderer 在业务端口提供页面并把未处理请求代理到隐藏后端端口；打包后，Hono 直接监听业务端口并托管 `out/renderer`。`process.env.HONO_PORT` 是 `mainPlugin` 的保留定义，调用方不能覆盖。
 
+这是 Hono + React 工作流：`mainPlugin`、`rendererPlugin`、`honoServer` 和 `honoUrl` 必须配套使用。`honoServer(app: Hono)` 返回 Node Server，并在 Hono 响应 404 后处理生产静态资源与 SPA 回退；`honoUrl(name)` 的 `name` 必须等于 renderer 入口目录的 `package.json#name`。
+
 ## 普通 React renderer
 
 ```ts
@@ -101,6 +104,8 @@ await rendererLoad({
 });
 ```
 
+这是不经 Hono 页面地址的普通 renderer 工作流。`rendererLoad({ webContents, name, hash? })` 在开发时调用 `loadURL`，打包后调用 `loadFile`；`name` 必须等于 renderer 入口目录的 `package.json#name`，调用方不判断 `app.isPackaged`，也不拼接开发 URL 或输出路径。
+
 ## Preload
 
 ```ts
@@ -109,7 +114,7 @@ import preloadConfig from "electron-vite-config-lib/preloadCreate/vite/index";
 
 export default defineConfig({
   preload: preloadConfig({
-    paths: ["./src/preload/login", "./src/preload/settings"], // index.ts 或 index.tsx
+    paths: ["./src/preload/login/index.ts", "./src/preload/settings/index.ts"],
   }),
 } satisfies UserConfig);
 ```
@@ -122,25 +127,9 @@ const webPreferences = {
 };
 ```
 
+`preloadConfig({ paths, define? })` 按各入口目录的 `package.json#name` 生成 `out/preload/<name>.cjs`；`preloadPath(name)` 返回对应路径。两者必须配套使用，调用方不拼接 `out/preload`。
+
 `define` 对所属 target 的全部入口统一生效，不支持同一 target 内按项目注入不同常量；需要项目专属全局名时使用包名前缀。
 
-## MCP
-
-配套包 `electron-vite-config-mcpserver` 默认导出命名空间 `electron_vite_config` 的静态 Register：
-
-```text
-electron_vite_config
-├─ mainPlugin
-├─ honoServer
-├─ honoUrl
-├─ rendererReactPlugin
-├─ rendererLoad
-├─ preloadCreate
-└─ preloadPath
-```
-
-- `mainPlugin` 配套 `honoServer`、`honoUrl`。
-- `rendererReactPlugin` 配套 `rendererLoad`。
-- `preloadCreate` 配套 `preloadPath`。
-
-七个成员都是 AI 可自主调用的只读 Tool。插件 Tool 只返回安装与配置步骤，运行时黑盒 Tool 只返回对应公开入口的调用契约；双方通过 `pairedTools` 互相指向。AI 使用普通文件操作完成目标项目修改，MCP Server 不复制 main、renderer 或 preload 的实现。
+renderer 与 preload 的 `paths` 都是非空入口数组；入口必须以 `.` 开始，并命名为 `index.ts` 或 `index.tsx`。
+renderer 入口目录不提供 `index.html`；插件集中生成最小 HTML，并由 Vite 在一次原生多入口构建中输出全部 renderer。

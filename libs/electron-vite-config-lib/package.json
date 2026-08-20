@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    ".": "./index.ts",
+    "./README.md": "./README.md",
     "./*": "./*.ts"
   },
   "peerDependencies": {

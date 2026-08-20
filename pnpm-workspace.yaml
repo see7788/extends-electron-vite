@@ -6,7 +6,6 @@ packages:
   - '../extends-antd'
   - '../extends-hono'
   - '../extends-hono/libs/vite-config-lib'
-  - '../extends-hono/libs/mcp-server-lib'
   - '../extends-mcp/libs/mcpserver'
   - '../packagecli/packagecli-mcpserver'
   - '../packagecli/packagecli-lib'
@@ -15,4 +14,4 @@ packages:
   - '../remote-runtimeobj/vscode-plugin-proxy'
   - '../extends-ssh/ubuntu-lib'
   - '../extends-vite'
-  - '../extends-zustand'
+  - '../extends-zustand/libs/zustand-lib'

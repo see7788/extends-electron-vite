@@ -10,7 +10,7 @@ import {
   defineRead,
   portsRead,
   type mainPlugin_t,
-} from "electron-vite-config-lib/public";
+} from "../public";
 
 const honoPort = "process.env.HONO_PORT";
 const mainOutputDirectory = ".dist/out/main";
