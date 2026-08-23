@@ -14,7 +14,7 @@ import {
 
 const annotations = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 const mutationAnnotations = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
-export default mcpserver.register.slice({ sliceName: "electron-vite-config" })
+export default mcpserver.register.slice({ registerName: "electron-vite-config" })
   .resource.register("get", "/readme", readmeUri, {
     title: "electron-vite-config-lib blackbox contract",
     description: "完整的 Electron Vite 配置、Hono、renderer 与 preload 黑盒公约。",

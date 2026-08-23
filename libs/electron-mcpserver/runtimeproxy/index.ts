@@ -3,7 +3,7 @@ import store from "../store";
 import { packageImportValidator } from "./store";
 
 export default mcpserver
-  .register({ sliceName: "electron-runtimeproxy" })
+  .register.slice({ registerName: "electron-runtimeproxy" })
   .tool.register(
     "post",
     "/packageImport",
