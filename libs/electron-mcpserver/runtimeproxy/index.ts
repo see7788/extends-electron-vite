@@ -10,5 +10,5 @@ export default mcpserver
     packageImportValidator,
     "返回 Electron-Vite runtimeproxy 对应运行端的真实入口 import。",
     { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    context => context.json(store.getState().runtimeProxyActions.import(context.req.valid("json"))),
+    context => context.json(store.getState().runtimeProxyActions.packageImport(context.req.valid("json"))),
   );
