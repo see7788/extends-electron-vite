@@ -7,6 +7,7 @@ packages:
   - '../extends-hono'
   - '../extends-hono/libs/vite-config-lib'
   - '../extends-mcp/libs/mcpserver'
+  - '../extends-mcp/libs/user-response-templates-mcpserver'
   - '../packagecli/packagecli-mcpserver'
   - '../packagecli/packagecli-lib'
   - '../remote-runtimeobj/webrtcsignaling'
