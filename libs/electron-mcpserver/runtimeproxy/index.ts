@@ -1,14 +1,22 @@
 import mcpserver from "mcpserver";
-import store from "../store";
-import { packageImportValidator } from "./store";
+import {
+  packageImportValidator,
+  runtimeProxy,
+} from "electron-vite-runtimeproxy/index";
 
-export default mcpserver
-  .register.slice({ registerName: "electron-runtimeproxy" })
-  .tool.register(
+export default mcpserver.register
+  .slice("runtimeProxy")
+  .tool(
     "post",
     "/packageImport",
     packageImportValidator,
-    "返回 Electron-Vite runtimeproxy 对应运行端的真实入口 import。",
-    { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    context => context.json(store.getState().runtimeProxyActions.packageImport(context.req.valid("json"))),
+    "返回 Electron Vite RuntimeProxy 对应运行端的真实入口导入。",
+    {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    context =>
+      context.json(runtimeProxy.packageImport(context.req.valid("json"))),
   );
