@@ -5,7 +5,7 @@ import {
 } from "electron-vite-runtimeproxy/index";
 
 export default mcpserver.register
-  .slice("runtimeProxy")
+  .slice("electronRuntimeProxy")
   .tool(
     "post",
     "/packageImport",
