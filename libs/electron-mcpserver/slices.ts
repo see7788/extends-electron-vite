@@ -1,4 +1,8 @@
-export {
-  default as electronViteConfig,
-} from "./electron-vite-config/index.ts";
-export { default as runtimeProxy } from "./runtimeproxy/index.ts";
+import mcpserver from "mcpserver";
+import electronViteConfig from "./electron-vite-config/index.ts";
+import runtimeProxy from "./runtimeproxy/index.ts";
+
+export default mcpserver.register.register(
+  electronViteConfig,
+  runtimeProxy,
+);

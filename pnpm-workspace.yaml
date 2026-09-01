@@ -2,7 +2,7 @@ packages:
   - 'vscode-plugin'
   - 'apps/*'
   - 'libs/**'
-  - '../extends-react'
+  - '../extends-react/libs/react-src'
   - '../extends-antd'
   - '../extends-hono'
   - '../extends-hono/libs/vite-config-lib'

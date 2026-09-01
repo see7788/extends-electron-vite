@@ -1,0 +1,31 @@
+{
+  "name": "__PACKAGE_NAME__",
+  "version": "0.1.0",
+  "private": true,
+  "tpltype": "electron-vite-main-library",
+  "type": "module",
+  "exports": {
+    "./*": "./*.ts"
+  },
+  "scripts": { "typecheck": "tsc -p tsconfig.json --noEmit" },
+  "peerDependencies": {
+    "electron": "^39.2.6",
+    "electron-vite-runtimeproxy": "workspace:*",
+    "immer": "10.2.0",
+    "zustand": "5.0.13",
+    "public-runtimeproxy": "workspace:*",
+    "zustand-lib": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "electron": "^39.2.6",
+    "electron-vite-runtimeproxy": "workspace:*",
+    "immer": "10.2.0",
+    "typescript": "^5.9.3",
+    "zustand": "5.0.13",
+    "public-runtimeproxy": "workspace:*",
+    "zustand-lib": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}
