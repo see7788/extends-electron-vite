@@ -25,8 +25,7 @@ const remoteMutate = {
   openWorldHint: true,
 } as const;
 
-export default mcpserver.register
-  .slice("electronViteConfig")
+export default mcpserver.metas("electronViteConfig")
   .resource(
     "get",
     "/readme",
