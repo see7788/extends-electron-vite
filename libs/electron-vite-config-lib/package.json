@@ -5,9 +5,14 @@
   "exports": {
     "./README.md": "./README.md",
     "./index": "./index.ts",
-    "./*": "./*.ts"
+    "./*": "./*.ts",
+    "./electron-vite-config": "./electron-vite-config/index.ts",
+    "./electron-vite-config/*": "./electron-vite-config/*.ts",
+    "./runtimeproxy": "./runtimeproxy/index.ts",
+    "./runtimeproxy/*": "./runtimeproxy/*.ts"
   },
   "dependencies": {
+    "vite-src": "workspace:*",
     "zod": "^4.4.3"
   },
   "peerDependencies": {
@@ -16,6 +21,7 @@
     "electron": "^39.2.6",
     "electron-vite": "6.0.0-beta.1",
     "hono": "^4.12.18",
+    "mcpserver": "workspace:*",
     "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
   },
   "devDependencies": {
@@ -25,6 +31,7 @@
     "electron": "^39.2.6",
     "electron-vite": "6.0.0-beta.1",
     "hono": "^4.12.18",
+    "mcpserver": "workspace:*",
     "typescript": "^5.9.3",
     "vite": "^8.0.11",
     "zod": "^4.4.3"

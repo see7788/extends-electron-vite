@@ -10,7 +10,7 @@ import {
   readmeUri,
   rendererLoadValidator,
   rendererPluginValidator,
-} from "electron-vite-config-lib/index";
+} from "../index";
 
 const read = {
   readOnlyHint: true,

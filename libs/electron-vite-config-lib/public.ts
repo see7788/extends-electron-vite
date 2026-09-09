@@ -7,18 +7,15 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import { normalizePath, type Plugin, type UserConfig } from "vite";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import {
+  type JsonValue,
+  viteHtmlEntryUrl,
+  viteHtmlMiddleware,
+} from "vite-src/public";
+import type { Plugin, UserConfig } from "vite";
 
 const entryNamePattern = /^[A-Za-z0-9._~-]+$/;
-
-type json_t =
-  | null
-  | boolean
-  | number
-  | string
-  | readonly json_t[]
-  | { readonly [key: string]: json_t };
 
 type ports_t = readonly [
   mainPort: number,
@@ -29,7 +26,7 @@ export type path_t = `.${string}/index.${"ts" | "tsx"}`;
 
 type paths_t = readonly [path_t, ...path_t[]];
 
-type define_t = Readonly<Record<string, json_t>>;
+type define_t = Readonly<Record<string, JsonValue>>;
 
 export type rendererPlugin_t = {
   ports: ports_t;
@@ -117,11 +114,8 @@ type ReactProject = ReturnType<typeof packageProjects>[number] & {
   html: string;
 };
 
-const htmlSource = (project: ReactProject, development: boolean): string => {
-  const relativeEntry = normalizePath(relative(dirname(project.html), project.entry));
-  const entry = development
-    ? `/@fs/${normalizePath(project.entry)}`
-    : relativeEntry.startsWith(".") ? relativeEntry : `./${relativeEntry}`;
+const htmlSource = (project: ReactProject, command: "serve" | "build"): string => {
+  const entry = viteHtmlEntryUrl(project.html, project.entry, command);
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -169,7 +163,7 @@ export const renderer = (
     enforce: "pre",
     config(_config, { command }) {
       for (const project of projects) {
-        writeFileSync(project.html, htmlSource(project, command === "serve"), "utf8");
+        writeFileSync(project.html, htmlSource(project, command), "utf8");
       }
       const common: UserConfig = {
         base: command === "serve" ? "/" : "./",
@@ -200,32 +194,7 @@ export const renderer = (
       };
     },
     configureServer(server) {
-      server.middlewares.use(async (request, response, next) => {
-        try {
-          if (request.method !== "GET" || !request.url) return next();
-          const url = new URL(request.url, "http://electron-renderer.local");
-          const project = projects.find(({ name }) => (
-            url.pathname === `/${name}` || url.pathname.startsWith(`/${name}/`)
-          ));
-          if (!project) return next();
-          if (url.pathname === `/${project.name}`) {
-            response.statusCode = 307;
-            response.setHeader("Location", `/${project.name}/${url.search}`);
-            response.end();
-            return;
-          }
-          if (!request.headers.accept?.includes("text/html")) return next();
-          const html = await server.transformIndexHtml(
-            url.pathname,
-            readFileSync(project.html, "utf8"),
-          );
-          response.statusCode = 200;
-          response.setHeader("Content-Type", "text/html; charset=utf-8");
-          response.end(html);
-        } catch (error) {
-          next(error);
-        }
-      });
+      viteHtmlMiddleware(server, projects, "http://electron-renderer.local");
     },
   };
 };
