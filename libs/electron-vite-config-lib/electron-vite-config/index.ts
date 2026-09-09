@@ -12,18 +12,8 @@ import {
   rendererPluginValidator,
 } from "../index";
 
-const read = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false,
-} as const;
-const remoteMutate = {
-  readOnlyHint: false,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: true,
-} as const;
+const read = [true, false, true, false] as const;
+const remoteMutate = [false, false, true, true] as const;
 
 export default mcpserver.metas("electronViteConfig")
   .resource(

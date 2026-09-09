@@ -26,12 +26,7 @@ export default mcpserver.metas("electronRuntimeProxy")
     "/packageImport",
     packageImportValidator,
     "返回 Electron IPC 对应运行端的真实入口导入。",
-    {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false,
-    },
+    [true, false, true, false],
     context =>
       context.json(packageImport(context.req.valid("json"))),
   );
