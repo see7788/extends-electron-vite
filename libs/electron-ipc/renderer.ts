@@ -1,4 +1,4 @@
-import { CommunicationClient } from "pure-blackbox/client";
+﻿import Client from "pure-blackbox/client";
 import type { RouteMap } from "pure-blackbox/types";
 import { electronBridgeKey } from "./protocol.ts";
 import type { ElectronPreloadBridge } from "./preload.ts";
@@ -25,12 +25,12 @@ const bridgeRead = (): ElectronPreloadBridge => {
 };
 
 export class ElectronRendererCommunication<
-  TContext extends ElectronRendererContext = ElectronRendererContext,
-  TRoutes extends RouteMap = {},
-> extends CommunicationClient<TRoutes, TContext, ElectronRendererRuntimeContext> {
+  Context extends ElectronRendererContext = ElectronRendererContext,
+  Routes extends RouteMap = {},
+> extends Client<Routes, Context, ElectronRendererRuntimeContext> {
   public readonly lifecycle: ElectronRendererLifecycle;
 
-  public constructor(context: TContext) {
+  public constructor(context: Context) {
     const bridge = bridgeRead();
     super({ transport: { send: (frame) => bridge.invoke(frame) }, context });
     let initialized = false;

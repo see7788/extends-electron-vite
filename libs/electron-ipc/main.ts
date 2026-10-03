@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import type {
   App,
   BrowserWindow,
@@ -9,11 +9,11 @@ import type {
   WebContents,
 } from "electron";
 import type { CommunicationBlackBox } from "pure-blackbox/communication";
-import { CommunicationServer } from "pure-blackbox/server";
+import Server from "pure-blackbox/server";
+import type { ProtocolFrame } from "pure-blackbox/protocol";
 import type {
   AnySchema,
   CommunicationTransport,
-  ProtocolFrame,
   RouteDefinition,
   RouteMap,
   ZodCatch,
@@ -24,9 +24,9 @@ export type ElectronMainContext = {
   readonly zodCatch: ZodCatch<ElectronMainRuntimeContext>;
   readonly [key: string]: unknown;
 };
-export type ElectronMainOptions<TContext extends ElectronMainContext = ElectronMainContext> = {
+export type ElectronMainOptions<Context extends ElectronMainContext = ElectronMainContext> = {
   readonly webContents: WebContents;
-  readonly context: TContext;
+  readonly context: Context;
   /** Accepted for ergonomic parity with Electron's native API; webContents.ipc is used internally. */
   readonly ipcMain?: IpcMain;
 };
@@ -69,48 +69,48 @@ const dialogMessageSchema = z.object({
 });
 
 type ElectronMainRoute<
-  TContext extends ElectronMainContext,
-  TSchema extends AnySchema,
-  TOutput,
-> = RouteDefinition<TSchema, TContext, ElectronMainRuntimeContext, TOutput>;
+  Context extends ElectronMainContext,
+  Schema extends AnySchema,
+  Output,
+> = RouteDefinition<Schema, Context, ElectronMainRuntimeContext, Output>;
 
-export type ElectronWindowRoutes<TContext extends ElectronMainContext> = {
-  "/electron/window/show": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/hide": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/focus": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/blur": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/reload": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/minimize": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/maximize": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/unmaximize": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/restore": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/close": ElectronMainRoute<TContext, typeof emptyInputSchema, void>;
-  "/electron/window/is-visible": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
-  "/electron/window/is-focused": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
-  "/electron/window/is-minimized": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
-  "/electron/window/is-maximized": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
-  "/electron/window/is-destroyed": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
+export type ElectronWindowRoutes<Context extends ElectronMainContext> = {
+  "/electron/window/show": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/hide": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/focus": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/blur": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/reload": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/minimize": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/maximize": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/unmaximize": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/restore": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/close": ElectronMainRoute<Context, typeof emptyInputSchema, void>;
+  "/electron/window/is-visible": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
+  "/electron/window/is-focused": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
+  "/electron/window/is-minimized": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
+  "/electron/window/is-maximized": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
+  "/electron/window/is-destroyed": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
 };
 
-export type ElectronAppRoutes<TContext extends ElectronMainContext> = {
-  "/electron/app/version": ElectronMainRoute<TContext, typeof emptyInputSchema, string>;
-  "/electron/app/name": ElectronMainRoute<TContext, typeof emptyInputSchema, string>;
-  "/electron/app/is-packaged": ElectronMainRoute<TContext, typeof emptyInputSchema, boolean>;
-  "/electron/app/path": ElectronMainRoute<TContext, typeof appPathSchema, string>;
+export type ElectronAppRoutes<Context extends ElectronMainContext> = {
+  "/electron/app/version": ElectronMainRoute<Context, typeof emptyInputSchema, string>;
+  "/electron/app/name": ElectronMainRoute<Context, typeof emptyInputSchema, string>;
+  "/electron/app/is-packaged": ElectronMainRoute<Context, typeof emptyInputSchema, boolean>;
+  "/electron/app/path": ElectronMainRoute<Context, typeof appPathSchema, string>;
 };
 
-export type ElectronDialogRoutes<TContext extends ElectronMainContext> = {
+export type ElectronDialogRoutes<Context extends ElectronMainContext> = {
   "/electron/dialog/message": ElectronMainRoute<
-    TContext,
+    Context,
     typeof dialogMessageSchema,
     Electron.MessageBoxReturnValue
   >;
 };
 
-export type ElectronMainRoutes<TContext extends ElectronMainContext = ElectronMainContext> =
-  ElectronWindowRoutes<TContext>
-  & ElectronAppRoutes<TContext>
-  & ElectronDialogRoutes<TContext>;
+export type ElectronMainRoutes<Context extends ElectronMainContext = ElectronMainContext> =
+  ElectronWindowRoutes<Context>
+  & ElectronAppRoutes<Context>
+  & ElectronDialogRoutes<Context>;
 
 export type ElectronMainLifecycle = {
   initialized: boolean;
@@ -120,15 +120,15 @@ export type ElectronMainLifecycle = {
 };
 
 export class ElectronMainCommunication<
-  TContext extends ElectronMainContext = ElectronMainContext,
-  TRoutes extends RouteMap = {},
-> extends CommunicationServer<TRoutes, TContext, ElectronMainRuntimeContext> {
+  Context extends ElectronMainContext = ElectronMainContext,
+  Routes extends RouteMap = {},
+> extends Server<Routes, Context, ElectronMainRuntimeContext> {
   public readonly webContents: WebContents;
   public readonly lifecycle: ElectronMainLifecycle;
 
-  public constructor(options: ElectronMainOptions<TContext>);
-  public constructor(webContents: WebContents, context: TContext);
-  public constructor(optionsOrWebContents: ElectronMainOptions<TContext> | WebContents, contextArg?: TContext) {
+  public constructor(options: ElectronMainOptions<Context>);
+  public constructor(webContents: WebContents, context: Context);
+  public constructor(optionsOrWebContents: ElectronMainOptions<Context> | WebContents, contextArg?: Context) {
     const webContents = "webContents" in optionsOrWebContents
       ? optionsOrWebContents.webContents
       : optionsOrWebContents;
@@ -198,8 +198,8 @@ export class ElectronMainCommunication<
   public browserWindow(
     window: BrowserWindow,
   ): this & CommunicationBlackBox<
-    TRoutes & ElectronWindowRoutes<TContext>,
-    TContext,
+    Routes & ElectronWindowRoutes<Context>,
+    Context,
     ElectronMainRuntimeContext
   > {
     this.on("/electron/window/show", emptyInputSchema, () => { window.show(); });
@@ -218,8 +218,8 @@ export class ElectronMainCommunication<
     this.handle("/electron/window/is-maximized", emptyInputSchema, () => window.isMaximized());
     this.handle("/electron/window/is-destroyed", emptyInputSchema, () => window.isDestroyed());
     return this as this & CommunicationBlackBox<
-      TRoutes & ElectronWindowRoutes<TContext>,
-      TContext,
+      Routes & ElectronWindowRoutes<Context>,
+      Context,
       ElectronMainRuntimeContext
     >;
   }
@@ -227,8 +227,8 @@ export class ElectronMainCommunication<
   public app(
     appApi: App,
   ): this & CommunicationBlackBox<
-    TRoutes & ElectronAppRoutes<TContext>,
-    TContext,
+    Routes & ElectronAppRoutes<Context>,
+    Context,
     ElectronMainRuntimeContext
   > {
     this.handle("/electron/app/version", emptyInputSchema, () => appApi.getVersion());
@@ -236,8 +236,8 @@ export class ElectronMainCommunication<
     this.handle("/electron/app/is-packaged", emptyInputSchema, () => appApi.isPackaged);
     this.handle("/electron/app/path", appPathSchema, ({ input }) => appApi.getPath(input.name));
     return this as this & CommunicationBlackBox<
-      TRoutes & ElectronAppRoutes<TContext>,
-      TContext,
+      Routes & ElectronAppRoutes<Context>,
+      Context,
       ElectronMainRuntimeContext
     >;
   }
@@ -245,14 +245,14 @@ export class ElectronMainCommunication<
   public dialog(
     dialogApi: Dialog,
   ): this & CommunicationBlackBox<
-    TRoutes & ElectronDialogRoutes<TContext>,
-    TContext,
+    Routes & ElectronDialogRoutes<Context>,
+    Context,
     ElectronMainRuntimeContext
   > {
     this.handle("/electron/dialog/message", dialogMessageSchema, ({ input }) => dialogApi.showMessageBox(input));
     return this as this & CommunicationBlackBox<
-      TRoutes & ElectronDialogRoutes<TContext>,
-      TContext,
+      Routes & ElectronDialogRoutes<Context>,
+      Context,
       ElectronMainRuntimeContext
     >;
   }

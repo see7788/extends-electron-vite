@@ -1,7 +1,7 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { CommunicationClient } from "pure-blackbox/client";
-import type { CommunicationClientOptions } from "pure-blackbox/client";
-import type { ProtocolFrame, RouteMap } from "pure-blackbox/types";
+﻿import { contextBridge, ipcRenderer } from "electron";
+import Client from "pure-blackbox/client";
+import type { ProtocolFrame } from "pure-blackbox/protocol";
+import type { RouteMap } from "pure-blackbox/types";
 import { electronBridgeKey, electronIpcChannel as channel } from "./protocol.ts";
 
 export type ElectronPreloadContext = { readonly zodCatch?: never; readonly [key: string]: unknown };
@@ -12,15 +12,15 @@ export type ElectronPreloadBridge = {
   subscribe: (listener: (frame: unknown, event: Electron.IpcRendererEvent) => void) => () => void;
 };
 
-export type ElectronPreloadClientOptions<TContext extends ElectronPreloadContext = ElectronPreloadContext> =
-  Omit<CommunicationClientOptions<TContext, ElectronPreloadRuntimeContext>, "transport"> & {
-    readonly expose?: boolean;
-  };
+export type ElectronPreloadClientOptions<Context extends ElectronPreloadContext = ElectronPreloadContext> = {
+  readonly context: Context;
+  readonly expose?: boolean;
+};
 
 export class ElectronPreloadClient<
-  TContext extends ElectronPreloadContext = ElectronPreloadContext,
-  TRoutes extends RouteMap = {},
-> extends CommunicationClient<TRoutes, TContext, ElectronPreloadRuntimeContext> {
+  Context extends ElectronPreloadContext = ElectronPreloadContext,
+  Routes extends RouteMap = {},
+> extends Client<Routes, Context, ElectronPreloadRuntimeContext> {
   public readonly bridge: ElectronPreloadBridge;
   public readonly lifecycle: {
     initialized: boolean;
@@ -30,15 +30,15 @@ export class ElectronPreloadClient<
   };
 
   public constructor(
-    contextOrOptions: TContext | ElectronPreloadClientOptions<TContext> = {} as TContext,
+    contextOrOptions: Context | ElectronPreloadClientOptions<Context> = {} as Context,
     lifecycleOptions: { readonly expose?: boolean } = {},
   ) {
     const isOptions = Object.prototype.hasOwnProperty.call(contextOrOptions, "context");
     const context = (isOptions
-      ? (contextOrOptions as ElectronPreloadClientOptions<TContext>).context
-      : contextOrOptions) as TContext;
+      ? (contextOrOptions as ElectronPreloadClientOptions<Context>).context
+      : contextOrOptions) as Context;
     const expose = isOptions
-      ? (contextOrOptions as ElectronPreloadClientOptions<TContext>).expose
+      ? (contextOrOptions as ElectronPreloadClientOptions<Context>).expose
       : lifecycleOptions.expose;
     const bridge: ElectronPreloadBridge = {
       invoke: (frame) => ipcRenderer.invoke(channel, frame),
@@ -69,9 +69,9 @@ export class ElectronPreloadClient<
   }
 }
 
-export const installElectronPreload = <TContext extends ElectronPreloadContext = ElectronPreloadContext, TRoutes extends RouteMap = {}>(
-  client?: ElectronPreloadClient<TContext, TRoutes>,
-): ElectronPreloadBridge => (client ?? new ElectronPreloadClient<TContext, TRoutes>()).bridge;
+export const installElectronPreload = <Context extends ElectronPreloadContext = ElectronPreloadContext, Routes extends RouteMap = {}>(
+  client?: ElectronPreloadClient<Context, Routes>,
+): ElectronPreloadBridge => (client ?? new ElectronPreloadClient<Context, Routes>()).bridge;
 
 export { electronBridgeKey, electronIpcChannel } from "./protocol.ts";
 export type { ElectronPreloadBridge as Bridge };
