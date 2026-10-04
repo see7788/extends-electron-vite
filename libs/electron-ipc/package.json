@@ -11,7 +11,7 @@
   },
   "scripts": { "typecheck": "tsc -p tsconfig.json --noEmit" },
   "dependencies": {
-    "pure-blackbox": "workspace:*",
+    "invoke-protocol": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": { "electron": "39.2.6", "typescript": "5.9.3" }

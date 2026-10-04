@@ -15,5 +15,5 @@ packages:
   - '../extends-ssh/ubuntu-lib'
   - '../extends-vite'
   - '../extends-vite/libs/vite-src'
-  - '../runtimeproxy/libs/pure-blackbox'
+  - '../runtimeproxy/libs/invoke-protocol'
   - '../extends-zustand/libs/zustand-lib'

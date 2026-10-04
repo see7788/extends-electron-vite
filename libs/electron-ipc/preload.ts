@@ -1,7 +1,9 @@
 ﻿import { contextBridge, ipcRenderer } from "electron";
-import Client from "pure-blackbox/client";
-import type { ProtocolFrame } from "pure-blackbox/protocol";
-import type { RouteMap } from "pure-blackbox/types";
+import Base from "invoke-protocol";
+import type { z } from "zod";
+type ProtocolFrame = { readonly type: "request"; readonly id: string; readonly route: string; readonly input: unknown } | { readonly type: "response"; readonly id: string; readonly ok: boolean; readonly output?: unknown; readonly error?: unknown };
+type RouteMap = Record<string, { readonly schema: z.ZodType; readonly handler: (...args: any[]) => any }>;
+export const hc = <Routes extends RouteMap>(communication: { readonly invoke: (path: string, input: unknown) => Promise<unknown> }): any => { const create = (path: string): any => new Proxy(() => undefined, { get: (_target, property: string | symbol) => typeof property === "string" ? create(path ? `${path}/${property}` : property) : undefined, apply: (_target, _thisArg, args: unknown[]) => communication.invoke(path, args[0]) }); return create(""); };
 import { electronBridgeKey, electronIpcChannel as channel } from "./protocol.ts";
 
 export type ElectronPreloadContext = { readonly zodCatch?: never; readonly [key: string]: unknown };
@@ -20,8 +22,12 @@ export type ElectronPreloadClientOptions<Context extends ElectronPreloadContext 
 export class ElectronPreloadClient<
   Context extends ElectronPreloadContext = ElectronPreloadContext,
   Routes extends RouteMap = {},
-> extends Client<Routes, Context, ElectronPreloadRuntimeContext> {
+> extends Base<Context & ElectronPreloadRuntimeContext, {}> {
+  public receive(_frame: unknown, _context?: unknown): void { }
+  public closePending(_reason: unknown): void { }
+
   public readonly bridge: ElectronPreloadBridge;
+  public readonly invoke: (path: string, input: unknown) => Promise<unknown>;
   public readonly lifecycle: {
     initialized: boolean;
     destroyed: boolean;
@@ -48,7 +54,8 @@ export class ElectronPreloadClient<
         return () => ipcRenderer.off(channel, callback);
       },
     };
-    super({ context, transport: { send: (frame) => bridge.invoke(frame) } });
+    super();
+    this.invoke = (path, input) => bridge.invoke({ type: "request", id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`, route: path, input }) as Promise<unknown>;
     this.bridge = bridge;
     if (expose !== false) contextBridge.exposeInMainWorld(electronBridgeKey, bridge);
     const unsubscribe = bridge.subscribe((frame, event) => {

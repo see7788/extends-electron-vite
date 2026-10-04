@@ -8,16 +8,14 @@ import type {
   IpcMainInvokeEvent,
   WebContents,
 } from "electron";
-import type { CommunicationBlackBox } from "pure-blackbox/communication";
-import Server from "pure-blackbox/server";
-import type { ProtocolFrame } from "pure-blackbox/protocol";
-import type {
-  AnySchema,
-  CommunicationTransport,
-  RouteDefinition,
-  RouteMap,
-  ZodCatch,
-} from "pure-blackbox/types";
+import Base from "invoke-protocol";
+type AnySchema = z.ZodType;
+type ProtocolFrame = { readonly type: "request"; readonly id: string; readonly route: string; readonly input: unknown } | { readonly type: "response"; readonly id: string; readonly ok: boolean; readonly output?: unknown; readonly error?: unknown };
+type RouteDefinition<Schema extends AnySchema, Context extends object, RuntimeContext extends object, Output> = { readonly schema: Schema; readonly handler: (context: Context & RuntimeContext & { readonly input: z.output<Schema> }) => Output | Promise<Output> };
+type RouteMap = Record<string, RouteDefinition<any, any, any, any>>;
+type ZodCatch<RuntimeContext extends object> = (info: { readonly error: z.ZodError; readonly rawInput: unknown; readonly route: string; readonly runtimeContext: RuntimeContext }) => unknown | Promise<unknown>;
+type CommunicationBlackBox<Routes extends RouteMap = {}, Context extends object = {}, RuntimeContext extends object = {}> = object;
+type CommunicationTransport = { readonly send: (frame: ProtocolFrame) => unknown | Promise<unknown> };
 import { electronIpcChannel as channel } from "./protocol.ts";
 
 export type ElectronMainContext = {
@@ -122,7 +120,21 @@ export type ElectronMainLifecycle = {
 export class ElectronMainCommunication<
   Context extends ElectronMainContext = ElectronMainContext,
   Routes extends RouteMap = {},
-> extends Server<Routes, Context, ElectronMainRuntimeContext> {
+> extends Base<Context & ElectronMainRuntimeContext, {}> {
+  private readonly pending = new Map<string, { readonly resolve: (value: any) => void; readonly reject: (reason: unknown) => void }>();
+  private sequence = 0;
+  private routePath(path: string): string { return path.replace(/^\/+/, "").replace(/\//g, "."); }
+  public handle(path: string, schema: z.ZodType, handler: (context: any) => unknown): this { this.registerHandler(this.routePath(path), schema, handler as any); return this; }
+  public on(path: string, schema: z.ZodType, handler: (context: any) => unknown): this { return this.handle(path, schema, handler); }
+  public receive(raw: unknown, runtimeContext: ElectronMainRuntimeContext, responseSend: (frame: ProtocolFrame) => unknown): void {
+    if (!raw || typeof raw !== "object") return; const frame = raw as Record<string, any>;
+    if (typeof frame.type !== "string" || typeof frame.id !== "string") return;
+    if (frame.type === "response") { const request = this.pending.get(frame.id); if (!request) return; this.pending.delete(frame.id); frame.ok ? request.resolve(frame.output) : request.reject(new Error(String(frame.error?.message ?? frame.error ?? "Remote invoke failed"))); return; }
+    if (frame.type !== "request" || typeof frame.route !== "string") return;
+    void super.routeDispatch({ ...runtimeContext, path: this.routePath(frame.route), input: frame.input } as any).then((output: unknown) => responseSend({ type: "response", id: frame.id, ok: true, output }), (error: unknown) => responseSend({ type: "response", id: frame.id, ok: false, error: { message: String(error) } }));
+  }
+  public closePending(reason: unknown): void { for (const request of this.pending.values()) request.reject(reason); this.pending.clear(); }
+
   public readonly webContents: WebContents;
   public readonly lifecycle: ElectronMainLifecycle;
 
@@ -142,7 +154,7 @@ export class ElectronMainCommunication<
         webContents.send(channel, frame);
       },
     };
-    super({ transport, context });
+    super();
     this.webContents = webContents;
     let initialized = false;
     let destroyed = false;

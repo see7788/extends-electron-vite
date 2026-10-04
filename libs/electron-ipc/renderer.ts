@@ -1,5 +1,7 @@
-﻿import Client from "pure-blackbox/client";
-import type { RouteMap } from "pure-blackbox/types";
+﻿import Base from "invoke-protocol";
+import type { z } from "zod";
+type RouteMap = Record<string, { readonly schema: z.ZodType; readonly handler: (...args: any[]) => any }>;
+export const hc = <Routes extends RouteMap>(communication: { readonly invoke: (path: string, input: unknown) => Promise<unknown> }): any => { const create = (path: string): any => new Proxy(() => undefined, { get: (_target, property: string | symbol) => typeof property === "string" ? create(path ? `${path}/${property}` : property) : undefined, apply: (_target, _thisArg, args: unknown[]) => communication.invoke(path, args[0]) }); return create(""); };
 import { electronBridgeKey } from "./protocol.ts";
 import type { ElectronPreloadBridge } from "./preload.ts";
 
@@ -27,12 +29,17 @@ const bridgeRead = (): ElectronPreloadBridge => {
 export class ElectronRendererCommunication<
   Context extends ElectronRendererContext = ElectronRendererContext,
   Routes extends RouteMap = {},
-> extends Client<Routes, Context, ElectronRendererRuntimeContext> {
+> extends Base<Context & ElectronRendererRuntimeContext, {}> {
+  public receive(_frame: unknown, _context?: unknown): void { }
+  public closePending(_reason: unknown): void { }
+
+  public readonly invoke: (path: string, input: unknown) => Promise<unknown>;
   public readonly lifecycle: ElectronRendererLifecycle;
 
   public constructor(context: Context) {
     const bridge = bridgeRead();
-    super({ transport: { send: (frame) => bridge.invoke(frame) }, context });
+    super();
+    this.invoke = (path, input) => bridge.invoke({ type: "request", id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`, route: path, input }) as Promise<unknown>;
     let initialized = false;
     let destroyed = false;
     let unsubscribe: (() => void) | undefined;

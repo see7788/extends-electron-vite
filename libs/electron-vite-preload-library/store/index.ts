@@ -1,5 +1,5 @@
-// 此文件只负责组合 Zustand 主 Store。
-import { hc } from "pure-blackbox/client";
+﻿// 此文件只负责组合 Zustand 主 Store。
+import { hc } from "electron-ipc/preload";
 import type { ElectronMainRoutes } from "electron-ipc/main";
 import { ElectronPreloadClient } from "electron-ipc/preload";
 import { immer } from "zustand/middleware/immer";
