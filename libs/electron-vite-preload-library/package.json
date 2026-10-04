@@ -10,7 +10,7 @@
   "scripts": { "typecheck": "tsc -p tsconfig.json --noEmit" },
   "peerDependencies": {
     "invoke-protocol": "workspace:*",
-    "electron-ipc": "workspace:*",
+    "electron-invoke-protocol": "workspace:*",
     "electron": "^39.2.6",
     "immer": "10.2.0",
     "zustand": "5.0.13",
@@ -20,7 +20,7 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "invoke-protocol": "workspace:*",
-    "electron-ipc": "workspace:*",
+    "electron-invoke-protocol": "workspace:*",
     "electron": "^39.2.6",
     "immer": "10.2.0",
     "typescript": "^5.9.3",

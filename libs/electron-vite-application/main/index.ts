@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog } from "electron";
 import { Hono } from "hono";
-import { ElectronMainCommunication } from "electron-ipc/main";
+import { ElectronMainCommunication } from "electron-invoke-protocol/main";
 import { honoServer, honoUrl } from "electron-vite-config-lib/mainPlugin/hono";
 import preloadPath from "electron-vite-config-lib/preloadCreate/electron";
 import electronUpdate from "../resources/electron-update";

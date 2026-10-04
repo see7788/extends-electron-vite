@@ -1,5 +1,5 @@
 {
-  "name": "electron-ipc",
+  "name": "electron-invoke-protocol",
   "version": "0.1.0",
   "private": true,
   "type": "module",
