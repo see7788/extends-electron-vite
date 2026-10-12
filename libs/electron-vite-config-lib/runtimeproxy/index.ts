@@ -1,4 +1,4 @@
-import mcpserver from "mcpserver";
+﻿import mcpserver from "mcpserver";
 import { z } from "zod";
 
 const packageImportValidator = z.object({
@@ -8,9 +8,9 @@ const packageImportValidator = z.object({
 const packageImport = (input: z.output<typeof packageImportValidator>) => {
   const value = packageImportValidator.parse(input);
   const imports = {
-    main: 'import { ElectronMainCommunication } from "electron-invoke-protocol/main";',
-    preload: 'import { ElectronPreloadClient } from "electron-invoke-protocol/preload";',
-    renderer: 'import { ElectronRendererCommunication } from "electron-invoke-protocol/renderer";',
+    main: 'import ElectronMain from "electron-invoke-protocol/main";',
+    preload: 'import ElectronPreload from "electron-invoke-protocol/preload";',
+    renderer: 'import ElectronRenderer from "electron-invoke-protocol/renderer";',
   } as const;
   return {
     packageName: "electron-invoke-protocol" as const,

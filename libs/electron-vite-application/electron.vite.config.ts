@@ -4,7 +4,6 @@ import { defineConfig, type UserConfig } from "electron-vite";
 import mainPlugin from "electron-vite-config-lib/mainPlugin/plugin";
 import preloadConfig from "electron-vite-config-lib/preloadCreate/vite/index";
 import rendererPlugin from "electron-vite-config-lib/rendererReactPlugin/plugin";
-import ubuntu from "ubuntu-lib/index.ts";
 
 const ports = [3000, 3001] as const;
 
@@ -30,7 +29,6 @@ const config = {
         ports,
         paths: ["../__PACKAGE_NAME__-renderer/index.tsx"],
       }),
-      ubuntu.vite.dev.forward(),
     ],
   },
 } satisfies UserConfig;

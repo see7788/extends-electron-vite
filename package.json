@@ -1,6 +1,6 @@
 {
   "name": "extends-electron-vite",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "author": "example.com",
   "homepage": "https://electron-vite.org",
