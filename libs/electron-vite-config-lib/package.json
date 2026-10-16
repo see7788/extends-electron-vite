@@ -3,13 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "exports": {
-    "./README.md": "./README.md",
-    "./index": "./index.ts",
-    "./*": "./*.ts",
-    "./electron-vite-config": "./electron-vite-config/index.ts",
-    "./electron-vite-config/*": "./electron-vite-config/*.ts",
-    "./runtimeproxy": "./runtimeproxy/index.ts",
-    "./runtimeproxy/*": "./runtimeproxy/*.ts"
+    "./*": "./*.ts"
   },
   "dependencies": {
     "vite-src": "workspace:*",

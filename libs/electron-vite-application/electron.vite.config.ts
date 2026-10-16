@@ -6,8 +6,7 @@ import preloadConfig from "electron-vite-config-lib/preloadCreate/vite/index";
 import rendererPlugin from "electron-vite-config-lib/rendererReactPlugin/plugin";
 
 const ports = [3000, 3001] as const;
-
-const config = {
+export default defineConfig({
   main: {
     plugins: [mainPlugin({ ports })],
     build: {
@@ -22,7 +21,6 @@ const config = {
     paths: ["../__PACKAGE_NAME__-preload/index.ts"],
   }),
   renderer: {
-    server: { port: 5173 },
     plugins: [
       react(),
       rendererPlugin({
@@ -31,6 +29,4 @@ const config = {
       }),
     ],
   },
-} satisfies UserConfig;
-
-export default defineConfig(config);
+});

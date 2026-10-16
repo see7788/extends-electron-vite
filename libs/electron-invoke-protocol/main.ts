@@ -1,191 +1,112 @@
-﻿import { app, dialog, ipcMain, type App, type BrowserWindow, type Dialog, type IpcMainEvent, type WebContents } from "electron";
-import { z } from "zod";
+﻿import {
+  ipcMain,
+  type BrowserWindow,
+  type IpcMainEvent,
+  type IpcMainInvokeEvent,
+  type WebContents,
+} from 'electron';
 import Base, {
+  type context_t as CoreContext,
   type invokeProxy_t,
-  type rpc_t,
-} from "invoke-protocol";
-import { electronIpcChannel as channel } from "./protocol.ts";
+} from 'invoke-protocol';
+import { invokeChannel } from './public.ts';
 
-type EmptyRoute = {
-  readonly validator: undefined;
-  readonly handler: (...args: any[]) => unknown;
-};
-
-type ElectronWindowRoutes = {
-  "electron.window.show": EmptyRoute;
-  "electron.window.hide": EmptyRoute;
-  "electron.window.focus": EmptyRoute;
-  "electron.window.blur": EmptyRoute;
-  "electron.window.reload": EmptyRoute;
-  "electron.window.minimize": EmptyRoute;
-  "electron.window.maximize": EmptyRoute;
-  "electron.window.unmaximize": EmptyRoute;
-  "electron.window.restore": EmptyRoute;
-  "electron.window.close": EmptyRoute;
-  "electron.window.isVisible": EmptyRoute & { readonly handler: () => boolean };
-  "electron.window.isFocused": EmptyRoute & { readonly handler: () => boolean };
-  "electron.window.isMinimized": EmptyRoute & { readonly handler: () => boolean };
-  "electron.window.isMaximized": EmptyRoute & { readonly handler: () => boolean };
-  "electron.window.isDestroyed": EmptyRoute & { readonly handler: () => boolean };
-};
-
-type ElectronAppRoutes = {
-  "electron.app.version": EmptyRoute & { readonly handler: () => string };
-  "electron.app.name": EmptyRoute & { readonly handler: () => string };
-  "electron.app.is-packaged": EmptyRoute & { readonly handler: () => boolean };
-  "electron.app.path": {
-    readonly validator: typeof appPathSchema;
-    readonly handler: (context: { readonly input: z.infer<typeof appPathSchema> }) => string;
-  };
-};
-
-type ElectronDialogRoutes = {
-  "electron.dialog.message": {
-    readonly validator: typeof dialogMessageSchema;
-    readonly handler: (context: { readonly input: z.infer<typeof dialogMessageSchema> }) => Promise<Electron.MessageBoxReturnValue>;
-  };
-};
-
-const appPathSchema = z.object({
-  name: z.enum([
-    "home",
-    "appData",
-    "assets",
-    "userData",
-    "sessionData",
-    "temp",
-    "exe",
-    "module",
-    "desktop",
-    "documents",
-    "downloads",
-    "music",
-    "pictures",
-    "videos",
-    "recent",
-    "logs",
-    "crashDumps",
-  ]),
-});
-
-const dialogMessageSchema = z.object({
-  message: z.string(),
-  title: z.string().optional(),
-  type: z.enum(["none", "info", "error", "question", "warning"]).optional(),
-  buttons: z.array(z.string()).max(16).optional(),
-  defaultId: z.number().int().nonnegative().optional(),
-  cancelId: z.number().int().nonnegative().optional(),
-  noLink: z.boolean().optional(),
-});
-
-export type ElectronMainRuntimeContext<routers extends object = {}> = {
-  readonly event: IpcMainEvent;
+export interface context_t<remote extends object = object> extends CoreContext {
+  readonly event: IpcMainEvent | IpcMainInvokeEvent;
   readonly webContents: WebContents;
-  readonly invokeProxy: invokeProxy_t<routers>;
-};
+  readonly invokeProxy: invokeProxy_t<remote>;
+}
 
-export type ElectronMainRoutes = ElectronWindowRoutes & ElectronAppRoutes & ElectronDialogRoutes;
-
-export default abstract class ElectronMain<
-  env extends object = {},
-  routers extends object = {},
-> extends Base<
-  routers,
-  rpc_t & env & ElectronMainRuntimeContext<routers>
-> {
-  public invokeProxy!: invokeProxy_t<routers>;
-
+export class ElectronMain<
+  remote extends { readonly routes: object } = { readonly routes: object },
+  context extends context_t<remote['routes']> = context_t<remote['routes']>,
+> extends Base<context> {
   public override async dispatchInit({
-    webContents,
-    env = () => ({} as env),
+    browser,
+    env = () => ({} as Omit<context, keyof context_t>),
   }: {
-    readonly webContents: WebContents;
-    readonly env?: () => env;
+    readonly browser: BrowserWindow;
+    readonly env?: () => Omit<context, keyof context_t>;
   }): Promise<void> {
-    if (this.invokeProxy) return;
-    if (webContents.isDestroyed()) throw new Error("Electron WebContents is destroyed");
+    const { webContents } = browser;
+    if (webContents.isDestroyed()) {
+      throw new Error('Electron WebContents is destroyed');
+    }
 
+    let invokeProxy!: invokeProxy_t<remote['routes']>;
+    let event!: IpcMainEvent | IpcMainInvokeEvent;
     let receive: ((message: unknown) => void) | undefined;
-    let event: IpcMainEvent | undefined;
-    const onMessage = (senderEvent: IpcMainEvent, message: unknown): void => {
-      if (senderEvent.sender !== webContents) return;
-      event = senderEvent;
-      receive?.(message);
-      event = undefined;
+
+    const onMessage = (nextEvent: IpcMainEvent, message: unknown): void => {
+      if (nextEvent.sender !== webContents) return;
+      event = nextEvent;
+      try {
+        receive?.(message);
+      } finally {
+        event = undefined!;
+      }
+    };
+    const detach = (onClose?: () => void): void => {
+      ipcMain.off(invokeChannel, onMessage);
+      if (onClose) {
+        webContents.off('destroyed', onClose);
+        webContents.off('render-process-gone', onClose);
+      }
+      receive = undefined;
     };
 
-    this.invokeProxy = this.invokeProxyFromSendOn(
+    webContents.ipc.handle(
+      invokeChannel,
+      (nextEvent, input: Pick<CoreContext, 'path' | 'input'>) => {
+        event = nextEvent;
+        try {
+          return this.dispatchRoute({
+            ...input,
+            ...env(),
+            event,
+            webContents,
+            invokeProxy,
+          } as Omit<context, 'router'>);
+        } finally {
+          event = undefined!;
+        }
+      },
+    );
+
+    invokeProxy = this.invokeProxyFromSendOn(
       message => {
-        if (webContents.isDestroyed()) throw new Error("Electron WebContents is destroyed");
-        webContents.send(channel, message);
+        if (webContents.isDestroyed()) {
+          throw new Error('Electron WebContents is destroyed');
+        }
+        webContents.send(invokeChannel, message);
       },
       listener => {
         receive = listener;
-        ipcMain.on(channel, onMessage);
+        ipcMain.on(invokeChannel, onMessage);
       },
       listener => {
-        const close = (): void => {
-          ipcMain.off(channel, onMessage);
-          webContents.off("destroyed", close);
-          webContents.off("render-process-gone", close);
-          receive = undefined;
+        const handleClose = (): void => {
+          detach(handleClose);
           listener();
         };
-        webContents.on("destroyed", close);
-        webContents.on("render-process-gone", close);
+        webContents.once('destroyed', handleClose);
+        webContents.once('render-process-gone', handleClose);
       },
-      ({ invokeProxy, path, input }) => ({
+      operation => ({
         ...env(),
-        event: event as IpcMainEvent,
+        event,
         webContents,
         invokeProxy,
-        path,
-        input,
-      }),
-    );
-  }
-
-  public browserWindow<Self extends this>(
-    this: Self,
-    window: BrowserWindow,
-  ): Self & { readonly routers: Self["routers"] & ElectronWindowRoutes } {
-    this.registerHandler("electron.window.show", () => { window.show(); });
-    this.registerHandler("electron.window.hide", () => { window.hide(); });
-    this.registerHandler("electron.window.focus", () => { window.focus(); });
-    this.registerHandler("electron.window.blur", () => { window.blur(); });
-    this.registerHandler("electron.window.reload", () => { window.reload(); });
-    this.registerHandler("electron.window.minimize", () => { window.minimize(); });
-    this.registerHandler("electron.window.maximize", () => { window.maximize(); });
-    this.registerHandler("electron.window.unmaximize", () => { window.unmaximize(); });
-    this.registerHandler("electron.window.restore", () => { window.restore(); });
-    this.registerHandler("electron.window.close", () => { window.close(); });
-    this.registerHandler("electron.window.isVisible", () => window.isVisible());
-    this.registerHandler("electron.window.isFocused", () => window.isFocused());
-    this.registerHandler("electron.window.isMinimized", () => window.isMinimized());
-    this.registerHandler("electron.window.isMaximized", () => window.isMaximized());
-    this.registerHandler("electron.window.isDestroyed", () => window.isDestroyed());
-    return this as Self & { readonly routers: Self["routers"] & ElectronWindowRoutes };
-  }
-
-  public app<Self extends this>(
-    this: Self,
-    appApi: App = app,
-  ): Self & { readonly routers: Self["routers"] & ElectronAppRoutes } {
-    this.registerHandler("electron.app.version", () => appApi.getVersion());
-    this.registerHandler("electron.app.name", () => appApi.getName());
-    this.registerHandler("electron.app.is-packaged", () => appApi.isPackaged);
-    this.registerHandler("electron.app.path", appPathSchema, ({ input }) => appApi.getPath(input.name));
-    return this as Self & { readonly routers: Self["routers"] & ElectronAppRoutes };
-  }
-
-  public dialog<Self extends this>(
-    this: Self,
-    dialogApi: Dialog = dialog,
-  ): Self & { readonly routers: Self["routers"] & ElectronDialogRoutes } {
-    this.registerHandler("electron.dialog.message", dialogMessageSchema, ({ input }) => dialogApi.showMessageBox(input));
-    return this as Self & { readonly routers: Self["routers"] & ElectronDialogRoutes };
+        path: operation.path,
+        input: operation.input,
+      } as Omit<context, 'router'>),
+    ) as unknown as invokeProxy_t<remote['routes']>;
   }
 }
 
-export { channel as electronIpcChannel };
-export type { ElectronWindowRoutes, ElectronAppRoutes, ElectronDialogRoutes };
+export default function createElectronMain<
+  remote extends { readonly routes: object } = { readonly routes: object },
+  context extends context_t<remote['routes']> = context_t<remote['routes']>,
+>(): ElectronMain<remote, context> {
+  return new ElectronMain<remote, context>();
+}

@@ -7,13 +7,10 @@
     "./main": "./main.ts",
     "./preload": "./preload.ts",
     "./renderer": "./renderer.ts",
-    "./protocol": "./protocol.ts"
+    "./public": "./public.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "zod": "^4.4.3"
   },
   "devDependencies": {
     "electron": "39.2.6",

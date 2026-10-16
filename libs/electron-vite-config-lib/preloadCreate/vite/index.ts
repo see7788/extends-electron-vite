@@ -1,4 +1,4 @@
-import type { PreloadViteConfig } from "electron-vite";
+﻿import type { PreloadViteConfig } from "electron-vite";
 import {
   defineRead,
   packageEntries,

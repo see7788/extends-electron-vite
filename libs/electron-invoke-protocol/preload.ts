@@ -1,86 +1,82 @@
-﻿import { contextBridge, ipcRenderer } from "electron";
+﻿import {
+  contextBridge,
+  ipcRenderer,
+  type IpcRendererEvent,
+} from 'electron';
 import Base, {
+  Remote,
+  type context_t as CoreContext,
   type invokeProxy_t,
-  type rpc_t,
-} from "invoke-protocol";
-import { electronBridgeKey, electronIpcChannel as channel } from "./protocol.ts";
+} from 'invoke-protocol';
+import { invokeBridgeKey, invokeChannel } from './public.ts';
 
-export type ElectronPreloadBridge = {
-  readonly send: (message: unknown) => void;
-  readonly on: (listener: (message: unknown) => void) => () => void;
-};
+export interface context_t<remote extends object = object> extends CoreContext {
+  readonly event: IpcRendererEvent;
+  readonly invokeProxy: invokeProxy_t<remote>;
+}
 
-export type ElectronPreloadRuntimeContext<routers extends object = {}> = {
-  readonly event: Electron.IpcRendererEvent;
-  readonly window: Window;
-  readonly document: Document;
-  readonly invokeProxy: invokeProxy_t<routers>;
-};
-
-export default abstract class ElectronPreload<
-  env extends object = {},
-  routers extends object = {},
-> extends Base<
-  routers,
-  rpc_t & env & ElectronPreloadRuntimeContext<routers>
-> {
-  public invokeProxy!: invokeProxy_t<routers>;
-
+export class ElectronPreload<
+  remote extends { readonly routes: object } = { readonly routes: object },
+  context extends context_t<remote['routes']> = context_t<remote['routes']>,
+> extends Base<context> {
   public override async dispatchInit({
-    env = () => ({} as env),
-    expose = true,
+    env = () => ({} as Omit<context, keyof context_t>),
   }: {
-    readonly env?: () => env;
-    readonly expose?: boolean;
+    readonly env?: () => Omit<context, keyof context_t>;
   } = {}): Promise<void> {
-    if (this.invokeProxy) return;
+    let invokeProxy!: invokeProxy_t<remote['routes']>;
+    let event!: IpcRendererEvent;
+    let listener: ((message: unknown) => void) | undefined;
 
-    let receive: ((message: unknown) => void) | undefined;
-    let event: Electron.IpcRendererEvent | undefined;
-    const onMessage = (senderEvent: Electron.IpcRendererEvent, message: unknown): void => {
-      event = senderEvent;
-      receive?.(message);
-      event = undefined;
+    const onMessage = (
+      nextEvent: IpcRendererEvent,
+      message: unknown,
+    ): void => {
+      event = nextEvent;
+      try {
+        listener?.(message);
+      } finally {
+        event = undefined!;
+      }
     };
 
-    const bridge: ElectronPreloadBridge = {
-      send: message => {
-        ipcRenderer.send(channel, message);
+    this.invokeProxyFromSendOn(
+      message => ipcRenderer.send(invokeChannel, message),
+      nextListener => {
+        listener = nextListener;
+        ipcRenderer.on(invokeChannel, onMessage);
       },
-      on: listener => {
-        const callback = (_event: Electron.IpcRendererEvent, message: unknown): void => listener(message);
-        ipcRenderer.on(channel, callback);
-        return () => ipcRenderer.off(channel, callback);
+      close => {
+        window.addEventListener('unload', () => {
+          ipcRenderer.off(invokeChannel, onMessage);
+          listener = undefined;
+          close();
+        }, { once: true });
       },
-    };
-
-    this.invokeProxy = this.invokeProxyFromSendOn(
-      bridge.send,
-      listener => {
-        receive = listener;
-        ipcRenderer.on(channel, onMessage);
-      },
-      listener => {
-        const close = (): void => {
-          ipcRenderer.off(channel, onMessage);
-          receive = undefined;
-          listener();
-        };
-        window.addEventListener("unload", close, { once: true });
-      },
-      ({ invokeProxy, path, input }) => ({
+      operation => ({
         ...env(),
-        event: event as Electron.IpcRendererEvent,
-        window,
-        document,
+        event,
         invokeProxy,
-        path,
-        input,
-      }),
+        path: operation.path,
+        input: operation.input,
+      } as Omit<context, 'router'>),
     );
 
-    if (expose) contextBridge.exposeInMainWorld(electronBridgeKey, bridge);
+    contextBridge.exposeInMainWorld(
+      invokeBridgeKey,
+      (input: Pick<CoreContext, 'path' | 'input'>) =>
+        ipcRenderer.invoke(invokeChannel, input),
+    );
+
+    invokeProxy = new Remote<remote>().invokeProxyInit(
+      input => ipcRenderer.invoke(invokeChannel, input),
+    );
   }
 }
 
-export { electronBridgeKey, electronIpcChannel } from "./protocol.ts";
+export default function createElectronPreload<
+  remote extends { readonly routes: object } = { readonly routes: object },
+  context extends context_t<remote['routes']> = context_t<remote['routes']>,
+>(): ElectronPreload<remote, context> {
+  return new ElectronPreload<remote, context>();
+}
