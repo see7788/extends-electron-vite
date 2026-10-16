@@ -6,19 +6,24 @@
   type WebContents,
 } from 'electron';
 import Base, {
+  Remote,
   type context_t as CoreContext,
   type invokeProxy_t,
 } from 'invoke-protocol';
-import { invokeChannel } from './public.ts';
+import {
+  duplexChannel,
+  invokeChannel,
+  type remote_t,
+} from './public.ts';
 
-export interface context_t<remote extends object = object> extends CoreContext {
+export interface context_t<routes extends object = object> extends CoreContext {
   readonly event: IpcMainEvent | IpcMainInvokeEvent;
   readonly webContents: WebContents;
-  readonly invokeProxy: invokeProxy_t<remote>;
+  readonly invokeProxy: invokeProxy_t<routes>;
 }
 
-export class ElectronMain<
-  remote extends { readonly routes: object } = { readonly routes: object },
+export default class ElectronMain<
+  remote extends remote_t = remote_t,
   context extends context_t<remote['routes']> = context_t<remote['routes']>,
 > extends Base<context> {
   public override async dispatchInit({
@@ -33,8 +38,8 @@ export class ElectronMain<
       throw new Error('Electron WebContents is destroyed');
     }
 
-    let invokeProxy!: invokeProxy_t<remote['routes']>;
     let event!: IpcMainEvent | IpcMainInvokeEvent;
+    let invokeProxy!: invokeProxy_t<remote['routes']>;
     let receive: ((message: unknown) => void) | undefined;
 
     const onMessage = (nextEvent: IpcMainEvent, message: unknown): void => {
@@ -47,7 +52,7 @@ export class ElectronMain<
       }
     };
     const detach = (onClose?: () => void): void => {
-      ipcMain.off(invokeChannel, onMessage);
+      ipcMain.off(duplexChannel, onMessage);
       if (onClose) {
         webContents.off('destroyed', onClose);
         webContents.off('render-process-gone', onClose);
@@ -73,16 +78,16 @@ export class ElectronMain<
       },
     );
 
-    invokeProxy = this.invokeProxyFromSendOn(
+    invokeProxy = new Remote<remote>().invokeProxyFromSendOn(
       message => {
         if (webContents.isDestroyed()) {
           throw new Error('Electron WebContents is destroyed');
         }
-        webContents.send(invokeChannel, message);
+        webContents.send(duplexChannel, message);
       },
       listener => {
         receive = listener;
-        ipcMain.on(invokeChannel, onMessage);
+        ipcMain.on(duplexChannel, onMessage);
       },
       listener => {
         const handleClose = (): void => {
@@ -100,13 +105,6 @@ export class ElectronMain<
         path: operation.path,
         input: operation.input,
       } as Omit<context, 'router'>),
-    ) as unknown as invokeProxy_t<remote['routes']>;
+    );
   }
-}
-
-export default function createElectronMain<
-  remote extends { readonly routes: object } = { readonly routes: object },
-  context extends context_t<remote['routes']> = context_t<remote['routes']>,
->(): ElectronMain<remote, context> {
-  return new ElectronMain<remote, context>();
 }

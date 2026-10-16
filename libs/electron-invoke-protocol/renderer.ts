@@ -1,12 +1,11 @@
 ﻿import {
   Remote,
-  type context_t as CoreContext,
   type invokeProxy_t,
 } from 'invoke-protocol';
-import { invokeBridgeKey } from './public.ts';
+import { invokeBridgeKey, type remote_t } from './public.ts';
 
 export default function createElectronRenderer<
-  remote extends { readonly routes: object },
+  remote extends remote_t,
 >(): invokeProxy_t<remote['routes']> {
   const invoke = Reflect.get(globalThis, invokeBridgeKey);
   if (typeof invoke !== 'function') {
@@ -15,9 +14,7 @@ export default function createElectronRenderer<
     );
   }
 
-  return new Remote<remote>().invokeProxyInit(
-    invoke as (
-      input: Pick<CoreContext, 'path' | 'input'>,
-    ) => unknown | Promise<unknown>,
+  return new Remote<remote>().invokeProxyInit(input =>
+    Reflect.apply(invoke, undefined, [input]),
   );
 }

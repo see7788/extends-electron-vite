@@ -8,15 +8,20 @@ import Base, {
   type context_t as CoreContext,
   type invokeProxy_t,
 } from 'invoke-protocol';
-import { invokeBridgeKey, invokeChannel } from './public.ts';
+import {
+  duplexChannel,
+  invokeBridgeKey,
+  invokeChannel,
+  type remote_t,
+} from './public.ts';
 
-export interface context_t<remote extends object = object> extends CoreContext {
+export interface context_t<routes extends object = object> extends CoreContext {
   readonly event: IpcRendererEvent;
-  readonly invokeProxy: invokeProxy_t<remote>;
+  readonly invokeProxy: invokeProxy_t<routes>;
 }
 
-export class ElectronPreload<
-  remote extends { readonly routes: object } = { readonly routes: object },
+export default class ElectronPreload<
+  remote extends remote_t = remote_t,
   context extends context_t<remote['routes']> = context_t<remote['routes']>,
 > extends Base<context> {
   public override async dispatchInit({
@@ -24,9 +29,9 @@ export class ElectronPreload<
   }: {
     readonly env?: () => Omit<context, keyof context_t>;
   } = {}): Promise<void> {
-    let invokeProxy!: invokeProxy_t<remote['routes']>;
     let event!: IpcRendererEvent;
-    let listener: ((message: unknown) => void) | undefined;
+    let invokeProxy!: invokeProxy_t<remote['routes']>;
+    let receive: ((message: unknown) => void) | undefined;
 
     const onMessage = (
       nextEvent: IpcRendererEvent,
@@ -34,24 +39,28 @@ export class ElectronPreload<
     ): void => {
       event = nextEvent;
       try {
-        listener?.(message);
+        receive?.(message);
       } finally {
         event = undefined!;
       }
     };
 
-    this.invokeProxyFromSendOn(
-      message => ipcRenderer.send(invokeChannel, message),
-      nextListener => {
-        listener = nextListener;
-        ipcRenderer.on(invokeChannel, onMessage);
+    invokeProxy = new Remote<remote>().invokeProxyFromSendOn(
+      message => ipcRenderer.send(duplexChannel, message),
+      listener => {
+        receive = listener;
+        ipcRenderer.on(duplexChannel, onMessage);
       },
       close => {
-        window.addEventListener('unload', () => {
-          ipcRenderer.off(invokeChannel, onMessage);
-          listener = undefined;
-          close();
-        }, { once: true });
+        window.addEventListener(
+          'unload',
+          () => {
+            ipcRenderer.off(duplexChannel, onMessage);
+            receive = undefined;
+            close();
+          },
+          { once: true },
+        );
       },
       operation => ({
         ...env(),
@@ -67,16 +76,5 @@ export class ElectronPreload<
       (input: Pick<CoreContext, 'path' | 'input'>) =>
         ipcRenderer.invoke(invokeChannel, input),
     );
-
-    invokeProxy = new Remote<remote>().invokeProxyInit(
-      input => ipcRenderer.invoke(invokeChannel, input),
-    );
   }
-}
-
-export default function createElectronPreload<
-  remote extends { readonly routes: object } = { readonly routes: object },
-  context extends context_t<remote['routes']> = context_t<remote['routes']>,
->(): ElectronPreload<remote, context> {
-  return new ElectronPreload<remote, context>();
 }

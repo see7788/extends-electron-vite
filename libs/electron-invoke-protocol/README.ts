@@ -1,33 +1,35 @@
 ﻿import type { BrowserWindow } from 'electron';
-import createElectronMain from './main.ts';
-import createElectronPreload from './preload.ts';
+import ElectronMain from './main.ts';
+import ElectronPreload from './preload.ts';
 import createElectronRenderer from './renderer.ts';
 
 declare const browser: BrowserWindow;
 
-const main = createElectronMain()
-  .registerRoute('health', () => ({ ok: true }));
+const main = new ElectronMain()
+  .registerRoute('health', (c) => ({ ok: true }));
 
-const preload = createElectronPreload()
-  .registerRoute('ping', ({ invokeProxy }) => invokeProxy.health());
+const preload = new ElectronPreload()
+  .registerRoute('ping', (c) => 'pong');
 
 /**
- * 每个端点只有一个 dispatchInit 入口。
- * 入口内部同时建立本端路由分发和反向代理；
- * 反向代理通过 ctx.invokeProxy 提供给路由处理器。
+ * 每个端点只有一个启动入口。
+ * dispatchInit 会同时安装本端路由和对端 invokeProxy。
  */
 void main.dispatchInit({ browser });
 void preload.dispatchInit();
 
+/**
+ * renderer 是纯消费端：从 preload bridge 得到主进程路由代理。
+ */
 const rendererMain = createElectronRenderer<typeof main>();
 void rendererMain.health();
 
 /**
- * 远端路由类型通过工厂的类型参数传入：
+ * 主进程和 preload 的 remote 类型应来自同一份共享路由契约：
  *
- * createElectronMain<typeof preload>()
- * createElectronPreload<typeof main>()
+ *   new ElectronMain<PreloadContract>()
+ *   new ElectronPreload<MainContract>()
  *
- * Electron 适配层不提供默认业务 APIs，也不验证 RPC 包；
- * 路由输入校验和链式类型全部由 invoke-protocol 负责。
+ * 这样路由处理器里的 ctx.invokeProxy 才会得到对端路由的完整推导。
+ * Electron 适配层不增加业务 API，也不要求调用者手动消费或暴露代理。
  */
