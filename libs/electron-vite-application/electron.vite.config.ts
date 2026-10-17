@@ -18,14 +18,14 @@ export default defineConfig({
     },
   },
   preload: preloadConfig({
-    paths: ["../__PACKAGE_NAME__-preload/index.ts"],
+    paths: ["./preload/index.ts"],
   }),
   renderer: {
     plugins: [
       react(),
       rendererPlugin({
         ports,
-        paths: ["../__PACKAGE_NAME__-renderer/index.tsx"],
+        paths: ["./renderer/index.tsx"],
       }),
     ],
   },

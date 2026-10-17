@@ -3,24 +3,19 @@ import { Hono } from "hono";
 import { honoServer, honoUrl } from "electron-vite-config-lib/mainPlugin/hono";
 import preloadPath from "electron-vite-config-lib/preloadCreate/electron";
 import electronUpdate from "../resources/electron-update";
-import ElectronMain from "electron-invoke-protocol/main";
+import protocol from "./invoke-protocol";
 
 const routers = new Hono().get("/health", context => context.json({ ok: true }));
-
-
 void electronUpdate().then(({ initialUrl }) => {
   const server = honoServer(routers);
   server.once("listening", () => {
     const mainWindow = new BrowserWindow({
       webPreferences: {
-        preload: preloadPath("__PACKAGE_NAME__-preload"),
+        preload: preloadPath("preload"),
       },
     });
-    const communication = new ElectronMain();
-    void communication.dispatchInit({
-      browser: mainWindow,
-      env: () => ({}),
+    void protocol.dispatchInit({ browser: mainWindow }).then(() => {
+      void mainWindow.loadURL(initialUrl ?? honoUrl("renderer"));
     });
-    void mainWindow.loadURL(initialUrl ?? honoUrl("__PACKAGE_NAME__-renderer"));
   });
 });
