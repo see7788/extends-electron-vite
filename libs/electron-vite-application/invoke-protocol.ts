@@ -3,6 +3,11 @@ import Base, { type context_t as context_2 } from "invoke-protocol";
 import Remote, { type invokeProxy_t } from "invoke-protocol/remote";
 
 const key = "@runtimeproxy/electron-invoke-protocol";
+declare global {
+  interface Window {
+    readonly "@runtimeproxy/electron-invoke-protocol": typeof ipcRenderer;
+  }
+}
 
 export function main() {
   class Main extends Base<context_2 & { readonly browser: BrowserWindow }> {
@@ -21,11 +26,7 @@ export function main() {
 
     public get invokeProxy(): invokeProxy_t<this["routes"]> {
       //render进程消费
-      const bridge = Reflect.get(globalThis, key);
-      if (!bridge || typeof bridge.invoke !== "function") {
-        throw new Error("Electron preload bridge is missing; call preload() first");
-      }
-      return new Remote<this>().invokeProxyInit(input => bridge.invoke(input));
+      return new Remote<this>().invokeProxyInit(input => window[key].invoke(key, input));
     }
   }
   return new Main();
@@ -35,13 +36,9 @@ export function render() {
   class Render extends Base<context_2> {
     public override async dispatchInit<Self extends this>(this: Self): Promise<invokeProxy_t<Self["routes"]>> {
       //render进程注册的方法进行挂载
-      const bridge = Reflect.get(globalThis, key);
-      if (!bridge || typeof bridge.on !== "function" || typeof bridge.send !== "function") {
-        throw new Error("Electron preload bridge is missing; call preload() first");
-      }
       return new Remote<Self>().invokeProxyFromSendOn(
-        message => bridge.send(message),
-        listener => bridge.on(listener),
+        message => window[key].send(key, message),
+        listener => window[key].on(key, (_event, message) => listener(message)),
         close => window.addEventListener("unload", close, { once: true }),
         operation => this.dispatchRoute(operation),
       );
