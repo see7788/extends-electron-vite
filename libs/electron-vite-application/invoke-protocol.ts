@@ -48,7 +48,7 @@ export function render() {
   class Render extends Base<context_render> {
     public override async dispatchInit<Self extends this>(
       this: Self,
-    ): Promise<invokeProxy_t<Self["routers"]>> {
+    ):Promise<void> {
       //render进程作为生产者
       let event: IpcRendererEvent
       const { invokeProxy, close } = this.invokeProxyFromSendOn(
@@ -61,7 +61,6 @@ export function render() {
         operation => this.dispatchRoute({ ...operation, event }),
       );
       window.addEventListener("unload", close, { once: true });
-      return invokeProxy;
     }
 
     public invokeProxy(
