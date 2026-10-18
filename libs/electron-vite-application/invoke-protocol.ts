@@ -1,4 +1,4 @@
-﻿import { contextBridge, ipcRenderer, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
+﻿import { contextBridge, ipcRenderer, type BrowserWindow, type IpcMainEvent, type IpcMainInvokeEvent, type IpcRendererEvent } from "electron";
 import Base, { type context_t as context_2, type invokeProxy_t } from "invoke-protocol";
 
 const key = "@runtimeproxy/electron-invoke-protocol";
@@ -10,8 +10,8 @@ declare global {
 }
 
 export interface context_main extends context_2 {
- readonly browser: BrowserWindow
- readonly event: IpcMainInvokeEvent
+  readonly browser: BrowserWindow
+  readonly event: IpcMainInvokeEvent
 }
 
 export function main() {
@@ -41,7 +41,7 @@ export function main() {
 }
 
 export interface context_render extends context_2 {
-
+  readonly event: IpcRendererEvent
 }
 
 export function render() {
@@ -50,11 +50,15 @@ export function render() {
       this: Self,
     ): Promise<invokeProxy_t<Self["routers"]>> {
       //render进程作为生产者
+      let event: IpcRendererEvent
       const { invokeProxy, close } = this.invokeProxyFromSendOn(
         message => window[key].send(key, message),
         listener =>
-          window[key].on(key, (_event, message) => listener(message)),
-        operation => this.dispatchRoute(operation),
+          window[key].on(key, (_event, message) => {
+            event = _event
+            listener(message)
+          }),
+        operation => this.dispatchRoute({ ...operation, event }),
       );
       window.addEventListener("unload", close, { once: true });
       return invokeProxy;
