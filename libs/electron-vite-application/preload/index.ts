@@ -1,3 +1,4 @@
-﻿import { preload } from "../invoke-protocol";
+﻿import { contextBridge, ipcRenderer } from "electron";
+import { invokeprotocolKey } from "../declare";
 
-preload();
+contextBridge.exposeInMainWorld(invokeprotocolKey, ipcRenderer);

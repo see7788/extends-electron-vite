@@ -1,0 +1,1 @@
+globalThis.invokeprotocolKey = "invokeprotocol";
