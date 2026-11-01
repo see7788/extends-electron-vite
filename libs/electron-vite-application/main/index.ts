@@ -1,4 +1,4 @@
-﻿import { honoServer } from "electron-vite-config-lib/mainPlugin/hono";
+﻿import { honoServer } from "./declare";
 import electronUpdate from "../resources/electron-update";
 import Browser from "./Browser"
 import honoRouters from "./honoRouters"

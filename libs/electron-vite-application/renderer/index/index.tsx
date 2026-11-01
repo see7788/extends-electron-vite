@@ -1,5 +1,5 @@
 ﻿import dispatchInit from "./invoke-protocol";
-import invokeProxy from "../../main/Browser/invoke-protocol"
+import invokeProxy from "./invoke-protocol"
 class App {
   public readonly remoteApi = invokeProxy.invokeProxyInit();
 
