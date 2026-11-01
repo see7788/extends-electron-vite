@@ -1,6 +1,6 @@
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
-import { defineConfig, type UserConfig } from "electron-vite";
+import { defineConfig} from "electron-vite";
 import mainPlugin from "electron-vite-config-lib/mainPlugin/plugin";
 import preloadConfig from "electron-vite-config-lib/preloadCreate/vite/index";
 import rendererPlugin from "electron-vite-config-lib/rendererReactPlugin/plugin";
